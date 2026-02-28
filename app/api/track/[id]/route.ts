@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
+import { z } from "zod"
+
+import { normalizeAffiliateUrl } from "@/lib/affiliate-url"
 import { convexMutation } from "@/lib/convex"
+import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/security"
+
+const trackIdSchema = z.object({
+  id: z.string().trim().min(1).max(128).regex(/^[a-zA-Z0-9_-]+$/),
+})
 
 function getDeviceFromUserAgent(userAgent: string) {
   const ua = userAgent.toLowerCase()
@@ -21,14 +29,20 @@ function getSource(searchParams: URLSearchParams, referrer: string) {
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params
-    const referrer = req.headers.get("referer") || ""
-    const userAgent = req.headers.get("user-agent") || ""
-    const ip = req.headers.get("x-forwarded-for") || "anonymous"
-    const source = getSource(req.nextUrl.searchParams, referrer)
-    const device = getDeviceFromUserAgent(userAgent)
-    const path = req.nextUrl.searchParams.get("path") || ""
-    const sessionId = req.nextUrl.searchParams.get("sessionId") || ""
+    const parsedParams = trackIdSchema.parse(await params)
+    const { id } = parsedParams
+    const ip = getClientIp(req.headers)
+    const rate = checkRateLimit({ key: `api:track:${ip}`, windowMs: 60 * 1000, max: 240 })
+    if (!rate.allowed) {
+      return tooManyRequests(rate.retryAfterSec)
+    }
+
+    const referrer = (req.headers.get("referer") || "").slice(0, 500)
+    const userAgent = (req.headers.get("user-agent") || "").slice(0, 500)
+    const source = getSource(req.nextUrl.searchParams, referrer).slice(0, 100)
+    const device = getDeviceFromUserAgent(userAgent).slice(0, 40)
+    const path = (req.nextUrl.searchParams.get("path") || "").slice(0, 240)
+    const sessionId = (req.nextUrl.searchParams.get("sessionId") || "").slice(0, 120)
 
     const result = await convexMutation<
       {
@@ -57,9 +71,19 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ message: result.message || "Product not found" }, { status: 404 })
     }
 
-    return NextResponse.redirect(result.affiliateUrl)
+    let safeRedirect = ""
+    try {
+      safeRedirect = normalizeAffiliateUrl(result.affiliateUrl)
+    } catch {
+      return NextResponse.json({ message: "Unsafe redirect URL blocked" }, { status: 400 })
+    }
+
+    return NextResponse.redirect(safeRedirect)
   } catch (error) {
     console.error("Click tracking error:", error)
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ message: "Invalid tracking request", errors: error.errors }, { status: 400 })
+    }
     return NextResponse.json({ message: "Internal server error" }, { status: 500 })
   }
 }

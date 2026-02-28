@@ -3,25 +3,37 @@ import { revalidateTag } from "next/cache"
 import { z } from "zod"
 
 import { getSafeServerSession } from "@/lib/auth"
-import { normalizeAffiliateUrl } from "@/lib/affiliate-url"
+import { normalizeAffiliateUrl, tryNormalizeAffiliateUrl } from "@/lib/affiliate-url"
 import { convexMutation, convexQuery } from "@/lib/convex"
 import { fetchProductMetadata } from "@/lib/product-metadata"
+import { checkRateLimit, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
 import { getStoreCacheTag } from "@/lib/store-cache"
+import { requireActiveSubscription } from "@/lib/subscription-access"
+
+const imageUrlSchema = z
+  .string()
+  .trim()
+  .max(1000)
+  .refine((value) => value.startsWith("/") || Boolean(tryNormalizeAffiliateUrl(value)), "Invalid image URL")
 
 const productSchema = z.object({
-  title: z.string().min(2),
-  description: z.string().min(10),
+  title: z.string().trim().min(2).max(160),
+  description: z.string().trim().min(10).max(4000),
   affiliateUrl: z.string().trim().min(1),
-  category: z.string().min(2).max(60).optional().default("General"),
-  images: z.array(z.string()).optional().default([]),
-  videoUrl: z.string().url().optional().or(z.literal("")),
+  category: z.string().trim().min(2).max(60).optional().default("General"),
+  images: z.array(imageUrlSchema).max(10).optional().default([]),
+  videoUrl: z.string().trim().url().max(1000).optional().or(z.literal("")),
 })
 
 const quickUpdateSchema = z.object({
-  title: z.string().min(2).max(120).optional(),
+  title: z.string().trim().min(2).max(120).optional(),
   affiliateUrl: z.string().trim().min(1).optional(),
-  category: z.string().min(2).max(60).optional(),
+  category: z.string().trim().min(2).max(60).optional(),
   isArchived: z.boolean().optional(),
+})
+
+const routeParamsSchema = z.object({
+  id: z.string().trim().min(1).max(128).regex(/^[a-zA-Z0-9_-]+$/),
 })
 
 async function revalidateStoreForUser(userId: string) {
@@ -33,7 +45,13 @@ async function revalidateStoreForUser(userId: string) {
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params
+    const ip = getClientIp(req.headers)
+    const rate = checkRateLimit({ key: `api:products:get:${ip}`, windowMs: 60 * 1000, max: 240 })
+    if (!rate.allowed) {
+      return tooManyRequests(rate.retryAfterSec)
+    }
+
+    const { id } = routeParamsSchema.parse(await params)
     const session = await getSafeServerSession()
 
     if (!session?.user?.id) {
@@ -69,6 +87,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     return NextResponse.json({ product: serializedProduct })
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ message: "Invalid product id", errors: error.errors }, { status: 400 })
+    }
     console.error("Error fetching product:", error)
     return NextResponse.json({ message: "Internal server error" }, { status: 500 })
   }
@@ -76,12 +97,24 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params
+    const csrfBlock = enforceSameOrigin(req)
+    if (csrfBlock) return csrfBlock
+
+    const ip = getClientIp(req.headers)
+    const rate = checkRateLimit({ key: `api:products:update:${ip}`, windowMs: 60 * 1000, max: 60 })
+    if (!rate.allowed) {
+      return tooManyRequests(rate.retryAfterSec)
+    }
+
+    const { id } = routeParamsSchema.parse(await params)
     const session = await getSafeServerSession()
 
     if (!session?.user?.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
+
+    const access = await requireActiveSubscription(session.user.id, "update_product")
+    if (!access.ok) return access.response
 
     const body = await req.json()
     const { title, description, affiliateUrl: rawAffiliateUrl, category, images, videoUrl } = productSchema.parse(body)
@@ -94,6 +127,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         finalImages = [meta.image]
       }
     }
+    finalImages = finalImages
+      .map((img) => img.trim())
+      .filter((img) => img.startsWith("/") || Boolean(tryNormalizeAffiliateUrl(img)))
+      .slice(0, 10)
     if (finalImages.length === 0) {
       finalImages = ["/placeholder.jpg"]
     }
@@ -109,7 +146,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         images: string[]
         videoUrl?: string
       },
-      { ok: boolean; message?: string; product?: any }
+      { ok: boolean; message?: string; code?: string; product?: any }
     >("products:updateByIdForUser", {
       productId: id,
       userId: session.user.id,
@@ -122,7 +159,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     })
 
     if (!result.ok || !result.product) {
-      return NextResponse.json({ message: "Product not found" }, { status: 404 })
+      const status = result.code === "SUBSCRIPTION_REQUIRED" ? 402 : 404
+      return NextResponse.json({ message: result.message || "Product not found", code: result.code || "" }, { status })
     }
 
     await revalidateStoreForUser(session.user.id)
@@ -160,14 +198,26 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params
+    const csrfBlock = enforceSameOrigin(req)
+    if (csrfBlock) return csrfBlock
+
+    const ip = getClientIp(req.headers)
+    const rate = checkRateLimit({ key: `api:products:delete:${ip}`, windowMs: 60 * 1000, max: 60 })
+    if (!rate.allowed) {
+      return tooManyRequests(rate.retryAfterSec)
+    }
+
+    const { id } = routeParamsSchema.parse(await params)
     const session = await getSafeServerSession()
 
     if (!session?.user?.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
 
-    const result = await convexMutation<{ productId: string; userId: string }, { ok: boolean; message?: string }>(
+    const access = await requireActiveSubscription(session.user.id, "delete_product")
+    if (!access.ok) return access.response
+
+    const result = await convexMutation<{ productId: string; userId: string }, { ok: boolean; message?: string; code?: string }>(
       "products:deleteByIdForUser",
       {
         productId: id,
@@ -176,13 +226,17 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     )
 
     if (!result.ok) {
-      return NextResponse.json({ message: "Product not found" }, { status: 404 })
+      const status = result.code === "SUBSCRIPTION_REQUIRED" ? 402 : 404
+      return NextResponse.json({ message: result.message || "Product not found", code: result.code || "" }, { status })
     }
 
     await revalidateStoreForUser(session.user.id)
 
     return NextResponse.json({ message: "Product deleted successfully" })
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ message: "Invalid data", errors: error.errors }, { status: 400 })
+    }
     console.error("Product deletion error:", error)
     return NextResponse.json({ message: "Internal server error" }, { status: 500 })
   }
@@ -190,12 +244,24 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params
+    const csrfBlock = enforceSameOrigin(req)
+    if (csrfBlock) return csrfBlock
+
+    const ip = getClientIp(req.headers)
+    const rate = checkRateLimit({ key: `api:products:patch:${ip}`, windowMs: 60 * 1000, max: 80 })
+    if (!rate.allowed) {
+      return tooManyRequests(rate.retryAfterSec)
+    }
+
+    const { id } = routeParamsSchema.parse(await params)
     const session = await getSafeServerSession()
 
     if (!session?.user?.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
+
+    const access = await requireActiveSubscription(session.user.id, "patch_product")
+    if (!access.ok) return access.response
 
     const body = await req.json()
     const payload = quickUpdateSchema.parse(body)
@@ -210,7 +276,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         category?: string
         isArchived?: boolean
       },
-      { ok: boolean; message?: string; product?: any }
+      { ok: boolean; message?: string; code?: string; product?: any }
     >("products:quickUpdateByIdForUser", {
       productId: id,
       userId: session.user.id,
@@ -221,7 +287,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     })
 
     if (!result.ok || !result.product) {
-      return NextResponse.json({ message: result.message || "Product not found" }, { status: 404 })
+      const status = result.code === "SUBSCRIPTION_REQUIRED" ? 402 : 404
+      return NextResponse.json({ message: result.message || "Product not found", code: result.code || "" }, { status })
     }
 
     await revalidateStoreForUser(session.user.id)

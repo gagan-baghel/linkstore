@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
@@ -22,6 +22,7 @@ const themeSchema = z.object({
   themeBannerStyle: z.enum(["gradient", "solid", "soft"]),
   themeButtonStyle: z.enum(["rounded", "pill", "square"]),
   themeCardStyle: z.enum(["shadow", "outline", "flat"]),
+  themeMode: z.enum(["system", "light", "dark"]),
 })
 
 type ThemeFormValues = z.infer<typeof themeSchema>
@@ -32,6 +33,7 @@ interface StoreThemeFormProps {
   themeBannerStyle?: "gradient" | "solid" | "soft"
   themeButtonStyle?: "rounded" | "pill" | "square"
   themeCardStyle?: "shadow" | "outline" | "flat"
+  themeMode?: "system" | "light" | "dark"
 }
 
 export function StoreThemeForm({
@@ -40,10 +42,20 @@ export function StoreThemeForm({
   themeBannerStyle = "gradient",
   themeButtonStyle = "rounded",
   themeCardStyle = "shadow",
+  themeMode = "system",
 }: StoreThemeFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [prefersDark, setPrefersDark] = useState(false)
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
+    const sync = () => setPrefersDark(mediaQuery.matches)
+    sync()
+    mediaQuery.addEventListener("change", sync)
+    return () => mediaQuery.removeEventListener("change", sync)
+  }, [])
 
   const form = useForm<ThemeFormValues>({
     resolver: zodResolver(themeSchema),
@@ -53,6 +65,7 @@ export function StoreThemeForm({
       themeBannerStyle,
       themeButtonStyle,
       themeCardStyle,
+      themeMode,
     },
   })
 
@@ -102,11 +115,13 @@ export function StoreThemeForm({
         ? "border-none bg-card/70 shadow-none"
         : "border border-[#d8e2f3] shadow-[0_1px_3px_rgba(18,36,64,0.04),0_4px_12px_rgba(18,36,64,0.06)]"
 
+  const previewIsDark = values.themeMode === "dark" || (values.themeMode === "system" && prefersDark)
+
   const bannerStyle =
     values.themeBannerStyle === "solid"
       ? { backgroundColor: values.themePrimaryColor }
       : values.themeBannerStyle === "soft"
-        ? { background: `linear-gradient(135deg, ${values.themeAccentColor}, #ffffff)` }
+        ? { background: `linear-gradient(135deg, ${values.themeAccentColor}, ${previewIsDark ? "#0f172a" : "#ffffff"})` }
         : { background: `linear-gradient(135deg, ${values.themePrimaryColor}, ${values.themeAccentColor})` }
 
   const isSoftBanner = values.themeBannerStyle === "soft"
@@ -158,7 +173,43 @@ export function StoreThemeForm({
               />
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-4">
+              <FormField
+                control={form.control}
+                name="themeMode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-medium uppercase tracking-wide text-slate-600">Theme Mode</FormLabel>
+                    <FormControl>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { label: "System", value: "system" as const },
+                          { label: "Light", value: "light" as const },
+                          { label: "Dark", value: "dark" as const },
+                        ].map((mode) => (
+                          <Button
+                            key={mode.value}
+                            type="button"
+                            variant="outline"
+                            className={cn(
+                              "h-9 border px-2 text-xs shadow-none",
+                              field.value === mode.value
+                                ? "border-indigo-300 bg-indigo-50 text-indigo-700"
+                                : "border-slate-200 bg-slate-50/60 text-slate-700 hover:bg-slate-100",
+                            )}
+                            onClick={() => field.onChange(mode.value)}
+                          >
+                            {mode.label}
+                          </Button>
+                        ))}
+                      </div>
+                    </FormControl>
+                    <FormDescription className="text-xs">`System` follows the shopper's device setting.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={form.control}
                 name="themeBannerStyle"
@@ -237,13 +288,13 @@ export function StoreThemeForm({
         </form>
       </Form>
 
-      <div className="rounded-lg border border-slate-200 bg-white p-4 md:p-5">
-        <h2 className="text-sm font-semibold text-slate-900">Live Preview</h2>
-        <p className="mb-4 mt-1 text-xs text-slate-600">Quick preview of how your theme will look on your store.</p>
-        <div className="overflow-hidden rounded-lg border border-slate-200">
+      <div className={cn("rounded-lg border p-4 md:p-5", previewIsDark ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white")}>
+        <h2 className={cn("text-sm font-semibold", previewIsDark ? "text-slate-100" : "text-slate-900")}>Live Preview</h2>
+        <p className={cn("mb-4 mt-1 text-xs", previewIsDark ? "text-slate-400" : "text-slate-600")}>Quick preview of how your theme will look on your store.</p>
+        <div className={cn("overflow-hidden rounded-lg border", previewIsDark ? "border-slate-700" : "border-slate-200")}>
           <div className="p-4" style={bannerStyle}>
-            <h3 className={cn("text-base font-semibold", isSoftBanner ? "text-slate-900" : "text-white")}>Your Store Banner</h3>
-            <p className={cn("mt-1 text-xs", isSoftBanner ? "text-slate-700" : "text-white/90")}>
+            <h3 className={cn("text-base font-semibold", isSoftBanner ? (previewIsDark ? "text-slate-100" : "text-slate-900") : "text-white")}>Your Store Banner</h3>
+            <p className={cn("mt-1 text-xs", isSoftBanner ? (previewIsDark ? "text-slate-300" : "text-slate-700") : "text-white/90")}>
               This banner updates instantly as you edit your theme.
             </p>
             <Button
@@ -254,10 +305,10 @@ export function StoreThemeForm({
               Shop Now
             </Button>
           </div>
-          <div className="bg-card/70 p-4">
+          <div className={cn("p-4", previewIsDark ? "bg-slate-900" : "bg-card/70")}>
             <div className={cn("rounded-lg p-3", cardStyleClass)}>
-              <div className="mb-1 text-xs font-semibold">Product Card Preview</div>
-              <p className="text-xs text-muted-foreground">Card and button styles from your selected theme.</p>
+              <div className={cn("mb-1 text-xs font-semibold", previewIsDark ? "text-slate-100" : "text-slate-900")}>Product Card Preview</div>
+              <p className={cn("text-xs", previewIsDark ? "text-slate-400" : "text-muted-foreground")}>Card and button styles from your selected theme.</p>
             </div>
           </div>
         </div>

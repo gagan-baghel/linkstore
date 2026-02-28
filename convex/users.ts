@@ -1,6 +1,10 @@
 import { mutationGeneric, queryGeneric } from "convex/server"
 import { v } from "convex/values"
 
+const PLAN_CODE = "starter_monthly_149"
+const PLAN_AMOUNT_PAISE = 14900
+const PLAN_CURRENCY = "INR"
+
 function withoutPassword(user: any) {
   if (!user) return null
   const { passwordHash, ...rest } = user
@@ -38,6 +42,17 @@ async function generateUniqueUsername(ctx: any, name: string) {
   throw new Error("Unable to generate a unique username")
 }
 
+async function hasActiveSubscription(ctx: any, userId: string) {
+  const rows = await ctx.db
+    .query("subscriptions")
+    .withIndex("by_userId", (q: any) => q.eq("userId", userId))
+    .collect()
+
+  if (rows.length !== 1) return false
+  const sub = rows[0]
+  return sub.status === "active" && typeof sub.expiresAt === "number" && sub.expiresAt > Date.now()
+}
+
 export const getForAuthByEmail = queryGeneric({
   args: { email: v.string() },
   handler: async (ctx, args) => {
@@ -51,6 +66,22 @@ export const getById = queryGeneric({
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId)
     return withoutPassword(user)
+  },
+})
+
+export const getPublicByUsername = queryGeneric({
+  args: { username: v.string() },
+  handler: async (ctx, args) => {
+    const normalized = args.username.trim().toLowerCase()
+    if (!normalized) return null
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", normalized))
+      .first()
+
+    if (!user || user.storeEnabled !== true) return null
+    return { _id: user._id, username: user.username }
   },
 })
 
@@ -86,9 +117,12 @@ export const createUser = mutationGeneric({
       username: generatedUsername,
       email: normalizedEmail,
       passwordHash: args.passwordHash,
+      role: "user",
       image: "",
+      storeEnabled: false,
+      storeCreatedAt: undefined,
       storeBio: "",
-      storeBannerText: `${args.name}'s Affiliate Store`,
+      storeBannerText: "Store",
       contactInfo: "",
       storeLogo: "",
       socialFacebook: "",
@@ -101,6 +135,29 @@ export const createUser = mutationGeneric({
       themeBannerStyle: "gradient",
       themeButtonStyle: "rounded",
       themeCardStyle: "shadow",
+      themeMode: "system",
+      createdAt: now,
+      updatedAt: now,
+    })
+
+    await ctx.db.insert("subscriptions", {
+      userId,
+      planCode: PLAN_CODE,
+      planAmountPaise: PLAN_AMOUNT_PAISE,
+      currency: PLAN_CURRENCY,
+      status: "inactive",
+      currentPeriodStart: undefined,
+      currentPeriodEnd: undefined,
+      activatedAt: undefined,
+      expiresAt: undefined,
+      cancelledAt: undefined,
+      pendingOrderId: undefined,
+      lastOrderId: undefined,
+      lastPaymentIdEncrypted: undefined,
+      lastPaymentIdHash: "",
+      lastSignatureHash: "",
+      webhookConfirmedAt: undefined,
+      deactivationReason: undefined,
       createdAt: now,
       updatedAt: now,
     })
@@ -166,6 +223,11 @@ export const updateStore = mutationGeneric({
       return { ok: false, message: "User not found" as const }
     }
 
+    const hasPremiumAccess = await hasActiveSubscription(ctx, args.userId)
+    if (!hasPremiumAccess) {
+      return { ok: false, message: "Active subscription required for store updates" as const, code: "SUBSCRIPTION_REQUIRED" as const }
+    }
+
     await ctx.db.patch(args.userId, {
       storeBannerText: args.storeBannerText,
       storeBio: args.storeBio,
@@ -211,11 +273,17 @@ export const updateStoreTheme = mutationGeneric({
     themeBannerStyle: v.string(),
     themeButtonStyle: v.string(),
     themeCardStyle: v.string(),
+    themeMode: v.string(),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId)
     if (!user) {
       return { ok: false, message: "User not found" as const }
+    }
+
+    const hasPremiumAccess = await hasActiveSubscription(ctx, args.userId)
+    if (!hasPremiumAccess) {
+      return { ok: false, message: "Active subscription required for store theme changes" as const, code: "SUBSCRIPTION_REQUIRED" as const }
     }
 
     await ctx.db.patch(args.userId, {
@@ -224,6 +292,7 @@ export const updateStoreTheme = mutationGeneric({
       themeBannerStyle: args.themeBannerStyle,
       themeButtonStyle: args.themeButtonStyle,
       themeCardStyle: args.themeCardStyle,
+      themeMode: args.themeMode,
       updatedAt: Date.now(),
     })
 

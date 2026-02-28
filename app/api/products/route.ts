@@ -3,18 +3,26 @@ import { revalidateTag } from "next/cache"
 import { z } from "zod"
 
 import { getSafeServerSession } from "@/lib/auth"
-import { normalizeAffiliateUrl } from "@/lib/affiliate-url"
+import { normalizeAffiliateUrl, tryNormalizeAffiliateUrl } from "@/lib/affiliate-url"
 import { convexMutation, convexQuery } from "@/lib/convex"
 import { fetchProductMetadata } from "@/lib/product-metadata"
+import { checkRateLimit, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
 import { getStoreCacheTag } from "@/lib/store-cache"
+import { requireActiveSubscription } from "@/lib/subscription-access"
+
+const imageUrlSchema = z
+  .string()
+  .trim()
+  .max(1000)
+  .refine((value) => value.startsWith("/") || Boolean(tryNormalizeAffiliateUrl(value)), "Invalid image URL")
 
 const productSchema = z.object({
-  title: z.string().min(2),
-  description: z.string().min(10),
+  title: z.string().trim().min(2).max(160),
+  description: z.string().trim().min(10).max(4000),
   affiliateUrl: z.string().trim().min(1),
-  category: z.string().min(2).max(60).optional().default("General"),
-  images: z.array(z.string()).optional().default([]),
-  videoUrl: z.string().url().optional().or(z.literal("")),
+  category: z.string().trim().min(2).max(60).optional().default("General"),
+  images: z.array(imageUrlSchema).max(10).optional().default([]),
+  videoUrl: z.string().trim().url().max(1000).optional().or(z.literal("")),
 })
 
 async function revalidateStoreForUser(userId: string) {
@@ -26,11 +34,23 @@ async function revalidateStoreForUser(userId: string) {
 
 export async function POST(req: Request) {
   try {
+    const csrfBlock = enforceSameOrigin(req)
+    if (csrfBlock) return csrfBlock
+
+    const ip = getClientIp(req.headers)
+    const rate = checkRateLimit({ key: `api:products:create:${ip}`, windowMs: 60 * 1000, max: 40 })
+    if (!rate.allowed) {
+      return tooManyRequests(rate.retryAfterSec)
+    }
+
     const session = await getSafeServerSession()
 
     if (!session?.user?.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
+
+    const access = await requireActiveSubscription(session.user.id, "create_product")
+    if (!access.ok) return access.response
 
     const body = await req.json()
     const { title, description, affiliateUrl: rawAffiliateUrl, category, images, videoUrl } = productSchema.parse(body)
@@ -43,6 +63,10 @@ export async function POST(req: Request) {
         finalImages = [meta.image]
       }
     }
+    finalImages = finalImages
+      .map((img) => img.trim())
+      .filter((img) => img.startsWith("/") || Boolean(tryNormalizeAffiliateUrl(img)))
+      .slice(0, 10)
     if (finalImages.length === 0) {
       finalImages = ["/placeholder.jpg"]
     }
@@ -57,7 +81,7 @@ export async function POST(req: Request) {
         images: string[]
         videoUrl?: string
       },
-      { ok: boolean; message?: string; product?: any }
+      { ok: boolean; message?: string; code?: string; product?: any }
     >("products:createProduct", {
       userId: session.user.id,
       title,
@@ -69,7 +93,13 @@ export async function POST(req: Request) {
     })
 
     if (!result.ok || !result.product) {
-      return NextResponse.json({ message: result.message || "Failed to create product" }, { status: 400 })
+      const status =
+        result.code === "SUBSCRIPTION_REQUIRED"
+          ? 402
+          : result.code === "PRODUCT_LIMIT_REACHED"
+            ? 409
+            : 400
+      return NextResponse.json({ message: result.message || "Failed to create product", code: result.code || "" }, { status })
     }
 
     await revalidateStoreForUser(session.user.id)
@@ -111,6 +141,12 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
   try {
+    const ip = getClientIp(req.headers)
+    const rate = checkRateLimit({ key: `api:products:list:${ip}`, windowMs: 60 * 1000, max: 240 })
+    if (!rate.allowed) {
+      return tooManyRequests(rate.retryAfterSec)
+    }
+
     const session = await getSafeServerSession()
 
     if (!session?.user?.id) {

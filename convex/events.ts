@@ -21,6 +21,10 @@ export const trackEvent = mutationGeneric({
       return { ok: false, message: "Store owner not found" as const }
     }
 
+    if (user.username.trim().toLowerCase() !== args.storeUsername.trim().toLowerCase()) {
+      return { ok: false, message: "Store mismatch" as const }
+    }
+
     if (args.productId) {
       const product = await ctx.db.get(args.productId)
       if (!product || product.userId !== args.userId) {

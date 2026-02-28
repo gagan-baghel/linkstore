@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { Facebook, Globe, Instagram, PencilLine, Twitter, Upload, X, Youtube } from "lucide-react"
+import { Facebook, Instagram, Twitter, Upload, X, Youtube } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -88,7 +88,6 @@ export function StoreForm({
     { name: "Twitter", value: values.socialTwitter?.trim() || "", icon: <Twitter className="h-4 w-4" /> },
     { name: "Instagram", value: values.socialInstagram?.trim() || "", icon: <Instagram className="h-4 w-4" /> },
     { name: "YouTube", value: values.socialYoutube?.trim() || "", icon: <Youtube className="h-4 w-4" /> },
-    { name: "Website", value: values.socialWebsite?.trim() || "", icon: <Globe className="h-4 w-4" /> },
   ].filter((item) => item.value.length > 0)
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -165,29 +164,7 @@ export function StoreForm({
   }
 
   return (
-    <div className="w-full">
-      <div className="mb-4 flex justify-end">
-        {!isEditing ? (
-          <Button type="button" variant="outline" className="h-9 rounded-md border-slate-300 bg-white text-sm shadow-none" onClick={() => setIsEditing(true)}>
-            <PencilLine className="mr-2 h-4 w-4" />
-            Edit
-          </Button>
-        ) : (
-          <Button
-            type="button"
-            variant="ghost"
-            className="h-9 rounded-md text-sm text-slate-600"
-            onClick={() => {
-              form.reset(defaultValues)
-              setIsEditing(false)
-            }}
-          >
-            <X className="mr-2 h-4 w-4" />
-            Cancel
-          </Button>
-        )}
-      </div>
-
+    <div className="w-full pb-20">
       {!isEditing ? (
         <div className="grid gap-4 md:grid-cols-12 md:gap-5">
           <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:col-span-8">
@@ -372,21 +349,6 @@ export function StoreForm({
                       )}
                     />
 
-                    <FormField
-                      control={form.control}
-                      name="socialWebsite"
-                      render={({ field }) => (
-                        <FormItem className="md:col-span-2">
-                          <FormLabel className="flex items-center gap-2 text-xs font-semibold text-slate-700">
-                            <Globe className="h-4 w-4" /> Website
-                          </FormLabel>
-                          <FormControl>
-                            <Input className="h-10 border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400" placeholder="https://yourwebsite.com" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
                   </div>
                 </div>
               </section>
@@ -462,6 +424,31 @@ export function StoreForm({
           </form>
         </Form>
       )}
+
+      <div className="fixed bottom-6 right-4 z-40 sm:right-6">
+        {!isEditing ? (
+          <Button
+            type="button"
+            className="h-10 border border-[#3e55df] bg-[#4a63f6] px-4 text-sm text-white shadow-[0_10px_24px_rgba(74,99,246,0.35)] hover:bg-[#3f56de]"
+            onClick={() => setIsEditing(true)}
+          >
+            Edit Store
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            className="h-10 border-[#cfd8ea] bg-white px-4 text-sm text-[#1f2a44] shadow-[0_10px_24px_rgba(19,34,68,0.14)] hover:bg-[#f3f6fc]"
+            onClick={() => {
+              form.reset(defaultValues)
+              setIsEditing(false)
+            }}
+          >
+            <X className="mr-2 h-4 w-4" />
+            Cancel Edit
+          </Button>
+        )}
+      </div>
     </div>
   )
 }

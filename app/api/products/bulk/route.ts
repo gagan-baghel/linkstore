@@ -3,13 +3,15 @@ import { revalidateTag } from "next/cache"
 import { z } from "zod"
 
 import { getSafeServerSession } from "@/lib/auth"
-import { normalizeAffiliateUrl } from "@/lib/affiliate-url"
+import { normalizeAffiliateUrl, tryNormalizeAffiliateUrl } from "@/lib/affiliate-url"
 import { convexMutation, convexQuery } from "@/lib/convex"
 import { fetchProductMetadata } from "@/lib/product-metadata"
+import { checkRateLimit, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
 import { getStoreCacheTag } from "@/lib/store-cache"
+import { requireActiveSubscription } from "@/lib/subscription-access"
 
 const bulkSchema = z.object({
-  csv: z.string().min(1),
+  csv: z.string().min(1).max(500_000),
 })
 
 async function revalidateStoreForUser(userId: string) {
@@ -97,10 +99,22 @@ function parseCsv(csv: string): CsvRow[] {
 
 export async function POST(req: Request) {
   try {
+    const csrfBlock = enforceSameOrigin(req)
+    if (csrfBlock) return csrfBlock
+
+    const ip = getClientIp(req.headers)
+    const rate = checkRateLimit({ key: `api:products:bulk:${ip}`, windowMs: 10 * 60 * 1000, max: 10 })
+    if (!rate.allowed) {
+      return tooManyRequests(rate.retryAfterSec)
+    }
+
     const session = await getSafeServerSession()
     if (!session?.user?.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
+
+    const access = await requireActiveSubscription(session.user.id, "bulk_create_products")
+    if (!access.ok) return access.response
 
     const body = await req.json()
     const { csv } = bulkSchema.parse(body)
@@ -117,13 +131,19 @@ export async function POST(req: Request) {
 
     for (const row of rows) {
       if (!row.title || !row.description || !row.affiliateUrl) continue
+      const title = row.title.trim().slice(0, 160)
+      const description = row.description.trim().slice(0, 4000)
+      const category = (row.category || "General").trim().slice(0, 60) || "General"
+      if (title.length < 2 || description.length < 10) continue
+
       let affiliateUrl = ""
       try {
         affiliateUrl = normalizeAffiliateUrl(row.affiliateUrl)
       } catch {
         continue
       }
-      let images: string[] = row.imageUrl ? [row.imageUrl] : []
+      const normalizedImageUrl = row.imageUrl ? tryNormalizeAffiliateUrl(row.imageUrl) : null
+      let images: string[] = normalizedImageUrl ? [normalizedImageUrl] : []
 
       if (images.length === 0) {
         const metadata = await fetchProductMetadata(affiliateUrl).catch(() => null)
@@ -137,10 +157,10 @@ export async function POST(req: Request) {
       }
 
       preparedProducts.push({
-        title: row.title,
-        description: row.description,
+        title,
+        description,
         affiliateUrl,
-        category: row.category || "General",
+        category,
         images,
         videoUrl: row.videoUrl || "",
       })
@@ -158,14 +178,20 @@ export async function POST(req: Request) {
           videoUrl?: string
         }>
       },
-      { ok: boolean; created: number; message?: string }
+      { ok: boolean; created: number; message?: string; code?: string }
     >("products:bulkCreateByUser", {
       userId: session.user.id,
       products: preparedProducts,
     })
 
     if (!result.ok) {
-      return NextResponse.json({ message: result.message || "Bulk import failed" }, { status: 400 })
+      const status =
+        result.code === "SUBSCRIPTION_REQUIRED"
+          ? 402
+          : result.code === "PRODUCT_LIMIT_REACHED"
+            ? 409
+            : 400
+      return NextResponse.json({ message: result.message || "Bulk import failed", code: result.code || "" }, { status })
     }
 
     await revalidateStoreForUser(session.user.id)

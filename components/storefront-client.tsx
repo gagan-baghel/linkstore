@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Search, ShoppingBag, SlidersHorizontal } from "lucide-react"
+import { Search, ShoppingBag } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,6 +10,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { cn } from "@/lib/utils"
 
 type ThemeButtonStyle = "rounded" | "pill" | "square"
+type ThemeMode = "system" | "light" | "dark"
 
 interface StorefrontUser {
   _id: string
@@ -20,6 +21,7 @@ interface StorefrontUser {
   storeBannerText?: string
   themePrimaryColor?: string
   themeButtonStyle?: ThemeButtonStyle
+  themeMode?: ThemeMode
 }
 
 interface StorefrontProduct {
@@ -69,17 +71,19 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
   const [query, setQuery] = useState("")
   const [sortBy, setSortBy] = useState<"performance" | "latest" | "name">("performance")
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
-  const [searchOpen, setSearchOpen] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [source, setSource] = useState("storefront")
   const [sessionId, setSessionId] = useState("")
   const [currentPath, setCurrentPath] = useState("")
+  const [prefersDark, setPrefersDark] = useState(false)
   const trackStoreViewOnce = useRef(false)
 
   const themePrimaryColor = user.themePrimaryColor || "#2563eb"
   const themeButtonStyle = user.themeButtonStyle || "rounded"
+  const themeMode = user.themeMode || "system"
   const buttonRadiusClass =
     themeButtonStyle === "pill" ? "rounded-full" : themeButtonStyle === "square" ? "rounded-none" : "rounded-md"
+  const isDarkMode = themeMode === "dark" || (themeMode === "system" && prefersDark)
 
   const normalizedProducts = useMemo(
     () => products.map((product) => ({ ...product, category: normalizeCategory(product.category) })),
@@ -150,6 +154,14 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
       .filter((section) => section.products.length > 0)
   }, [categoryCounts, filteredProducts])
 
+  const storeTitle = useMemo(() => {
+    const banner = (user.storeBannerText || "").trim()
+    const legacyDefault = `${(user.name || "").trim()}'s Affiliate Store`.trim()
+    if (!banner) return "Store"
+    if (banner.toLowerCase() === legacyDefault.toLowerCase()) return "Store"
+    return banner
+  }, [user.name, user.storeBannerText])
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const resolvedSource = params.get("utm_source") || params.get("source") || "storefront"
@@ -158,10 +170,17 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
     setCurrentPath(window.location.pathname)
   }, [])
 
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
+    const sync = () => setPrefersDark(mediaQuery.matches)
+    sync()
+    mediaQuery.addEventListener("change", sync)
+    return () => mediaQuery.removeEventListener("change", sync)
+  }, [])
+
   function trackEvent(eventType: "store_view" | "product_card_click", productId?: string) {
     const payload = {
       eventType,
-      userId: user._id,
       productId,
       storeUsername: user.username || "store",
       source,
@@ -212,13 +231,13 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
   }
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden pb-16 sm:pb-14">
-      <div className="pointer-events-none absolute -left-28 top-16 h-72 w-72 rounded-full bg-sky-300/30 blur-3xl" />
-      <div className="pointer-events-none absolute right-0 top-0 h-80 w-80 rounded-full bg-violet-300/30 blur-3xl" />
-      <div className="pointer-events-none absolute bottom-10 left-1/3 h-64 w-64 rounded-full bg-emerald-200/30 blur-3xl" />
+    <div className={cn("relative min-h-screen overflow-x-hidden pb-10 sm:pb-8", isDarkMode ? "bg-slate-950 text-slate-100" : "")}>
+      <div className={cn("pointer-events-none absolute -left-28 top-16 h-72 w-72 rounded-full blur-3xl", isDarkMode ? "bg-sky-500/20" : "bg-sky-300/30")} />
+      <div className={cn("pointer-events-none absolute right-0 top-0 h-80 w-80 rounded-full blur-3xl", isDarkMode ? "bg-violet-500/20" : "bg-violet-300/30")} />
+      <div className={cn("pointer-events-none absolute bottom-10 left-1/3 h-64 w-64 rounded-full blur-3xl", isDarkMode ? "bg-emerald-500/20" : "bg-emerald-200/30")} />
 
-      <header className="sticky top-0 z-40 border-b border-white/55 bg-white/50 backdrop-blur-md">
-        <div className="mx-auto w-full max-w-[1400px] px-3 sm:px-4 md:px-6">
+      <header className={cn("sticky top-0 z-40 backdrop-blur-md", isDarkMode ? "border-b border-slate-700/80 bg-slate-900/80" : "border-b border-white/55 bg-white/60")}>
+        <div className="w-full px-2 sm:px-3 md:px-4 lg:px-5">
           <div className="flex items-center gap-2 py-2 sm:py-2.5">
             <div className="flex min-w-0 flex-1 items-center gap-2.5">
               {user.storeLogo || user.image ? (
@@ -230,74 +249,65 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                   decoding="async"
                 />
               ) : (
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/75">
+                <div className={cn("flex h-9 w-9 items-center justify-center rounded-full", isDarkMode ? "bg-slate-800" : "bg-white/75")}>
                   <ShoppingBag className="h-4.5 w-4.5" style={{ color: themePrimaryColor }} />
                 </div>
               )}
               <div className="min-w-0">
-                <p className="truncate text-base font-bold leading-tight text-slate-800 sm:text-2xl">
-                  {user.storeBannerText || `${user.name}'s Affiliate Store`}
+                <p className={cn("truncate text-base font-bold leading-tight sm:text-2xl", isDarkMode ? "text-slate-100" : "text-slate-800")}>
+                  {storeTitle}
                 </p>
               </div>
             </div>
 
             <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className={cn("h-9 border-white/65 bg-white/70 px-2.5 sm:px-3", buttonRadiusClass)}
-                onClick={() => setFiltersOpen(true)}
-              >
-                <Search className="h-4 w-4 sm:mr-1.5" />
-                <span className="hidden sm:inline">Filters</span>
-                <span className="sr-only sm:hidden">Filters</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={cn("h-9 w-9 border border-white/65 bg-white/70", buttonRadiusClass)}
-                onClick={() => setSearchOpen((prev) => !prev)}
-                aria-label="Toggle search"
-              >
-                <SlidersHorizontal className="h-4 w-4 text-slate-600" />
-              </Button>
-            </div>
-          </div>
-
-          {searchOpen && (
-            <div className="pb-2.5">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
                 <Input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search products..."
-                  className="h-10 border-white/65 bg-white/85 pl-9"
-                  autoFocus
+                  placeholder="Search products"
+                  className={cn(
+                    "h-9 w-[150px] pl-8 text-xs shadow-none focus-visible:ring-2 sm:w-[240px] sm:text-sm md:w-[300px]",
+                    isDarkMode
+                      ? "border-slate-600 bg-slate-900/90 text-slate-100 placeholder:text-slate-400 focus-visible:ring-slate-500"
+                      : "border-white/70 bg-white/92 text-slate-800 placeholder:text-slate-500 focus-visible:ring-white",
+                    buttonRadiusClass,
+                  )}
                 />
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "h-9 px-2.5 shadow-none sm:px-3",
+                  isDarkMode
+                    ? "border-slate-600 bg-slate-900/90 text-slate-100 hover:bg-slate-800"
+                    : "border-white/70 bg-white/92 text-slate-800 hover:bg-white",
+                  buttonRadiusClass,
+                )}
+                onClick={() => setFiltersOpen(true)}
+              >
+                <span className="text-xs font-semibold sm:text-sm">Filters</span>
+              </Button>
             </div>
-          )}
+          </div>
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-[1400px] space-y-8 px-3 pt-5 sm:px-4 sm:pt-8 md:px-6">
-        <section id="catalog" className="p-2">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-xl font-bold tracking-tight text-slate-800 sm:text-2xl">All Products</h2>
-            <span className="rounded-full border border-white/65 bg-white/75 px-2.5 py-1 text-xs text-slate-600 sm:px-3 sm:text-sm">
-              {filteredProducts.length} items
-            </span>
+      <main className="w-full space-y-4 px-2 pt-3 sm:px-3 sm:pt-4 md:px-4 lg:px-5">
+        <section id="catalog">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className={cn("text-xl font-bold tracking-tight sm:text-2xl", isDarkMode ? "text-slate-100" : "text-slate-800")}>All Products</h2>
           </div>
 
           {groupedProducts.length > 0 ? (
             groupedProducts.map((section) => (
-              <div key={section.category} className="mb-6 last:mb-0">
-                <div className="mb-2 flex items-center justify-between">
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{section.category}</h3>
-                  <span className="text-xs text-slate-500">{section.products.length} products</span>
+              <div key={section.category} className="mb-4 last:mb-0">
+                <div className="mb-2">
+                  <h3 className={cn("text-sm font-semibold uppercase tracking-wide", isDarkMode ? "text-slate-300" : "text-slate-500")}>{section.category}</h3>
                 </div>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                   {section.products.map((product) => (
                     <a
                       key={product._id}
@@ -305,31 +315,35 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() => trackEvent("product_card_click", product._id)}
-                      className="group relative overflow-hidden rounded-2xl border border-white/65 bg-white/85 transition-transform hover:-translate-y-0.5"
+                      className={cn(
+                        "group relative overflow-hidden rounded-xl transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2",
+                        isDarkMode ? "border-slate-700 bg-slate-900/80 focus-visible:ring-slate-500" : "border-white/65 bg-white/80 focus-visible:ring-white",
+                      )}
                     >
-                      <div className="aspect-square overflow-hidden bg-slate-100/70">
+                      <div className={cn("aspect-[4/5] overflow-hidden", isDarkMode ? "bg-slate-800/80" : "bg-slate-100/70")}>
                         <img
                           src={product.images?.[0] || "/placeholder.svg?height=600&width=600"}
                           alt={product.title}
-                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]"
                           loading="lazy"
                           decoding="async"
                         />
                       </div>
-                      <div className="p-3">
-                        <h4 className="line-clamp-2 text-sm font-semibold text-slate-800">{product.title}</h4>
-                        <p className="mt-1 text-xs text-slate-500">{section.category}</p>
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 translate-y-2 bg-gradient-to-t from-black/80 via-black/45 to-transparent px-3 pb-3 pt-8 opacity-0 transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100">
+                        <h4 className="line-clamp-2 text-sm font-semibold text-white">{product.title}</h4>
+                        <p className="mt-1 text-[11px] text-white/85">{section.category}</p>
                       </div>
+                      <span className="sr-only">{product.title}</span>
                     </a>
                   ))}
                 </div>
               </div>
             ))
           ) : (
-            <div className="rounded-2xl border border-dashed border-white/65 bg-white/70 p-10 text-center">
-              <ShoppingBag className="mx-auto mb-3 h-10 w-10 text-slate-400" />
-              <h3 className="text-lg font-semibold text-slate-800">No products found</h3>
-              <p className="mt-1 text-sm text-slate-600">
+            <div className="py-10 text-center">
+              <ShoppingBag className={cn("mx-auto mb-3 h-10 w-10", isDarkMode ? "text-slate-500" : "text-slate-400")} />
+              <h3 className={cn("text-lg font-semibold", isDarkMode ? "text-slate-100" : "text-slate-800")}>No products found</h3>
+              <p className={cn("mt-1 text-sm", isDarkMode ? "text-slate-400" : "text-slate-600")}>
                 {products.length === 0
                   ? "This store has not added products yet."
                   : "Try another search term or clear filters."}
@@ -340,17 +354,17 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
       </main>
 
       <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
-        <SheetContent side="left" className="w-[92vw] max-w-[360px] border-white/65 bg-white/95 p-0">
-          <SheetHeader className="border-b border-white/65">
+        <SheetContent side="left" className={cn("w-[92vw] max-w-[360px] p-0", isDarkMode ? "border-slate-700 bg-slate-900/95" : "border-white/65 bg-white/95")}>
+          <SheetHeader className={cn("border-b", isDarkMode ? "border-slate-700" : "border-white/65")}>
             <SheetTitle>Filters</SheetTitle>
             <SheetDescription>Sort and filter products by category.</SheetDescription>
           </SheetHeader>
 
           <div className="space-y-5 p-4">
             <div>
-              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">Sort</p>
+              <p className={cn("mb-2 text-xs font-medium uppercase tracking-wide", isDarkMode ? "text-slate-300" : "text-slate-500")}>Sort</p>
               <Select value={sortBy} onValueChange={(value: "performance" | "latest" | "name") => setSortBy(value)}>
-                <SelectTrigger className="w-full border-white/65 bg-white">
+                <SelectTrigger className={cn("w-full", isDarkMode ? "border-slate-700 bg-slate-800 text-slate-100" : "border-white/65 bg-white")}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -362,7 +376,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
             </div>
 
             <div>
-              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">Categories</p>
+              <p className={cn("mb-2 text-xs font-medium uppercase tracking-wide", isDarkMode ? "text-slate-300" : "text-slate-500")}>Categories</p>
               <div className="space-y-2">
                 {categoryCounts.map((category) => {
                   const active = selectedCategories.includes(category.name)
@@ -373,19 +387,23 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                       onClick={() => toggleCategory(category.name)}
                       className={cn(
                         "flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors",
-                        active ? "border-transparent text-white" : "border-white/65 bg-white hover:bg-slate-50",
+                        active
+                          ? "border-transparent text-white"
+                          : isDarkMode
+                            ? "border-slate-700 bg-slate-800 text-slate-100 hover:bg-slate-700"
+                            : "border-white/65 bg-white hover:bg-slate-50",
                       )}
                       style={active ? { backgroundColor: themePrimaryColor } : undefined}
                     >
                       <span>{category.name}</span>
-                      <span className={cn("text-xs", active ? "text-white/80" : "text-slate-500")}>{category.count}</span>
+                      <span className={cn("text-xs", active ? "text-white/80" : isDarkMode ? "text-slate-400" : "text-slate-500")}>{category.count}</span>
                     </button>
                   )
                 })}
               </div>
             </div>
 
-            <Button variant="outline" className="w-full border-white/65 bg-white" onClick={clearFilters}>
+            <Button variant="outline" className={cn("w-full", isDarkMode ? "border-slate-700 bg-slate-800 text-slate-100 hover:bg-slate-700" : "border-white/65 bg-white")} onClick={clearFilters}>
               Clear Filters
             </Button>
           </div>

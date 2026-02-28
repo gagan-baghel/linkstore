@@ -4,14 +4,33 @@ import { compare, hash } from "bcrypt"
 
 import { getSafeServerSession } from "@/lib/auth"
 import { convexMutation, convexQuery } from "@/lib/convex"
+import { checkRateLimit, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
 
 const passwordSchema = z.object({
-  currentPassword: z.string().min(8),
-  newPassword: z.string().min(8),
+  currentPassword: z.string().min(8).max(128),
+  newPassword: z
+    .string()
+    .min(10, "Password must be at least 10 characters.")
+    .max(128)
+    .regex(/[a-z]/, "Password must include a lowercase letter.")
+    .regex(/[A-Z]/, "Password must include an uppercase letter.")
+    .regex(/\d/, "Password must include a number."),
+}).refine((data) => data.currentPassword !== data.newPassword, {
+  message: "New password must be different from current password.",
+  path: ["newPassword"],
 })
 
 export async function PUT(req: Request) {
   try {
+    const csrfBlock = enforceSameOrigin(req)
+    if (csrfBlock) return csrfBlock
+
+    const ip = getClientIp(req.headers)
+    const rate = checkRateLimit({ key: `api:password:${ip}`, windowMs: 10 * 60 * 1000, max: 20 })
+    if (!rate.allowed) {
+      return tooManyRequests(rate.retryAfterSec)
+    }
+
     const session = await getSafeServerSession()
 
     if (!session?.user?.id) {

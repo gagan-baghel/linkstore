@@ -1,12 +1,11 @@
 import type { Metadata } from "next"
-import Link from "next/link"
 
 import { getSafeServerSession } from "@/lib/auth"
 import { DashboardShell } from "@/components/dashboard-shell"
 import { StoreForm } from "@/components/store-form"
+import { SubscriptionStatusCard } from "@/components/subscription-status-card"
 import { convexQuery } from "@/lib/convex"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
 
 export const metadata: Metadata = {
   title: "Store Settings - AffiliateHub",
@@ -17,11 +16,17 @@ export default async function StoreSettingsPage() {
   const session = await getSafeServerSession()
 
   let user: any | null = null
+  let subscriptionAccess: any | null = null
   let hasDataError = false
 
   if (session?.user.id) {
     try {
-      user = await convexQuery<{ userId: string }, any | null>("users:getById", { userId: session.user.id })
+      const [resolvedUser, resolvedAccess] = await Promise.all([
+        convexQuery<{ userId: string }, any | null>("users:getById", { userId: session.user.id }),
+        convexQuery<{ userId: string }, any | null>("subscriptions:getAccessState", { userId: session.user.id }),
+      ])
+      user = resolvedUser
+      subscriptionAccess = resolvedAccess
     } catch (error) {
       console.error("Store settings load error:", error)
       hasDataError = true
@@ -31,19 +36,17 @@ export default async function StoreSettingsPage() {
   return (
     <DashboardShell>
       <div className="mx-auto w-full max-w-6xl">
-        <div className="mb-3 flex sm:mb-5 sm:justify-end">
-          <Link href="/dashboard/store-theme">
-            <Button variant="outline" className="h-8 w-full rounded-md border-slate-300 bg-white px-3 text-xs shadow-none sm:h-9 sm:w-auto sm:text-sm">
-              Edit Theme
-            </Button>
-          </Link>
-        </div>
         <div className="grid gap-4 sm:gap-6 md:gap-8">
           {hasDataError && (
             <Alert variant="destructive">
               <AlertDescription>Store settings are temporarily unavailable. Please refresh shortly.</AlertDescription>
             </Alert>
           )}
+          <SubscriptionStatusCard
+            initialAccess={subscriptionAccess}
+            userName={user?.name || ""}
+            userEmail={user?.email || ""}
+          />
           <StoreForm
             storeBannerText={user?.storeBannerText || ""}
             storeBio={user?.storeBio || ""}

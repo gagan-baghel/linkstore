@@ -9,12 +9,14 @@
  */
 
 import type * as analytics from "../analytics.js";
+import type * as auditLogs from "../auditLogs.js";
 import type * as clicks from "../clicks.js";
 import type * as crons from "../crons.js";
 import type * as events from "../events.js";
 import type * as linkHealth from "../linkHealth.js";
 import type * as products from "../products.js";
 import type * as stores from "../stores.js";
+import type * as subscriptions from "../subscriptions.js";
 import type * as users from "../users.js";
 
 import type {
@@ -25,12 +27,14 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   analytics: typeof analytics;
+  auditLogs: typeof auditLogs;
   clicks: typeof clicks;
   crons: typeof crons;
   events: typeof events;
   linkHealth: typeof linkHealth;
   products: typeof products;
   stores: typeof stores;
+  subscriptions: typeof subscriptions;
   users: typeof users;
 }>;
 

@@ -41,6 +41,7 @@ export default async function StoreThemePage() {
             themeBannerStyle={user?.themeBannerStyle || "gradient"}
             themeButtonStyle={user?.themeButtonStyle || "rounded"}
             themeCardStyle={user?.themeCardStyle || "shadow"}
+            themeMode={user?.themeMode || "system"}
           />
         </div>
       </div>

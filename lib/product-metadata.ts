@@ -1,4 +1,4 @@
-import { normalizeAffiliateUrl } from "@/lib/affiliate-url"
+import { assertSafePublicHttpUrl, normalizeAffiliateUrl, tryNormalizeAffiliateUrl } from "@/lib/affiliate-url"
 
 export interface ProductMetadata {
   title?: string
@@ -114,9 +114,11 @@ function pickBestImage(baseUrl: string, candidates: (string | undefined)[]): str
   for (const raw of candidates) {
     const absolute = absoluteUrl(baseUrl, raw)
     if (!absolute) continue
-    const score = scoreImageCandidate(absolute)
+    const safeAbsolute = tryNormalizeAffiliateUrl(absolute)
+    if (!safeAbsolute) continue
+    const score = scoreImageCandidate(safeAbsolute)
     if (!best || score > best.score) {
-      best = { image: absolute, score }
+      best = { image: safeAbsolute, score }
     }
   }
   return best?.image
@@ -344,7 +346,9 @@ async function fetchViaDuckDuckGoImages(title: string, hostname: string): Promis
     const results: { image?: string; thumbnail?: string }[] = json?.results || []
     for (const r of results.slice(0, 5)) {
       const imgUrl = r.image || r.thumbnail
-      if (imgUrl && IMAGE_URL_RE.test(imgUrl)) return imgUrl
+      if (!imgUrl || !IMAGE_URL_RE.test(imgUrl)) continue
+      const safe = tryNormalizeAffiliateUrl(imgUrl)
+      if (safe) return safe
     }
   } catch { /* failed */ }
   return undefined
@@ -379,6 +383,38 @@ const BROWSER_HEADERS = {
   "sec-fetch-mode": "navigate",
   "sec-fetch-site": "cross-site",
   "upgrade-insecure-requests": "1",
+}
+
+async function fetchHtmlWithSafeRedirects(initialUrl: string): Promise<{ html: string; resolvedUrl: string }> {
+  let currentUrl = initialUrl
+
+  for (let hop = 0; hop < 6; hop += 1) {
+    const parsed = new URL(currentUrl)
+    assertSafePublicHttpUrl(parsed)
+
+    const response = await fetch(currentUrl, {
+      redirect: "manual",
+      signal: AbortSignal.timeout(12000),
+      headers: BROWSER_HEADERS,
+      cache: "no-store",
+    })
+
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get("location")
+      if (!location) throw new Error("Redirect without location header")
+
+      const nextUrl = new URL(location, currentUrl).toString()
+      const parsedNextUrl = new URL(nextUrl)
+      assertSafePublicHttpUrl(parsedNextUrl)
+      currentUrl = parsedNextUrl.toString()
+      continue
+    }
+
+    const html = await response.text()
+    return { html, resolvedUrl: response.url || currentUrl }
+  }
+
+  throw new Error("Too many redirects while fetching metadata")
 }
 
 function buildCandidateUrls(url: URL): string[] {
@@ -425,15 +461,7 @@ export async function fetchProductMetadata(affiliateUrl: string): Promise<Produc
   // ── Strategy 1 & 2 & 3: Direct HTML fetch for each candidate URL ──
   for (const candidateUrl of candidateUrls) {
     try {
-      const res = await fetch(candidateUrl, {
-        redirect: "follow",
-        signal: AbortSignal.timeout(12000),
-        headers: BROWSER_HEADERS,
-        cache: "no-store",
-      })
-
-      const html = await res.text()
-      const resolvedUrl = res.url || candidateUrl
+      const { html, resolvedUrl } = await fetchHtmlWithSafeRedirects(candidateUrl)
 
       // Title / description
       const title = extractTitle(html)

@@ -1,9 +1,35 @@
 import { mutationGeneric, queryGeneric } from "convex/server"
 import { v } from "convex/values"
 
+const PRODUCT_LIMIT = 200
+
 function normalizeCategory(category?: string) {
   const normalized = (category || "").trim()
   return normalized.length > 0 ? normalized : "General"
+}
+
+async function hasActiveSubscription(ctx: any, userId: string) {
+  const rows = await ctx.db
+    .query("subscriptions")
+    .withIndex("by_userId", (q: any) => q.eq("userId", userId))
+    .collect()
+
+  if (rows.length !== 1) {
+    return { ok: false as const, message: "Subscription state is ambiguous." }
+  }
+
+  const subscription = rows[0]
+  const isActive = subscription.status === "active" && typeof subscription.expiresAt === "number" && subscription.expiresAt > Date.now()
+  if (!isActive) {
+    return { ok: false as const, message: "Active subscription is required." }
+  }
+
+  return { ok: true as const }
+}
+
+async function countProductsForUser(ctx: any, userId: string) {
+  const docs = await ctx.db.query("products").withIndex("by_userId", (q: any) => q.eq("userId", userId)).collect()
+  return docs.length
 }
 
 export const listByUser = queryGeneric({
@@ -107,7 +133,21 @@ export const createProduct = mutationGeneric({
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId)
     if (!user) {
-      return { ok: false, message: "User not found" as const }
+      return { ok: false, message: "User not found" as const, code: "USER_NOT_FOUND" as const }
+    }
+
+    const subscriptionCheck = await hasActiveSubscription(ctx, args.userId)
+    if (!subscriptionCheck.ok) {
+      return { ok: false, message: subscriptionCheck.message, code: "SUBSCRIPTION_REQUIRED" as const }
+    }
+
+    const currentProductCount = await countProductsForUser(ctx, args.userId)
+    if (currentProductCount >= PRODUCT_LIMIT) {
+      return {
+        ok: false,
+        message: `Product limit reached (${PRODUCT_LIMIT}).`,
+        code: "PRODUCT_LIMIT_REACHED" as const,
+      }
     }
 
     const now = Date.now()
@@ -151,13 +191,32 @@ export const bulkCreateByUser = mutationGeneric({
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId)
     if (!user) {
-      return { ok: false, message: "User not found" as const, created: 0 }
+      return { ok: false, message: "User not found" as const, created: 0, code: "USER_NOT_FOUND" as const }
+    }
+
+    const subscriptionCheck = await hasActiveSubscription(ctx, args.userId)
+    if (!subscriptionCheck.ok) {
+      return { ok: false, message: subscriptionCheck.message, created: 0, code: "SUBSCRIPTION_REQUIRED" as const }
+    }
+
+    const existingCount = await countProductsForUser(ctx, args.userId)
+    const remainingSlots = Math.max(PRODUCT_LIMIT - existingCount, 0)
+    if (remainingSlots <= 0) {
+      return {
+        ok: false,
+        message: `Product limit reached (${PRODUCT_LIMIT}).`,
+        created: 0,
+        code: "PRODUCT_LIMIT_REACHED" as const,
+      }
     }
 
     const now = Date.now()
     let created = 0
 
     for (const product of args.products) {
+      if (created >= remainingSlots) {
+        break
+      }
       if (!product.title.trim() || !product.affiliateUrl.trim()) {
         continue
       }
@@ -182,7 +241,7 @@ export const bulkCreateByUser = mutationGeneric({
       created += 1
     }
 
-    return { ok: true, created }
+    return { ok: true, created, remainingSlotsAfter: Math.max(remainingSlots - created, 0) }
   },
 })
 
@@ -201,6 +260,11 @@ export const updateByIdForUser = mutationGeneric({
     const product = await ctx.db.get(args.productId)
     if (!product || product.userId !== args.userId) {
       return { ok: false, message: "Product not found" as const }
+    }
+
+    const subscriptionCheck = await hasActiveSubscription(ctx, args.userId)
+    if (!subscriptionCheck.ok) {
+      return { ok: false, message: subscriptionCheck.message, code: "SUBSCRIPTION_REQUIRED" as const }
     }
 
     await ctx.db.patch(args.productId, {
@@ -233,6 +297,11 @@ export const quickUpdateByIdForUser = mutationGeneric({
       return { ok: false, message: "Product not found" as const }
     }
 
+    const subscriptionCheck = await hasActiveSubscription(ctx, args.userId)
+    if (!subscriptionCheck.ok) {
+      return { ok: false, message: subscriptionCheck.message, code: "SUBSCRIPTION_REQUIRED" as const }
+    }
+
     const patch: Record<string, unknown> = { updatedAt: Date.now() }
     if (typeof args.title === "string") patch.title = args.title.trim()
     if (typeof args.affiliateUrl === "string") patch.affiliateUrl = args.affiliateUrl.trim()
@@ -257,6 +326,11 @@ export const setArchivedByIdForUser = mutationGeneric({
       return { ok: false, message: "Product not found" as const }
     }
 
+    const subscriptionCheck = await hasActiveSubscription(ctx, args.userId)
+    if (!subscriptionCheck.ok) {
+      return { ok: false, message: subscriptionCheck.message, code: "SUBSCRIPTION_REQUIRED" as const }
+    }
+
     await ctx.db.patch(args.productId, {
       isArchived: args.isArchived,
       updatedAt: Date.now(),
@@ -275,6 +349,20 @@ export const duplicateByIdForUser = mutationGeneric({
     const product = await ctx.db.get(args.productId)
     if (!product || product.userId !== args.userId) {
       return { ok: false, message: "Product not found" as const }
+    }
+
+    const subscriptionCheck = await hasActiveSubscription(ctx, args.userId)
+    if (!subscriptionCheck.ok) {
+      return { ok: false, message: subscriptionCheck.message, code: "SUBSCRIPTION_REQUIRED" as const }
+    }
+
+    const currentProductCount = await countProductsForUser(ctx, args.userId)
+    if (currentProductCount >= PRODUCT_LIMIT) {
+      return {
+        ok: false,
+        message: `Product limit reached (${PRODUCT_LIMIT}).`,
+        code: "PRODUCT_LIMIT_REACHED" as const,
+      }
     }
 
     const now = Date.now()
@@ -366,6 +454,11 @@ export const deleteByIdForUser = mutationGeneric({
     const product = await ctx.db.get(args.productId)
     if (!product || product.userId !== args.userId) {
       return { ok: false, message: "Product not found" as const }
+    }
+
+    const subscriptionCheck = await hasActiveSubscription(ctx, args.userId)
+    if (!subscriptionCheck.ok) {
+      return { ok: false, message: subscriptionCheck.message, code: "SUBSCRIPTION_REQUIRED" as const }
     }
 
     await ctx.db.delete(args.productId)

@@ -1,5 +1,6 @@
 import { unstable_cache } from "next/cache"
 
+import { tryNormalizeAffiliateUrl } from "@/lib/affiliate-url"
 import { convexQuery } from "@/lib/convex"
 import { fetchProductMetadata } from "@/lib/product-metadata"
 
@@ -23,7 +24,10 @@ async function hydrateProductsWithMetadataImages(products: any[] = []) {
       }
 
       try {
-        const metadata = await fetchProductMetadata(product.affiliateUrl.trim())
+        const safeUrl = tryNormalizeAffiliateUrl(product.affiliateUrl.trim())
+        if (!safeUrl) return product
+
+        const metadata = await fetchProductMetadata(safeUrl)
         if (!metadata.image) return product
         return { ...product, images: [metadata.image] }
       } catch {

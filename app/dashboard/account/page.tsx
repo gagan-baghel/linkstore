@@ -41,7 +41,6 @@ export default async function AccountPage() {
             name={user?.name || ""}
             email={user?.email || ""}
             username={user?.username || ""}
-            storeLogo={user?.storeLogo || ""}
           />
         </div>
       </div>

@@ -50,6 +50,10 @@ export const getByUsername = queryGeneric({
       return null
     }
 
+    if (user.storeEnabled !== true) {
+      return null
+    }
+
     const allProducts = await ctx.db
       .query("products")
       .withIndex("by_userId_createdAt", (q) => q.eq("userId", user._id))

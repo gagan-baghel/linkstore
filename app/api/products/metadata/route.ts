@@ -4,6 +4,8 @@ import { z } from "zod"
 import { getSafeServerSession } from "@/lib/auth"
 import { normalizeAffiliateUrl } from "@/lib/affiliate-url"
 import { fetchProductMetadata } from "@/lib/product-metadata"
+import { checkRateLimit, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
+import { requireActiveSubscription } from "@/lib/subscription-access"
 
 const metadataSchema = z.object({
   affiliateUrl: z.string().trim().min(1, "Please enter an affiliate URL."),
@@ -11,10 +13,22 @@ const metadataSchema = z.object({
 
 export async function POST(req: Request) {
   try {
+    const csrfBlock = enforceSameOrigin(req)
+    if (csrfBlock) return csrfBlock
+
+    const ip = getClientIp(req.headers)
+    const rate = checkRateLimit({ key: `api:products:metadata:${ip}`, windowMs: 60 * 1000, max: 30 })
+    if (!rate.allowed) {
+      return tooManyRequests(rate.retryAfterSec)
+    }
+
     const session = await getSafeServerSession()
     if (!session?.user?.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
+
+    const access = await requireActiveSubscription(session.user.id, "fetch_product_metadata")
+    if (!access.ok) return access.response
 
     const body = await req.json()
     const { affiliateUrl: rawAffiliateUrl } = metadataSchema.parse(body)

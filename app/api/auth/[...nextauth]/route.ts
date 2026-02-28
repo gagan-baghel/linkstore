@@ -3,9 +3,19 @@ import NextAuth from "next-auth/next"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { compare } from "bcrypt"
 import { convexQuery } from "@/lib/convex"
+import { checkRateLimit, getClientIp } from "@/lib/security"
+
+const nextAuthSecret =
+  process.env.NEXTAUTH_SECRET ||
+  (process.env.NODE_ENV === "development" ? "development-only-change-before-production" : "")
+
+if (!nextAuthSecret) {
+  throw new Error("NEXTAUTH_SECRET is required in production.")
+}
 
 export const authOptions: NextAuthOptions = {
-  secret: process.env.NEXTAUTH_SECRET || "dev-only-nextauth-secret-change-me",
+  secret: nextAuthSecret,
+  useSecureCookies: process.env.NODE_ENV === "production",
   session: {
     strategy: "jwt",
   },
@@ -21,26 +31,31 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) {
           return null
         }
 
         try {
           const normalizedEmail = credentials.email.trim().toLowerCase()
+          const ip = getClientIp(new Headers(req?.headers || {}))
+          const rateKey = `auth:login:${ip}:${normalizedEmail}`
+          const rate = checkRateLimit({ key: rateKey, windowMs: 10 * 60 * 1000, max: 20 })
+          if (!rate.allowed) {
+            return null
+          }
+
           const user = await convexQuery<{ email: string }, any | null>("users:getForAuthByEmail", {
             email: normalizedEmail,
           })
 
           if (!user || !user.passwordHash) {
-            console.log("User not found or no password set")
             return null
           }
 
           const isPasswordValid = await compare(credentials.password, user.passwordHash)
 
           if (!isPasswordValid) {
-            console.log("Invalid password")
             return null
           }
 
@@ -50,6 +65,7 @@ export const authOptions: NextAuthOptions = {
             email: user.email,
             username: user.username,
             image: user.image,
+            role: user.role === "admin" ? "admin" : "user",
           }
         } catch (error) {
           console.error("Authentication error:", error)
@@ -63,6 +79,7 @@ export const authOptions: NextAuthOptions = {
       if (token) {
         session.user.id = token.id as string
         session.user.username = token.username as string
+        session.user.role = (token.role as "user" | "admin" | undefined) || "user"
       }
       return session
     },
@@ -70,6 +87,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id
         token.username = user.username
+        token.role = (user.role as "user" | "admin" | undefined) || "user"
       }
       return token
     },

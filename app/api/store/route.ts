@@ -3,28 +3,84 @@ import { revalidateTag } from "next/cache"
 import { z } from "zod"
 
 import { getSafeServerSession } from "@/lib/auth"
+import { tryNormalizeAffiliateUrl } from "@/lib/affiliate-url"
 import { convexMutation, convexQuery } from "@/lib/convex"
+import { checkRateLimit, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
 import { getStoreCacheTag } from "@/lib/store-cache"
+import { requireActiveSubscription } from "@/lib/subscription-access"
 
 const storeSchema = z.object({
-  storeBannerText: z.string().min(2),
-  storeBio: z.string().max(500).optional().or(z.literal("")),
-  contactInfo: z.string().optional(),
-  storeLogo: z.string().optional(),
-  socialFacebook: z.string().url().optional().or(z.literal("")),
-  socialTwitter: z.string().url().optional().or(z.literal("")),
-  socialInstagram: z.string().url().optional().or(z.literal("")),
-  socialYoutube: z.string().url().optional().or(z.literal("")),
-  socialWebsite: z.string().url().optional().or(z.literal("")),
+  storeBannerText: z.string().trim().min(2).max(120),
+  storeBio: z.string().trim().max(500).optional().or(z.literal("")),
+  contactInfo: z.string().trim().max(200).optional().or(z.literal("")),
+  storeLogo: z
+    .string()
+    .trim()
+    .max(500)
+    .optional()
+    .or(z.literal(""))
+    .refine((value) => !value || Boolean(tryNormalizeAffiliateUrl(value)), "Invalid logo URL"),
+  socialFacebook: z
+    .string()
+    .trim()
+    .url()
+    .max(500)
+    .optional()
+    .or(z.literal(""))
+    .refine((value) => !value || Boolean(tryNormalizeAffiliateUrl(value)), "Invalid Facebook URL"),
+  socialTwitter: z
+    .string()
+    .trim()
+    .url()
+    .max(500)
+    .optional()
+    .or(z.literal(""))
+    .refine((value) => !value || Boolean(tryNormalizeAffiliateUrl(value)), "Invalid Twitter URL"),
+  socialInstagram: z
+    .string()
+    .trim()
+    .url()
+    .max(500)
+    .optional()
+    .or(z.literal(""))
+    .refine((value) => !value || Boolean(tryNormalizeAffiliateUrl(value)), "Invalid Instagram URL"),
+  socialYoutube: z
+    .string()
+    .trim()
+    .url()
+    .max(500)
+    .optional()
+    .or(z.literal(""))
+    .refine((value) => !value || Boolean(tryNormalizeAffiliateUrl(value)), "Invalid YouTube URL"),
+  socialWebsite: z
+    .string()
+    .trim()
+    .url()
+    .max(500)
+    .optional()
+    .or(z.literal(""))
+    .refine((value) => !value || Boolean(tryNormalizeAffiliateUrl(value)), "Invalid website URL"),
 })
 
 export async function PUT(req: Request) {
   try {
+    const csrfBlock = enforceSameOrigin(req)
+    if (csrfBlock) return csrfBlock
+
+    const ip = getClientIp(req.headers)
+    const rate = checkRateLimit({ key: `api:store:${ip}`, windowMs: 60 * 1000, max: 60 })
+    if (!rate.allowed) {
+      return tooManyRequests(rate.retryAfterSec)
+    }
+
     const session = await getSafeServerSession()
 
     if (!session?.user?.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
+
+    const access = await requireActiveSubscription(session.user.id, "update_store_settings")
+    if (!access.ok) return access.response
 
     const body = await req.json()
     const {
@@ -56,7 +112,7 @@ export async function PUT(req: Request) {
         socialYoutube?: string
         socialWebsite?: string
       },
-      { ok: boolean; message?: string }
+      { ok: boolean; message?: string; code?: string }
     >("users:updateStore", {
       userId: session.user.id,
       storeBannerText,
@@ -71,7 +127,8 @@ export async function PUT(req: Request) {
     })
 
     if (!result.ok) {
-      return NextResponse.json({ message: result.message || "Failed to update store" }, { status: 400 })
+      const status = result.code === "SUBSCRIPTION_REQUIRED" ? 402 : 400
+      return NextResponse.json({ message: result.message || "Failed to update store", code: result.code || "" }, { status })
     }
 
     if (username) {

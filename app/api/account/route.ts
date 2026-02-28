@@ -3,18 +3,41 @@ import { revalidateTag } from "next/cache"
 import { z } from "zod"
 
 import { getSafeServerSession } from "@/lib/auth"
+import { tryNormalizeAffiliateUrl } from "@/lib/affiliate-url"
 import { convexMutation, convexQuery } from "@/lib/convex"
+import { checkRateLimit, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
 import { getStoreCacheTag } from "@/lib/store-cache"
 
 const accountSchema = z.object({
-  name: z.string().min(2),
+  name: z.string().trim().min(2).max(80),
   email: z.string().email(),
-  image: z.string().optional(),
-  storeLogo: z.string().optional(),
+  image: z
+    .string()
+    .trim()
+    .max(500)
+    .optional()
+    .or(z.literal(""))
+    .refine((value) => !value || Boolean(tryNormalizeAffiliateUrl(value)), "Invalid image URL"),
+  storeLogo: z
+    .string()
+    .trim()
+    .max(500)
+    .optional()
+    .or(z.literal(""))
+    .refine((value) => !value || Boolean(tryNormalizeAffiliateUrl(value)), "Invalid logo URL"),
 })
 
 export async function PUT(req: Request) {
   try {
+    const csrfBlock = enforceSameOrigin(req)
+    if (csrfBlock) return csrfBlock
+
+    const ip = getClientIp(req.headers)
+    const rate = checkRateLimit({ key: `api:account:${ip}`, windowMs: 60 * 1000, max: 60 })
+    if (!rate.allowed) {
+      return tooManyRequests(rate.retryAfterSec)
+    }
+
     const session = await getSafeServerSession()
 
     if (!session?.user?.id) {
@@ -36,8 +59,8 @@ export async function PUT(req: Request) {
       userId: session.user.id,
       name,
       email: normalizedEmail,
-      image,
-      storeLogo,
+      image: image || "",
+      storeLogo: storeLogo || "",
     })
 
     if (!result.ok) {

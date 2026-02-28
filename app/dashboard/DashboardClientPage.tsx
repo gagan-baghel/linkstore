@@ -193,13 +193,16 @@ export default function DashboardClientPage({
       >
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           <Link href="/dashboard/products/bulk">
-            <Button variant="outline" className="h-8 w-full text-xs sm:h-9 sm:w-auto sm:text-sm">
+            <Button
+              variant="outline"
+              className="h-8 w-full border-[#cfd8ea] bg-white text-xs text-[#1f2a44] shadow-none hover:bg-[#f3f6fc] sm:h-9 sm:w-auto sm:text-sm"
+            >
               <Upload className="mr-2 h-4 w-4" />
               Bulk Upload
             </Button>
           </Link>
           <Link href="/dashboard/products/new">
-            <Button className="h-8 w-full text-xs sm:h-9 sm:w-auto sm:text-sm">
+            <Button className="h-8 w-full border border-[#3e55df] bg-[#4a63f6] text-xs text-white shadow-none hover:bg-[#3f56de] sm:h-9 sm:w-auto sm:text-sm">
               <PlusCircle className="mr-2 h-4 w-4" />
               Add Product
             </Button>
@@ -230,55 +233,77 @@ export default function DashboardClientPage({
         />
       </div>
 
-      <div className="mb-4 grid gap-3 md:mb-6 md:gap-4 lg:grid-cols-[1.55fr_1fr]">
-        <section className="space-y-3 rounded-xl border border-[#d8e2f3] bg-white p-4 shadow-sm sm:p-5">
-          <div>
-            <h2 className="flex items-center gap-2 text-xs font-semibold text-[#1c1917] sm:text-sm">
+      <div className="mb-5 grid gap-5 border-t border-[#e7eefb] pt-5 md:mb-7 md:gap-6 md:pt-6 lg:grid-cols-[1.55fr_1fr] lg:items-start lg:divide-x lg:divide-[#e7eefb]">
+        <section className="space-y-4 lg:pr-6">
+          <div className="space-y-1 pb-2">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-[#162033]">
               <Share2 className="h-4 w-4 text-indigo-500" />
               Affiliate Store Link
             </h2>
-            <p className="text-[11px] text-[#8a94a8] sm:text-xs">Share this link in socials, bios, newsletters, and videos.</p>
+            <p className="text-xs text-[#60708a]">Share this link in socials, bios, newsletters, and videos.</p>
           </div>
           <div className="space-y-1.5">
-            <p className="text-[11px] font-medium text-[#5f6b7e] sm:text-xs">Your public URL</p>
+            <p className="text-xs font-semibold text-[#41506a]">Your public URL</p>
             <Input
-              className="h-9 font-mono text-xs sm:text-sm"
+              className="h-10 border-[#cfd8ea] bg-white font-mono text-xs text-[#1f2a44] sm:text-sm"
               value={fullStoreUrl}
               readOnly
               disabled={isLoading || !user?.username}
             />
-            <p className="text-[11px] text-[#8a94a8] sm:text-xs">Use this exact link anywhere you share your storefront.</p>
+            <p className="text-xs text-[#60708a]">Use this exact link anywhere you share your storefront.</p>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-            <Button variant="outline" className="h-8 w-full text-xs sm:h-9 sm:w-auto sm:text-sm" onClick={copyToClipboard} disabled={isLoading || !user?.username}>
-              <ClipboardCopy className="mr-2 h-4 w-4" />
-              Copy Link
-            </Button>
-            <Button variant="outline" className="h-8 w-full text-xs sm:h-9 sm:w-auto sm:text-sm" onClick={shareStoreLink} disabled={isLoading || !user?.username}>
-              <Share2 className="mr-2 h-4 w-4" />
-              Share
-            </Button>
-            <Button variant="outline" className="h-8 w-full text-xs sm:h-9 sm:w-auto sm:text-sm" asChild disabled={isLoading || !user?.username}>
-              <a href={storePath || "#"} target="_blank" rel="noopener noreferrer">
-                Open Store
-              </a>
-            </Button>
+          <div className="space-y-2 pt-1">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#60708a]">Quick Actions</p>
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+              <Button
+                variant="outline"
+                className="h-9 w-full border-[#4a63f6] bg-[#4a63f6] text-xs text-white shadow-none hover:bg-[#3f56de] disabled:opacity-60 sm:w-auto sm:text-sm"
+                onClick={copyToClipboard}
+                disabled={isLoading || !user?.username}
+              >
+                <ClipboardCopy className="mr-2 h-4 w-4" />
+                Copy Link
+              </Button>
+              <Button
+                variant="outline"
+                className="h-9 w-full border-[#c9d8ff] bg-[#edf2ff] text-xs text-[#2c3f7f] shadow-none hover:bg-[#dfe8ff] disabled:opacity-60 sm:w-auto sm:text-sm"
+                onClick={shareStoreLink}
+                disabled={isLoading || !user?.username}
+              >
+                <Share2 className="mr-2 h-4 w-4" />
+                Share
+              </Button>
+              <Button
+                variant="outline"
+                className="h-9 w-full border-[#cfd8ea] bg-white text-xs text-[#1f2a44] shadow-none hover:bg-[#f3f6fc] disabled:opacity-60 sm:w-auto sm:text-sm"
+                asChild
+                disabled={isLoading || !user?.username}
+              >
+                <a href={storePath || "#"} target="_blank" rel="noopener noreferrer">
+                  Open Store
+                </a>
+              </Button>
+            </div>
           </div>
         </section>
 
-        <section className="space-y-3 rounded-xl border border-[#d8e2f3] bg-white p-4 shadow-sm sm:p-5">
-          <div>
-            <h2 className="text-xs font-semibold text-[#1c1917] sm:text-sm">Setup Progress</h2>
-            <p className="text-[11px] text-[#8a94a8] sm:text-xs">
+        <section className="space-y-3 border-t border-[#e7eefb] pt-4 lg:border-t-0 lg:pl-6 lg:pt-0">
+          <div className="space-y-1">
+            <h2 className="text-sm font-semibold text-[#162033]">Setup Progress</h2>
+            <p className="text-xs text-[#60708a]">
               {completedChecklistItems}/{checklist.length} completed ({completionPercent}%)
             </p>
           </div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-[#e7eefb]">
+          <div className="h-1.5 overflow-hidden rounded-full bg-[#dbe5fb]">
             <div className="h-full rounded-full bg-indigo-500 transition-all" style={{ width: `${completionPercent}%` }} />
           </div>
           {checklist.map((item) => (
-            <Link key={item.id} href={item.href} className="flex items-center justify-between border-b border-[#e7eefb] py-2 last:border-0 sm:py-2.5">
-              <span className="flex items-center gap-2 text-xs text-[#5f6b7e] sm:text-sm">
+            <Link
+              key={item.id}
+              href={item.href}
+              className="flex items-center justify-between rounded-md border-b border-[#e7eefb] py-2 transition-colors hover:bg-[#f8fbff] last:border-0 sm:py-2.5"
+            >
+              <span className="flex items-center gap-2 text-xs text-[#4f5f7a] sm:text-sm">
                 {item.done ? (
                   <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                 ) : (
@@ -286,7 +311,7 @@ export default function DashboardClientPage({
                 )}
                 {item.label}
               </span>
-              <span className={item.done ? "text-[11px] font-medium text-emerald-600 sm:text-xs" : "text-[11px] text-[#8a94a8] sm:text-xs"}>
+              <span className={item.done ? "text-xs font-semibold text-emerald-600" : "text-xs font-medium text-indigo-700"}>
                 {item.done ? "Done" : "Open"}
               </span>
             </Link>
@@ -294,10 +319,10 @@ export default function DashboardClientPage({
         </section>
       </div>
 
-      <section className="rounded-xl border border-[#d8e2f3] bg-white p-4 shadow-sm sm:p-5">
+      <section className="border-t border-[#e7eefb] pt-5 sm:pt-6">
         <div className="mb-3 sm:mb-4">
-          <h2 className="text-xs font-semibold text-[#1c1917] sm:text-sm">Recent Products</h2>
-          <p className="text-[11px] text-[#8a94a8] sm:text-xs">Fast access to recently added products.</p>
+          <h2 className="text-sm font-semibold text-[#162033]">Recent Products</h2>
+          <p className="text-xs text-[#60708a]">Fast access to recently added products.</p>
         </div>
         {isLoading ? (
           <div className="flex justify-center py-8">
@@ -340,9 +365,9 @@ export default function DashboardClientPage({
           <div className="py-10 text-center">
             <ShoppingBag className="mx-auto mb-2 h-12 w-12 text-[#bcc9de]" />
             <h3 className="mb-1 text-sm font-semibold text-[#1c1917]">No products yet</h3>
-            <p className="mb-4 text-xs text-[#5f6b7e]">Add your first affiliate product to start tracking performance.</p>
+            <p className="mb-4 text-xs text-[#4f5f7a]">Add your first affiliate product to start tracking performance.</p>
             <Link href="/dashboard/products/new">
-              <Button>
+              <Button className="border border-[#3e55df] bg-[#4a63f6] text-white shadow-none hover:bg-[#3f56de]">
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add Product
               </Button>

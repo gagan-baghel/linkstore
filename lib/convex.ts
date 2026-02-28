@@ -7,13 +7,20 @@ declare global {
 }
 
 function getConvexUrl() {
-  return process.env.CONVEX_URL || process.env.NEXT_PUBLIC_CONVEX_URL
+  const privateUrl = process.env.CONVEX_URL?.trim()
+  if (privateUrl) return privateUrl
+
+  if (process.env.NODE_ENV === "development") {
+    return process.env.NEXT_PUBLIC_CONVEX_URL?.trim()
+  }
+
+  return undefined
 }
 
 function getConvexClient() {
   const url = getConvexUrl()
   if (!url) {
-    throw new Error("Please define CONVEX_URL (or NEXT_PUBLIC_CONVEX_URL) in your environment.")
+    throw new Error("Please define CONVEX_URL in your environment.")
   }
 
   if (!global.__convexClient) {
