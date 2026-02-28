@@ -19,12 +19,42 @@ export async function POST(req: Request) {
     if (!session?.user?.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
-    const userId = session.user.id
+    const primaryUserId = session.user.id
+    const sessionEmail = typeof session.user.email === "string" ? session.user.email.trim().toLowerCase() : ""
 
-    const data = await convexQuery<{ userId: string }, any>("analytics:getDashboardData", { userId })
+    let data = await convexQuery<{ userId: string }, any>("analytics:getDashboardData", { userId: primaryUserId })
+
+    // Recover gracefully if a stale session contains an old user id.
+    if (!data?.ok && sessionEmail) {
+      const userByEmail = await convexQuery<{ email: string }, any | null>("users:getForAuthByEmail", {
+        email: sessionEmail,
+      })
+
+      if (userByEmail?._id && userByEmail._id !== primaryUserId) {
+        data = await convexQuery<{ userId: string }, any>("analytics:getDashboardData", {
+          userId: userByEmail._id,
+        })
+      }
+    }
 
     if (!data?.ok) {
-      return NextResponse.json({ message: data?.message || "User not found" }, { status: 404 })
+      return NextResponse.json({
+        user: null,
+        totalProducts: 0,
+        recentProducts: [],
+        quickMetrics: {
+          storeViews30: 0,
+          cardClicks30: 0,
+          outboundClicks30: 0,
+          conversionRate30: 0,
+        },
+        linkHealth: {
+          brokenCount: 0,
+          staleCount: 0,
+          brokenProducts: [],
+        },
+        message: data?.message || "User not found",
+      })
     }
 
     return NextResponse.json({

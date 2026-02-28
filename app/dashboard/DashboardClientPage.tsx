@@ -94,11 +94,22 @@ export default function DashboardClientPage({
           body: JSON.stringify({ userId: session.user.id }),
         })
 
+        const data = await response.json().catch(() => null)
+
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
+          const apiMessage =
+            data && typeof data === "object" && "message" in data && typeof data.message === "string"
+              ? data.message
+              : ""
+
+          if (response.status === 401) {
+            setError("Your session has expired. Please sign in again.")
+            return
+          }
+
+          throw new Error(apiMessage || `HTTP error! status: ${response.status}`)
         }
 
-        const data = await response.json()
         setTotalProducts(data.totalProducts || 0)
         setUser(data.user || null)
         setRecentProducts(data.recentProducts || [])
@@ -106,8 +117,11 @@ export default function DashboardClientPage({
         setLinkHealth(data.linkHealth)
         setError(null)
       } catch (fetchError) {
-        console.error("Could not fetch dashboard data:", fetchError)
-        setError("Failed to load dashboard data. Please refresh the page.")
+        const fallbackMessage =
+          fetchError instanceof Error && fetchError.message
+            ? fetchError.message
+            : "Failed to load dashboard data. Please refresh the page."
+        setError(fallbackMessage)
       } finally {
         setIsLoading(false)
       }
@@ -117,8 +131,23 @@ export default function DashboardClientPage({
   }, [initialData, session.user.id])
 
   const baseUrl = origin || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-  const storePath = user?.username ? `/stores/${encodeURIComponent(user.username)}` : ""
+  const isStorePublic = Boolean(user?.username && user?.storeEnabled === true)
+  const canUseShopActions = Boolean(user?.storeEnabled === true)
+  const subscriptionRedirectBase = "/dashboard/store?upgrade=1"
+  const storePath = isStorePublic ? `/stores/${encodeURIComponent(user.username)}` : ""
   const fullStoreUrl = storePath ? `${baseUrl}${storePath}` : "Store URL will be available shortly"
+  const addProductHref = canUseShopActions
+    ? "/dashboard/products/new"
+    : `${subscriptionRedirectBase}&from=${encodeURIComponent("/dashboard/products/new")}`
+  const productsHref = canUseShopActions
+    ? "/dashboard/products"
+    : `${subscriptionRedirectBase}&from=${encodeURIComponent("/dashboard/products")}`
+  const bulkUploadHref = canUseShopActions
+    ? "/dashboard/products/bulk"
+    : `${subscriptionRedirectBase}&from=${encodeURIComponent("/dashboard/products/bulk")}`
+  const openStoreHref = isStorePublic
+    ? storePath
+    : `${subscriptionRedirectBase}&from=${encodeURIComponent("/dashboard/open-store")}`
 
   const checklist = useMemo(
     () => [
@@ -132,29 +161,36 @@ export default function DashboardClientPage({
         id: "product",
         label: "At least one product published",
         done: totalProducts > 0,
-        href: "/dashboard/products/new",
+        href: addProductHref,
       },
       {
         id: "share",
         label: "Store link ready to share",
-        done: Boolean(user?.username),
+        done: isStorePublic,
         href: "/dashboard/account",
       },
       {
         id: "health",
         label: "No broken product links",
         done: (linkHealth?.brokenCount || 0) === 0,
-        href: "/dashboard/products",
+        href: productsHref,
       },
     ],
-    [linkHealth?.brokenCount, totalProducts, user?.storeBannerText, user?.storeBio, user?.username],
+    [addProductHref, isStorePublic, linkHealth?.brokenCount, productsHref, totalProducts, user?.storeBannerText, user?.storeBio],
   )
 
   const completedChecklistItems = checklist.filter((item) => item.done).length
   const completionPercent = Math.round((completedChecklistItems / checklist.length) * 100)
 
+  const redirectToSubscription = () => {
+    window.location.href = `${subscriptionRedirectBase}&from=${encodeURIComponent("/dashboard")}`
+  }
+
   const copyToClipboard = () => {
-    if (!user?.username) return
+    if (!isStorePublic) {
+      redirectToSubscription()
+      return
+    }
     navigator.clipboard.writeText(fullStoreUrl)
     toast({
       title: "Copied",
@@ -163,7 +199,10 @@ export default function DashboardClientPage({
   }
 
   const shareStoreLink = async () => {
-    if (!user?.username) return
+    if (!isStorePublic) {
+      redirectToSubscription()
+      return
+    }
 
     if (navigator.share) {
       try {
@@ -192,7 +231,7 @@ export default function DashboardClientPage({
         text="Everything you need to run, optimize, and grow your affiliate storefront."
       >
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-          <Link href="/dashboard/products/bulk">
+          <Link href={bulkUploadHref}>
             <Button
               variant="outline"
               className="h-8 w-full border-[#cfd8ea] bg-white text-xs text-[#1f2a44] shadow-none hover:bg-[#f3f6fc] sm:h-9 sm:w-auto sm:text-sm"
@@ -201,7 +240,7 @@ export default function DashboardClientPage({
               Bulk Upload
             </Button>
           </Link>
-          <Link href="/dashboard/products/new">
+          <Link href={addProductHref}>
             <Button className="h-8 w-full border border-[#3e55df] bg-[#4a63f6] text-xs text-white shadow-none hover:bg-[#3f56de] sm:h-9 sm:w-auto sm:text-sm">
               <PlusCircle className="mr-2 h-4 w-4" />
               Add Product
@@ -248,7 +287,7 @@ export default function DashboardClientPage({
               className="h-10 border-[#cfd8ea] bg-white font-mono text-xs text-[#1f2a44] sm:text-sm"
               value={fullStoreUrl}
               readOnly
-              disabled={isLoading || !user?.username}
+              disabled={isLoading || !isStorePublic}
             />
             <p className="text-xs text-[#60708a]">Use this exact link anywhere you share your storefront.</p>
           </div>
@@ -259,7 +298,7 @@ export default function DashboardClientPage({
                 variant="outline"
                 className="h-9 w-full border-[#4a63f6] bg-[#4a63f6] text-xs text-white shadow-none hover:bg-[#3f56de] disabled:opacity-60 sm:w-auto sm:text-sm"
                 onClick={copyToClipboard}
-                disabled={isLoading || !user?.username}
+                disabled={isLoading}
               >
                 <ClipboardCopy className="mr-2 h-4 w-4" />
                 Copy Link
@@ -268,7 +307,7 @@ export default function DashboardClientPage({
                 variant="outline"
                 className="h-9 w-full border-[#c9d8ff] bg-[#edf2ff] text-xs text-[#2c3f7f] shadow-none hover:bg-[#dfe8ff] disabled:opacity-60 sm:w-auto sm:text-sm"
                 onClick={shareStoreLink}
-                disabled={isLoading || !user?.username}
+                disabled={isLoading}
               >
                 <Share2 className="mr-2 h-4 w-4" />
                 Share
@@ -277,9 +316,13 @@ export default function DashboardClientPage({
                 variant="outline"
                 className="h-9 w-full border-[#cfd8ea] bg-white text-xs text-[#1f2a44] shadow-none hover:bg-[#f3f6fc] disabled:opacity-60 sm:w-auto sm:text-sm"
                 asChild
-                disabled={isLoading || !user?.username}
+                disabled={isLoading}
               >
-                <a href={storePath || "#"} target="_blank" rel="noopener noreferrer">
+                <a
+                  href={openStoreHref}
+                  target={isStorePublic ? "_blank" : "_self"}
+                  rel={isStorePublic ? "noopener noreferrer" : undefined}
+                >
                   Open Store
                 </a>
               </Button>
@@ -348,7 +391,13 @@ export default function DashboardClientPage({
                     <h3 className="mb-1 line-clamp-1 text-xs font-semibold text-[#1c1917] sm:text-sm">{product.title}</h3>
                     <p className="mb-3 line-clamp-2 text-[11px] text-[#5f6b7e] sm:text-xs">{product.description}</p>
                     <div className="flex items-center justify-between gap-2">
-                      <Link href={`/dashboard/products/${product._id.toString()}/edit`}>
+                      <Link
+                        href={
+                          canUseShopActions
+                            ? `/dashboard/products/${product._id.toString()}/edit`
+                            : `${subscriptionRedirectBase}&from=${encodeURIComponent(`/dashboard/products/${product._id.toString()}/edit`)}`
+                        }
+                      >
                         <Button variant="outline" size="sm" className="h-8 px-3 text-xs">
                           Edit
                         </Button>
@@ -366,7 +415,7 @@ export default function DashboardClientPage({
             <ShoppingBag className="mx-auto mb-2 h-12 w-12 text-[#bcc9de]" />
             <h3 className="mb-1 text-sm font-semibold text-[#1c1917]">No products yet</h3>
             <p className="mb-4 text-xs text-[#4f5f7a]">Add your first affiliate product to start tracking performance.</p>
-            <Link href="/dashboard/products/new">
+            <Link href={addProductHref}>
               <Button className="border border-[#3e55df] bg-[#4a63f6] text-white shadow-none hover:bg-[#3f56de]">
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add Product

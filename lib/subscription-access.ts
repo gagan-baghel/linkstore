@@ -3,6 +3,10 @@ import { NextResponse } from "next/server"
 import { convexQuery } from "@/lib/convex"
 import { SUBSCRIPTION_PRODUCT_LIMIT, type SubscriptionAccessState } from "@/lib/subscription"
 
+export function hasPremiumAccess(state: SubscriptionAccessState | null | undefined) {
+  return Boolean(state?.canUsePremiumActions && state?.hasActiveSubscription)
+}
+
 export async function getSubscriptionAccessState(userId: string): Promise<SubscriptionAccessState | null> {
   try {
     const state = await convexQuery<{ userId: string }, SubscriptionAccessState | null>("subscriptions:getAccessState", {

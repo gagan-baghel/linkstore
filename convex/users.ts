@@ -22,6 +22,10 @@ function toUsernameBase(name: string) {
   return normalized.slice(0, 18)
 }
 
+function normalizeUsernameInput(input: string) {
+  return input.trim().replace(/^@+/, "").toLowerCase()
+}
+
 async function generateUniqueUsername(ctx: any, name: string) {
   const base = toUsernameBase(name)
 
@@ -72,7 +76,7 @@ export const getById = queryGeneric({
 export const getPublicByUsername = queryGeneric({
   args: { username: v.string() },
   handler: async (ctx, args) => {
-    const normalized = args.username.trim().toLowerCase()
+    const normalized = normalizeUsernameInput(args.username)
     if (!normalized) return null
 
     const user = await ctx.db

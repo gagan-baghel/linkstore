@@ -1,10 +1,13 @@
 import type { Metadata } from "next"
+import { redirect } from "next/navigation"
 
 import { getSafeServerSession } from "@/lib/auth"
 import { convexQuery } from "@/lib/convex"
 import { DashboardShell } from "@/components/dashboard-shell"
 import { StoreThemeForm } from "@/components/store-theme-form"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { getSubscriptionAccessState, hasPremiumAccess } from "@/lib/subscription-access"
+import { getSubscriptionRedirectPath } from "@/lib/subscription-routing"
 
 export const metadata: Metadata = {
   title: "Store Theme - AffiliateHub",
@@ -13,17 +16,23 @@ export const metadata: Metadata = {
 
 export default async function StoreThemePage() {
   const session = await getSafeServerSession()
+  if (!session?.user.id) {
+    redirect("/auth/login")
+  }
+
+  const accessState = await getSubscriptionAccessState(session.user.id)
+  if (!hasPremiumAccess(accessState)) {
+    redirect(getSubscriptionRedirectPath("/dashboard/store-theme"))
+  }
 
   let user: any | null = null
   let hasDataError = false
 
-  if (session?.user.id) {
-    try {
-      user = await convexQuery<{ userId: string }, any | null>("users:getById", { userId: session.user.id })
-    } catch (error) {
-      console.error("Store theme load error:", error)
-      hasDataError = true
-    }
+  try {
+    user = await convexQuery<{ userId: string }, any | null>("users:getById", { userId: session.user.id })
+  } catch (error) {
+    console.error("Store theme load error:", error)
+    hasDataError = true
   }
 
   return (

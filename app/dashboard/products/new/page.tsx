@@ -1,9 +1,12 @@
 import type { Metadata } from "next"
+import { redirect } from "next/navigation"
 
 import { getSafeServerSession } from "@/lib/auth"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { DashboardShell } from "@/components/dashboard-shell"
 import { ProductForm } from "@/components/product-form"
+import { getSubscriptionAccessState, hasPremiumAccess } from "@/lib/subscription-access"
+import { getSubscriptionRedirectPath } from "@/lib/subscription-routing"
 
 export const metadata: Metadata = {
   title: "New Product - AffiliateHub",
@@ -11,7 +14,15 @@ export const metadata: Metadata = {
 }
 
 export default async function NewProductPage() {
-  await getSafeServerSession()
+  const session = await getSafeServerSession()
+  if (!session?.user.id) {
+    redirect("/auth/login")
+  }
+
+  const accessState = await getSubscriptionAccessState(session.user.id)
+  if (!hasPremiumAccess(accessState)) {
+    redirect(getSubscriptionRedirectPath("/dashboard/products/new"))
+  }
 
   return (
     <DashboardShell>

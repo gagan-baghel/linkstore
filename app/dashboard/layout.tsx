@@ -8,6 +8,7 @@ import { DashboardTopbarContext } from "@/components/dashboard-topbar-context"
 import { MobileDashboardNav } from "@/components/mobile-dashboard-nav"
 import { ShoppingBag } from "lucide-react"
 import Link from "next/link"
+import { getSubscriptionAccessState, hasPremiumAccess } from "@/lib/subscription-access"
 
 export default async function DashboardLayout({
   children,
@@ -19,6 +20,9 @@ export default async function DashboardLayout({
   if (!session) {
     redirect("/auth/login")
   }
+
+  const accessState = await getSubscriptionAccessState(session.user.id)
+  const canUseShopFeatures = hasPremiumAccess(accessState)
 
   return (
     <div className="dashboard-minimal min-h-screen md:grid md:grid-cols-[260px_1fr]">
@@ -32,7 +36,7 @@ export default async function DashboardLayout({
           </Link>
         </div>
         <div className="px-4 pb-6">
-          <DashboardNav />
+          <DashboardNav canUseShopFeatures={canUseShopFeatures} />
         </div>
       </aside>
 
@@ -56,7 +60,7 @@ export default async function DashboardLayout({
         </header>
 
         <div className="flex-1 bg-slate-50">{children}</div>
-        <MobileDashboardNav />
+        <MobileDashboardNav canUseShopFeatures={canUseShopFeatures} />
       </main>
     </div>
   )

@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 
 import { getSafeServerSession } from "@/lib/auth"
 import { DashboardHeader } from "@/components/dashboard-header"
@@ -7,6 +7,8 @@ import { DashboardShell } from "@/components/dashboard-shell"
 import { ProductForm } from "@/components/product-form"
 import { convexQuery } from "@/lib/convex"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { getSubscriptionAccessState, hasPremiumAccess } from "@/lib/subscription-access"
+import { getSubscriptionRedirectPath } from "@/lib/subscription-routing"
 
 export const metadata: Metadata = {
   title: "Edit Product - AffiliateHub",
@@ -23,7 +25,12 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
   const { id } = await params
   const session = await getSafeServerSession()
   if (!session?.user.id) {
-    notFound()
+    redirect("/auth/login")
+  }
+
+  const accessState = await getSubscriptionAccessState(session.user.id)
+  if (!hasPremiumAccess(accessState)) {
+    redirect(getSubscriptionRedirectPath(`/dashboard/products/${id}/edit`))
   }
 
   let product: any | null = null

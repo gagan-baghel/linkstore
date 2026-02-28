@@ -7,6 +7,10 @@ function withoutPassword(user: any) {
   return rest
 }
 
+function normalizeUsernameInput(input: string) {
+  return input.trim().replace(/^@+/, "")
+}
+
 function toProductView(product: any, performance: any) {
   return {
     ...product,
@@ -29,21 +33,29 @@ export const getByUsername = queryGeneric({
     username: v.string(),
   },
   handler: async (ctx, args) => {
-    const requestedUsername = args.username.trim()
+    const requestedUsernameRaw = args.username.trim()
+    const requestedUsername = normalizeUsernameInput(requestedUsernameRaw)
+    if (!requestedUsername) return null
     const normalizedUsername = requestedUsername.toLowerCase()
 
-    let user = await ctx.db
-      .query("users")
-      .withIndex("by_username", (q) => q.eq("username", requestedUsername))
-      .first()
+    const directCandidates = Array.from(new Set([requestedUsernameRaw, requestedUsername, normalizedUsername])).filter(
+      Boolean,
+    )
 
-    if (!user && normalizedUsername !== requestedUsername) {
-      user = await ctx.db.query("users").withIndex("by_username", (q) => q.eq("username", normalizedUsername)).first()
+    let user: any | null = null
+    for (const candidate of directCandidates) {
+      user = await ctx.db
+        .query("users")
+        .withIndex("by_username", (q) => q.eq("username", candidate))
+        .first()
+      if (user) break
     }
 
     if (!user) {
       const allUsers = await ctx.db.query("users").collect()
-      user = allUsers.find((candidate) => candidate.username.toLowerCase() === normalizedUsername) ?? null
+      user =
+        allUsers.find((candidate) => normalizeUsernameInput(candidate.username).toLowerCase() === normalizedUsername) ??
+        null
     }
 
     if (!user) {

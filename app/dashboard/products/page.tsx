@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import { redirect } from "next/navigation"
 import { PlusCircle, Upload } from "lucide-react"
 
 import { getSafeServerSession } from "@/lib/auth"
@@ -9,6 +10,8 @@ import { EmptyPlaceholder } from "@/components/empty-placeholder"
 import { ProductsTable } from "@/components/products-table"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { convexQuery } from "@/lib/convex"
+import { getSubscriptionAccessState, hasPremiumAccess } from "@/lib/subscription-access"
+import { getSubscriptionRedirectPath } from "@/lib/subscription-routing"
 
 export const metadata: Metadata = {
   title: "Products - AffiliateHub",
@@ -19,7 +22,12 @@ export default async function ProductsPage() {
   const session = await getSafeServerSession()
 
   if (!session) {
-    return <div>Loading...</div>
+    redirect("/auth/login")
+  }
+
+  const accessState = await getSubscriptionAccessState(session.user.id)
+  if (!hasPremiumAccess(accessState)) {
+    redirect(getSubscriptionRedirectPath("/dashboard/products"))
   }
 
   try {
