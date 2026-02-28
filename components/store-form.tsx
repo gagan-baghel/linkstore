@@ -185,7 +185,7 @@ export function StoreForm({
             <h3 className="text-sm font-semibold text-slate-900">Branding</h3>
             <div className="mt-4 flex items-center gap-3">
               <Avatar className="h-12 w-12 border border-slate-200">
-                <AvatarImage src={values.storeLogo || "/placeholder.svg"} alt="Store logo" />
+                <AvatarImage src={values.storeLogo || "/placeholder-logo.png"} alt="Store logo" />
                 <AvatarFallback>{logoFallback}</AvatarFallback>
               </Avatar>
               <p className="text-sm text-slate-700">{values.storeLogo?.trim() ? "Store logo is set." : "No logo uploaded yet."}</p>
@@ -365,7 +365,7 @@ export function StoreForm({
                       <div className="flex flex-col items-center rounded-md border border-slate-200 bg-slate-50 p-4">
                         <Avatar className="h-20 w-20">
                           {field.value ? (
-                            <AvatarImage src={field.value || "/placeholder.svg"} alt="Store logo" />
+                            <AvatarImage src={field.value || "/placeholder-logo.png"} alt="Store logo" />
                           ) : (
                             <AvatarFallback className="bg-primary/10">
                               <Upload className="h-8 w-8 text-primary" />

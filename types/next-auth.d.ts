@@ -7,6 +7,9 @@ declare module "next-auth" {
       id: string
       username?: string
       role?: "user" | "admin"
+      subscriptionStatus?: "inactive" | "pending" | "active" | "expired" | "cancelled"
+      hasActiveSubscription?: boolean
+      subscriptionExpiresAt?: number | null
     } & DefaultSession["user"]
   }
 
@@ -22,5 +25,9 @@ declare module "next-auth/jwt" {
     id?: string
     username?: string
     role?: "user" | "admin"
+    subscriptionStatus?: "inactive" | "pending" | "active" | "expired" | "cancelled"
+    hasActiveSubscription?: boolean
+    subscriptionExpiresAt?: number | null
+    lastSyncedAt?: number
   }
 }

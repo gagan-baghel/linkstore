@@ -45,7 +45,11 @@ export function LoginForm() {
       })
 
       if (response?.error) {
-        setError("Invalid email or password. Please try again.")
+        if (response.error === "RATE_LIMITED") {
+          setError("Too many login attempts. Please wait a few minutes and try again.")
+        } else {
+          setError("Invalid email or password. Please try again.")
+        }
         return
       }
 

@@ -31,10 +31,16 @@ export const getDashboardData = queryGeneric({
       .withIndex("by_userId_createdAt", (q) => q.eq("userId", args.userId))
       .order("desc")
       .collect()
+    const clicks = await ctx.db
+      .query("clicks")
+      .withIndex("by_userId_createdAt", (q) => q.eq("userId", args.userId))
+      .order("desc")
+      .collect()
     const events30 = events.filter((event) => event.createdAt >= last30Days)
+    const clicks30 = clicks.filter((click) => click.createdAt >= last30Days)
     const storeViews30 = events30.filter((event) => event.eventType === "store_view").length
     const cardClicks30 = events30.filter((event) => event.eventType === "product_card_click").length
-    const outboundClicks30 = events30.filter((event) => event.eventType === "outbound_click").length
+    const outboundClicks30 = clicks30.length
     const conversionRate30 = storeViews30 > 0 ? (outboundClicks30 / storeViews30) * 100 : 0
 
     const activeProducts = products.filter((product) => product.isArchived !== true)
@@ -103,20 +109,20 @@ export const getAnalyticsData = queryGeneric({
     const storeViews7 = last7DayEvents.filter((event) => event.eventType === "store_view").length
     const productCardClicks30 = last30DayEvents.filter((event) => event.eventType === "product_card_click").length
     const productCardClicks7 = last7DayEvents.filter((event) => event.eventType === "product_card_click").length
-    const outboundClicks30 = last30DayEvents.filter((event) => event.eventType === "outbound_click").length
-    const outboundClicks7 = last7DayEvents.filter((event) => event.eventType === "outbound_click").length
+    const outboundClicks30 = clicks.filter((click) => click.createdAt >= last30Days).length
+    const outboundClicks7 = clicks.filter((click) => click.createdAt >= last7Days).length
 
     const totalProducts = activeProducts.length
-    const totalClicks = events.length > 0 ? events.filter((event) => event.eventType === "outbound_click").length : clicks.length
-    const recentClicks = events.length > 0 ? outboundClicks7 : clicks.filter((click) => click.createdAt >= last7Days).length
-    const last30DaysClicks =
-      events.length > 0 ? outboundClicks30 : clicks.filter((click) => click.createdAt >= last30Days).length
+    const totalClicks = clicks.length
+    const recentClicks = outboundClicks7
+    const last30DaysClicks = outboundClicks30
 
     const productMap = new Map(activeProducts.map((product) => [product._id, product]))
     const cardClickMap30 = new Map<string, number>()
     const cardClickMap7 = new Map<string, number>()
     const outboundMap30 = new Map<string, number>()
     const outboundMap7 = new Map<string, number>()
+    const dayCounts = new Map<string, number>()
 
     for (const event of events) {
       if (!event.productId) continue
@@ -127,22 +133,18 @@ export const getAnalyticsData = queryGeneric({
           cardClickMap7.set(event.productId, (cardClickMap7.get(event.productId) || 0) + 1)
         }
       }
-
-      if (event.eventType === "outbound_click") {
-        outboundMap30.set(event.productId, (outboundMap30.get(event.productId) || 0) + 1)
-        if (event.createdAt >= last7Days) {
-          outboundMap7.set(event.productId, (outboundMap7.get(event.productId) || 0) + 1)
-        }
-      }
     }
 
-    if (events.length === 0) {
-      for (const click of clicks) {
-        outboundMap30.set(click.productId, (outboundMap30.get(click.productId) || 0) + 1)
-        if (click.createdAt >= last7Days) {
-          outboundMap7.set(click.productId, (outboundMap7.get(click.productId) || 0) + 1)
-        }
+    for (const click of clicks) {
+      outboundMap30.set(click.productId, (outboundMap30.get(click.productId) || 0) + 1)
+      if (click.createdAt >= last7Days) {
+        outboundMap7.set(click.productId, (outboundMap7.get(click.productId) || 0) + 1)
       }
+      if (click.createdAt < last30Days) {
+        continue
+      }
+      const key = toDayKey(click.createdAt)
+      dayCounts.set(key, (dayCounts.get(key) || 0) + 1)
     }
 
     const productClicksData = activeProducts.map((product) => ({
@@ -176,52 +178,16 @@ export const getAnalyticsData = queryGeneric({
       })
       .sort((a, b) => b.ctr7d - a.ctr7d)
 
-    const dayCounts = new Map<string, number>()
-    if (events.length > 0) {
-      for (const event of events) {
-        if (event.eventType !== "outbound_click" || event.createdAt < last30Days) continue
-        const key = toDayKey(event.createdAt)
-        dayCounts.set(key, (dayCounts.get(key) || 0) + 1)
-      }
-    } else {
-      for (const click of clicks) {
-        if (click.createdAt < last30Days) continue
-        const key = toDayKey(click.createdAt)
-        dayCounts.set(key, (dayCounts.get(key) || 0) + 1)
-      }
-    }
-
-    const dailyClicksData = Array.from(dayCounts.entries())
-      .sort(([a], [b]) => (a < b ? -1 : 1))
-      .map(([date, count]) => ({
-        date,
-        clicks: count,
-      }))
-
     const referrerCounts = new Map<string, number>()
-    if (events.length > 0) {
-      for (const event of events) {
-        if (event.eventType !== "outbound_click") continue
-        if (!event.referrer) continue
-        let domain = event.referrer
-        try {
-          domain = new URL(event.referrer).hostname
-        } catch {
-          // Keep referrer as-is if it is not a valid URL.
-        }
-        referrerCounts.set(domain, (referrerCounts.get(domain) || 0) + 1)
+    for (const click of clicks) {
+      if (!click.referrer) continue
+      let domain = click.referrer
+      try {
+        domain = new URL(click.referrer).hostname
+      } catch {
+        // Keep referrer as-is if it is not a valid URL.
       }
-    } else {
-      for (const click of clicks) {
-        if (!click.referrer) continue
-        let domain = click.referrer
-        try {
-          domain = new URL(click.referrer).hostname
-        } catch {
-          // Keep referrer as-is if it is not a valid URL.
-        }
-        referrerCounts.set(domain, (referrerCounts.get(domain) || 0) + 1)
-      }
+      referrerCounts.set(domain, (referrerCounts.get(domain) || 0) + 1)
     }
 
     const sourceCounts = new Map<string, number>()
@@ -250,41 +216,22 @@ export const getAnalyticsData = queryGeneric({
       .sort((a, b) => b[1] - a[1])
       .map(([name, value]) => ({ name, value }))
 
-    const recentOutboundEvents = events.filter((event) => event.eventType === "outbound_click").slice(0, 10)
-    const recentClicksData =
-      recentOutboundEvents.length > 0
-        ? recentOutboundEvents.map((event) => {
-            const product = event.productId ? productMap.get(event.productId) : null
-            return {
-              _id: event._id,
-              createdAt: event.createdAt,
-              source: event.source || "direct",
-              referrer: event.referrer || "",
-              device: event.device || "unknown",
-              productId: product
-                ? {
-                    title: product.title,
-                    affiliateUrl: product.affiliateUrl,
-                  }
-                : null,
+    const recentClicksData = clicks.slice(0, 10).map((click) => {
+      const product = productMap.get(click.productId)
+      return {
+        _id: click._id,
+        createdAt: click.createdAt,
+        source: "direct",
+        referrer: click.referrer || "",
+        device: "unknown",
+        productId: product
+          ? {
+              title: product.title,
+              affiliateUrl: product.affiliateUrl,
             }
-          })
-        : clicks.slice(0, 10).map((click) => {
-            const product = productMap.get(click.productId)
-            return {
-              _id: click._id,
-              createdAt: click.createdAt,
-              source: "direct",
-              referrer: click.referrer || "",
-              device: "unknown",
-              productId: product
-                ? {
-                    title: product.title,
-                    affiliateUrl: product.affiliateUrl,
-                  }
-                : null,
-            }
-          })
+          : null,
+      }
+    })
 
     const conversionRate = storeViews30 > 0 ? (outboundClicks30 / storeViews30) * 100 : 0
 
@@ -302,7 +249,12 @@ export const getAnalyticsData = queryGeneric({
       conversionRate,
       productClicksData,
       productPerformanceData,
-      dailyClicksData,
+      dailyClicksData: Array.from(dayCounts.entries())
+        .sort(([a], [b]) => (a < b ? -1 : 1))
+        .map(([date, count]) => ({
+          date,
+          clicks: count,
+        })),
       referrerChartData,
       sourceChartData,
       deviceChartData,

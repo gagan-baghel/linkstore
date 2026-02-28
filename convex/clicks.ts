@@ -34,21 +34,6 @@ export const trackClick = mutationGeneric({
       createdAt: now,
     })
 
-    await ctx.db.insert("events", {
-      eventType: "outbound_click",
-      userId: product.userId,
-      productId: product._id,
-      storeUsername: user.username,
-      source: args.source || "direct",
-      referrer: args.referrer || "",
-      device: args.device || "unknown",
-      path: args.path || "",
-      sessionId: args.sessionId || "",
-      userAgent: args.userAgent || "",
-      ip: args.ip || "",
-      createdAt: now,
-    })
-
     return { ok: true, affiliateUrl: product.affiliateUrl }
   },
 })

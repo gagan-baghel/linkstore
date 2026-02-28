@@ -49,3 +49,49 @@ export const listByActor = queryGeneric({
     return docs.slice(0, limit)
   },
 })
+
+export const consumeRateLimit = mutationGeneric({
+  args: {
+    key: v.string(),
+    windowMs: v.number(),
+    max: v.number(),
+    ip: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now()
+    const windowStart = now - Math.max(args.windowMs, 1000)
+    const attempts = await ctx.db
+      .query("auditLogs")
+      .withIndex("by_action_createdAt", (q) => q.eq("action", `ratelimit:${args.key}`))
+      .collect()
+
+    let recentCount = 0
+    for (const attempt of attempts) {
+      if (attempt.createdAt >= windowStart) {
+        recentCount += 1
+      }
+    }
+
+    const allowed = recentCount < args.max
+    await ctx.db.insert("auditLogs", {
+      actorType: "system",
+      actorUserId: undefined,
+      action: `ratelimit:${args.key}`,
+      resourceType: "ratelimit",
+      resourceId: undefined,
+      status: allowed ? "allowed" : "blocked",
+      ip: args.ip || "",
+      userAgent: args.userAgent || "",
+      details: "",
+      createdAt: now,
+    })
+
+    const retryAfterSec = Math.max(Math.ceil(args.windowMs / 1000), 1)
+    return {
+      allowed,
+      remaining: Math.max(args.max - (recentCount + 1), 0),
+      retryAfterSec,
+    }
+  },
+})

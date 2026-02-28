@@ -1,5 +1,6 @@
 import Link from "next/link"
-import { ArrowRight, CheckCircle2, Sparkles, WandSparkles } from "lucide-react"
+import Image from "next/image"
+import { ArrowRight, CheckCircle2, Sparkles } from "lucide-react"
 
 import { getSafeServerSession } from "@/lib/auth"
 import { Button } from "@/components/ui/button"
@@ -20,8 +21,8 @@ export default async function Home() {
       <header className="sticky top-0 z-40 border-b border-white/50 bg-white/45 backdrop-blur-md dark:border-white/10 dark:bg-slate-950/55">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-2 text-lg font-bold tracking-tight text-slate-800 dark:text-slate-100">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-linear-to-br from-indigo-400 to-violet-500 text-white shadow-[0_10px_18px_rgba(119,105,230,0.32)]">
-              <WandSparkles className="h-5 w-5" />
+            <div className="flex h-10 w-10 items-center justify-center">
+              <Image src="/favicon-32x32.png" alt="AffiliateHub logo" width={32} height={32} />
             </div>
             <span>AffiliateHub</span>
           </div>

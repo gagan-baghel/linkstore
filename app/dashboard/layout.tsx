@@ -1,12 +1,12 @@
 import type React from "react"
 import { redirect } from "next/navigation"
+import Image from "next/image"
 import { getSafeServerSession } from "@/lib/auth"
 import { DashboardNav } from "@/components/dashboard-nav"
 import { UserAccountNav } from "@/components/user-account-nav"
 import { DashboardSignOutButton } from "@/components/dashboard-signout-button"
 import { DashboardTopbarContext } from "@/components/dashboard-topbar-context"
 import { MobileDashboardNav } from "@/components/mobile-dashboard-nav"
-import { ShoppingBag } from "lucide-react"
 import Link from "next/link"
 import { getSubscriptionAccessState, hasPremiumAccess } from "@/lib/subscription-access"
 
@@ -29,8 +29,8 @@ export default async function DashboardLayout({
       <aside className="dashboard-sidebar hidden min-h-screen border-r border-slate-200 bg-white md:block">
         <div className="px-6 py-6">
           <Link href="/dashboard" className="flex items-center gap-2 text-xl font-bold text-slate-900">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-700">
-              <ShoppingBag className="h-5 w-5" />
+            <div className="flex h-10 w-10 items-center justify-center">
+              <Image src="/favicon-32x32.png" alt="AffiliateHub logo" width={32} height={32} />
             </div>
             <span>AffiliateHub</span>
           </Link>

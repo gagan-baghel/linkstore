@@ -461,6 +461,24 @@ export const deleteByIdForUser = mutationGeneric({
       return { ok: false, message: subscriptionCheck.message, code: "SUBSCRIPTION_REQUIRED" as const }
     }
 
+    const relatedClicks = await ctx.db
+      .query("clicks")
+      .withIndex("by_productId", (q) => q.eq("productId", args.productId))
+      .collect()
+    for (const click of relatedClicks) {
+      await ctx.db.delete(click._id)
+    }
+
+    const relatedEvents = await ctx.db
+      .query("events")
+      .withIndex("by_userId_createdAt", (q) => q.eq("userId", args.userId))
+      .collect()
+    for (const event of relatedEvents) {
+      if (event.productId === args.productId) {
+        await ctx.db.delete(event._id)
+      }
+    }
+
     await ctx.db.delete(args.productId)
     return { ok: true }
   },
