@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { Slider } from "@/components/ui/slider"
+import { PublicNavbar } from "@/components/public-navbar"
+import { PublicFooter } from "@/components/public-footer"
 
 export default async function Home() {
   const session = await getSafeServerSession()
@@ -18,33 +20,7 @@ export default async function Home() {
       <div className="pointer-events-none absolute right-0 top-0 h-80 w-80 rounded-full bg-violet-300/35 blur-3xl dark:bg-violet-500/20" />
       <div className="pointer-events-none absolute bottom-10 left-1/3 h-64 w-64 rounded-full bg-emerald-200/35 blur-3xl dark:bg-emerald-400/15" />
 
-      <header className="sticky top-0 z-40 border-b border-white/50 bg-white/45 backdrop-blur-md dark:border-white/10 dark:bg-slate-950/55">
-        <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-2 text-lg font-bold tracking-tight text-slate-800 dark:text-slate-100">
-            <div className="flex h-10 w-10 items-center justify-center">
-              <Image src="/favicon-32x32.png" alt="AffiliateHub logo" width={32} height={32} />
-            </div>
-            <span>AffiliateHub</span>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {isLoggedIn ? (
-              <Link href="/dashboard">
-                <Button>Open Dashboard</Button>
-              </Link>
-            ) : (
-              <>
-                <Link href="/auth/login">
-                  <Button variant="ghost">Log in</Button>
-                </Link>
-                <Link href="/auth/register">
-                  <Button>Get Started</Button>
-                </Link>
-              </>
-            )}
-          </div>
-        </div>
-      </header>
+      <PublicNavbar />
 
       <main className="container pt-8 md:pt-12">
         <section className="grid items-center gap-8 lg:grid-cols-2">
@@ -162,6 +138,7 @@ export default async function Home() {
           </div>
         </section>
       </main>
+      <PublicFooter />
     </div>
   )
 }

@@ -36,8 +36,8 @@ function safeEqualHex(leftHex: string, rightHex: string) {
 }
 
 function getRazorpayConfig() {
-  const keyId = process.env.RAZORPAY_KEY_ID?.trim()
-  const keySecret = process.env.RAZORPAY_KEY_SECRET?.trim()
+  const keyId = process.env.RAZORPAY_KEY?.trim()
+  const keySecret = process.env.RAZORPAY_SECRET?.trim()
 
   if (!keyId || !keySecret) {
     throw new Error("Razorpay credentials are not configured.")

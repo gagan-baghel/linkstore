@@ -25,22 +25,23 @@ export const getDashboardData = queryGeneric({
       .order("desc")
       .collect()
 
-    const last30Days = Date.now() - 30 * 24 * 60 * 60 * 1000
+    const now = Date.now()
+    const last30Days = now - 30 * 24 * 60 * 60 * 1000
     const events = await ctx.db
       .query("events")
       .withIndex("by_userId_createdAt", (q) => q.eq("userId", args.userId))
+      .filter((q) => q.gte(q.field("createdAt"), last30Days))
       .order("desc")
       .collect()
     const clicks = await ctx.db
       .query("clicks")
       .withIndex("by_userId_createdAt", (q) => q.eq("userId", args.userId))
+      .filter((q) => q.gte(q.field("createdAt"), last30Days))
       .order("desc")
       .collect()
-    const events30 = events.filter((event) => event.createdAt >= last30Days)
-    const clicks30 = clicks.filter((click) => click.createdAt >= last30Days)
-    const storeViews30 = events30.filter((event) => event.eventType === "store_view").length
-    const cardClicks30 = events30.filter((event) => event.eventType === "product_card_click").length
-    const outboundClicks30 = clicks30.length
+    const storeViews30 = events.filter((event) => event.eventType === "store_view").length
+    const cardClicks30 = events.filter((event) => event.eventType === "product_card_click").length
+    const outboundClicks30 = clicks.length
     const conversionRate30 = storeViews30 > 0 ? (outboundClicks30 / storeViews30) * 100 : 0
 
     const activeProducts = products.filter((product) => product.isArchived !== true)
@@ -90,30 +91,32 @@ export const getAnalyticsData = queryGeneric({
       .collect()
     const activeProducts = products.filter((product) => product.isArchived !== true)
 
-    const clicks = await ctx.db
+    const clicks30 = await ctx.db
       .query("clicks")
       .withIndex("by_userId_createdAt", (q) => q.eq("userId", args.userId))
+      .filter((q) => q.gte(q.field("createdAt"), last30Days))
       .order("desc")
       .collect()
 
-    const events = await ctx.db
+    const events30 = await ctx.db
       .query("events")
       .withIndex("by_userId_createdAt", (q) => q.eq("userId", args.userId))
+      .filter((q) => q.gte(q.field("createdAt"), last30Days))
       .order("desc")
       .collect()
 
-    const last30DayEvents = events.filter((event) => event.createdAt >= last30Days)
-    const last7DayEvents = events.filter((event) => event.createdAt >= last7Days)
+    const last7DayEvents = events30.filter((event) => event.createdAt >= last7Days)
+    const clicks7 = clicks30.filter((click) => click.createdAt >= last7Days)
 
-    const storeViews30 = last30DayEvents.filter((event) => event.eventType === "store_view").length
+    const storeViews30 = events30.filter((event) => event.eventType === "store_view").length
     const storeViews7 = last7DayEvents.filter((event) => event.eventType === "store_view").length
-    const productCardClicks30 = last30DayEvents.filter((event) => event.eventType === "product_card_click").length
+    const productCardClicks30 = events30.filter((event) => event.eventType === "product_card_click").length
     const productCardClicks7 = last7DayEvents.filter((event) => event.eventType === "product_card_click").length
-    const outboundClicks30 = clicks.filter((click) => click.createdAt >= last30Days).length
-    const outboundClicks7 = clicks.filter((click) => click.createdAt >= last7Days).length
+    const outboundClicks30 = clicks30.length
+    const outboundClicks7 = clicks7.length
 
     const totalProducts = activeProducts.length
-    const totalClicks = clicks.length
+    const totalClicks = outboundClicks30
     const recentClicks = outboundClicks7
     const last30DaysClicks = outboundClicks30
 
@@ -124,7 +127,7 @@ export const getAnalyticsData = queryGeneric({
     const outboundMap7 = new Map<string, number>()
     const dayCounts = new Map<string, number>()
 
-    for (const event of events) {
+    for (const event of events30) {
       if (!event.productId) continue
 
       if (event.eventType === "product_card_click") {
@@ -135,13 +138,10 @@ export const getAnalyticsData = queryGeneric({
       }
     }
 
-    for (const click of clicks) {
+    for (const click of clicks30) {
       outboundMap30.set(click.productId, (outboundMap30.get(click.productId) || 0) + 1)
       if (click.createdAt >= last7Days) {
         outboundMap7.set(click.productId, (outboundMap7.get(click.productId) || 0) + 1)
-      }
-      if (click.createdAt < last30Days) {
-        continue
       }
       const key = toDayKey(click.createdAt)
       dayCounts.set(key, (dayCounts.get(key) || 0) + 1)
@@ -179,7 +179,7 @@ export const getAnalyticsData = queryGeneric({
       .sort((a, b) => b.ctr7d - a.ctr7d)
 
     const referrerCounts = new Map<string, number>()
-    for (const click of clicks) {
+    for (const click of clicks30) {
       if (!click.referrer) continue
       let domain = click.referrer
       try {
@@ -191,13 +191,13 @@ export const getAnalyticsData = queryGeneric({
     }
 
     const sourceCounts = new Map<string, number>()
-    for (const event of events) {
+    for (const event of events30) {
       const source = event.source || "direct"
       sourceCounts.set(source, (sourceCounts.get(source) || 0) + 1)
     }
 
     const deviceCounts = new Map<string, number>()
-    for (const event of events) {
+    for (const event of events30) {
       const device = event.device || "unknown"
       deviceCounts.set(device, (deviceCounts.get(device) || 0) + 1)
     }
@@ -216,7 +216,7 @@ export const getAnalyticsData = queryGeneric({
       .sort((a, b) => b[1] - a[1])
       .map(([name, value]) => ({ name, value }))
 
-    const recentClicksData = clicks.slice(0, 10).map((click) => {
+    const recentClicksData = clicks30.slice(0, 10).map((click) => {
       const product = productMap.get(click.productId)
       return {
         _id: click._id,

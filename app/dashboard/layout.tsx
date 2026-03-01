@@ -37,6 +37,9 @@ export default async function DashboardLayout({
         </div>
         <div className="px-4 pb-6">
           <DashboardNav canUseShopFeatures={canUseShopFeatures} />
+          <div className="mt-4">
+            <DashboardSignOutButton className="w-full justify-start" />
+          </div>
         </div>
       </aside>
 
@@ -47,7 +50,6 @@ export default async function DashboardLayout({
               <DashboardTopbarContext />
             </div>
             <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
-              <DashboardSignOutButton />
               <UserAccountNav
                 user={{
                   name: session.user.name || "",

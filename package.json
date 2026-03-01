@@ -3,9 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently -n web,convex -c cyan,magenta \"npm run dev:web\" \"npm run dev:convex\"",
-    "dev:web": "next dev",
+    "dev": "concurrently --restart-tries 5 --restart-after 2000 -n web,convex -c cyan,magenta \"npm run dev:web\" \"npm run dev:convex\"",
+    "dev:web": "rm -rf .next/dev && next dev --webpack",
+    "dev:web:turbo": "rm -rf .next/dev && next dev --turbopack",
+    "dev:web:webpack": "rm -rf .next/dev && next dev --webpack",
     "dev:convex": "convex dev",
+    "dev:reset": "rm -rf .next && npm run dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx"

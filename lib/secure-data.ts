@@ -1,9 +1,17 @@
 import crypto from "crypto"
 
 const KEY_ENV = "PAYMENTS_DATA_KEY"
+const DEV_FALLBACK_KEY = "linkstore-dev-payments-data-key-change-me"
 
 function getRawKeyMaterial() {
-  return process.env[KEY_ENV]?.trim() || ""
+  const configured = process.env[KEY_ENV]?.trim()
+  if (configured) return configured
+
+  if (process.env.NODE_ENV !== "production") {
+    return DEV_FALLBACK_KEY
+  }
+
+  return ""
 }
 
 function decodeKeyMaterial(raw: string): Buffer {

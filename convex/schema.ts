@@ -172,5 +172,6 @@ export default defineSchema({
   })
     .index("by_userId_createdAt", ["userId", "createdAt"])
     .index("by_userId_eventType_createdAt", ["userId", "eventType", "createdAt"])
-    .index("by_storeUsername_createdAt", ["storeUsername", "createdAt"]),
+    .index("by_storeUsername_createdAt", ["storeUsername", "createdAt"])
+    .index("by_productId_createdAt", ["productId", "createdAt"]),
 })

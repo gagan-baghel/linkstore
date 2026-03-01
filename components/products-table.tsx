@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Archive, Copy, Edit, ExternalLink, MoreVertical, Trash, Undo2 } from "lucide-react"
@@ -55,6 +55,7 @@ interface ProductsTableProps {
 
 export function ProductsTable({ products }: ProductsTableProps) {
   const router = useRouter()
+  const [localProducts, setLocalProducts] = useState(products)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isQuickEditOpen, setIsQuickEditOpen] = useState(false)
   const [productToDelete, setProductToDelete] = useState<string | null>(null)
@@ -64,6 +65,10 @@ export function ProductsTable({ products }: ProductsTableProps) {
   const [quickTitle, setQuickTitle] = useState("")
   const [quickCategory, setQuickCategory] = useState("General")
   const [quickAffiliateUrl, setQuickAffiliateUrl] = useState("")
+
+  useEffect(() => {
+    setLocalProducts(products)
+  }, [products])
 
   function openQuickEdit(product: Product) {
     setActiveProductId(product._id)
@@ -151,8 +156,11 @@ export function ProductsTable({ products }: ProductsTableProps) {
       })
 
       if (!response.ok) {
-        throw new Error("Failed to delete product")
+        const errorPayload = await response.json().catch(() => ({}))
+        throw new Error(errorPayload.message || "Failed to delete product")
       }
+
+      setLocalProducts((prev) => prev.filter((item) => item._id !== productToDelete))
 
       toast({
         title: "Deleted",
@@ -164,7 +172,7 @@ export function ProductsTable({ products }: ProductsTableProps) {
       console.error(error)
       toast({
         title: "Error",
-        description: "Failed to delete product",
+        description: error instanceof Error ? error.message : "Failed to delete product",
         variant: "destructive",
       })
     } finally {
@@ -189,7 +197,7 @@ export function ProductsTable({ products }: ProductsTableProps) {
               </tr>
             </thead>
             <tbody>
-            {products.map((product) => {
+            {localProducts.map((product) => {
               const isArchived = product.isArchived === true
               const isHealthy = product.isLinkHealthy !== false
               const showBroken = !isArchived && !isHealthy
@@ -234,9 +242,13 @@ export function ProductsTable({ products }: ProductsTableProps) {
                   <td className="px-3 py-2.5 text-right align-middle sm:px-4 sm:py-3">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 rounded-md p-0 shadow-none hover:bg-slate-100" disabled={isUpdating}>
+                        <Button
+                          variant="ghost"
+                          className="h-8 w-8 rounded-md border border-slate-200 bg-white p-0 text-slate-700 shadow-none hover:bg-slate-100 hover:text-slate-900"
+                          disabled={isUpdating}
+                        >
                           <span className="sr-only">Open menu</span>
-                          <MoreVertical className="h-4 w-4" />
+                          <MoreVertical className="h-4 w-4 text-slate-700" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">

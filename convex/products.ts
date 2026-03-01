@@ -174,77 +174,6 @@ export const createProduct = mutationGeneric({
   },
 })
 
-export const bulkCreateByUser = mutationGeneric({
-  args: {
-    userId: v.id("users"),
-    products: v.array(
-      v.object({
-        title: v.string(),
-        description: v.string(),
-        affiliateUrl: v.string(),
-        images: v.array(v.string()),
-        videoUrl: v.optional(v.string()),
-        category: v.optional(v.string()),
-      }),
-    ),
-  },
-  handler: async (ctx, args) => {
-    const user = await ctx.db.get(args.userId)
-    if (!user) {
-      return { ok: false, message: "User not found" as const, created: 0, code: "USER_NOT_FOUND" as const }
-    }
-
-    const subscriptionCheck = await hasActiveSubscription(ctx, args.userId)
-    if (!subscriptionCheck.ok) {
-      return { ok: false, message: subscriptionCheck.message, created: 0, code: "SUBSCRIPTION_REQUIRED" as const }
-    }
-
-    const existingCount = await countProductsForUser(ctx, args.userId)
-    const remainingSlots = Math.max(PRODUCT_LIMIT - existingCount, 0)
-    if (remainingSlots <= 0) {
-      return {
-        ok: false,
-        message: `Product limit reached (${PRODUCT_LIMIT}).`,
-        created: 0,
-        code: "PRODUCT_LIMIT_REACHED" as const,
-      }
-    }
-
-    const now = Date.now()
-    let created = 0
-
-    for (const product of args.products) {
-      if (created >= remainingSlots) {
-        break
-      }
-      if (!product.title.trim() || !product.affiliateUrl.trim()) {
-        continue
-      }
-
-      await ctx.db.insert("products", {
-        userId: args.userId,
-        title: product.title.trim(),
-        description: product.description.trim(),
-        affiliateUrl: product.affiliateUrl.trim(),
-        images: product.images,
-        videoUrl: product.videoUrl || "",
-        category: normalizeCategory(product.category),
-        isArchived: false,
-        isLinkHealthy: true,
-        lastLinkCheckAt: undefined,
-        lastLinkStatus: undefined,
-        lastLinkError: "",
-        linkFailureCount: 0,
-        createdAt: now,
-        updatedAt: now,
-      })
-      created += 1
-    }
-
-    return { ok: true, created, remainingSlotsAfter: Math.max(remainingSlots - created, 0) }
-  },
-})
-
 export const updateByIdForUser = mutationGeneric({
   args: {
     productId: v.id("products"),
@@ -456,11 +385,6 @@ export const deleteByIdForUser = mutationGeneric({
       return { ok: false, message: "Product not found" as const }
     }
 
-    const subscriptionCheck = await hasActiveSubscription(ctx, args.userId)
-    if (!subscriptionCheck.ok) {
-      return { ok: false, message: subscriptionCheck.message, code: "SUBSCRIPTION_REQUIRED" as const }
-    }
-
     const relatedClicks = await ctx.db
       .query("clicks")
       .withIndex("by_productId", (q) => q.eq("productId", args.productId))
@@ -471,12 +395,11 @@ export const deleteByIdForUser = mutationGeneric({
 
     const relatedEvents = await ctx.db
       .query("events")
-      .withIndex("by_userId_createdAt", (q) => q.eq("userId", args.userId))
+      .withIndex("by_productId_createdAt", (q) => q.eq("productId", args.productId))
       .collect()
     for (const event of relatedEvents) {
-      if (event.productId === args.productId) {
-        await ctx.db.delete(event._id)
-      }
+      if (event.userId !== args.userId) continue
+      await ctx.db.delete(event._id)
     }
 
     await ctx.db.delete(args.productId)

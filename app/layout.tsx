@@ -4,9 +4,19 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/components/auth-provider"
 import "./globals.css"
 
+const metadataBase = (() => {
+  const candidate = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+  try {
+    return new URL(candidate)
+  } catch {
+    return new URL("http://localhost:3000")
+  }
+})()
+
 export const metadata: Metadata = {
   title: "AffiliateHub - Create Your Affiliate Storefront",
   description: "Build your own affiliate marketing storefront and start earning commissions",
+  metadataBase,
   icons: {
     icon: [
       { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },

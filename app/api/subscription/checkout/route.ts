@@ -7,7 +7,6 @@ import { getSafeServerSession } from "@/lib/auth"
 import { convexMutation, convexQuery } from "@/lib/convex"
 import { checkRateLimit, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
 import { createRazorpayOrder, getPublicRazorpayKeyId } from "@/lib/razorpay"
-import { hasPaymentsDataKeyConfigured } from "@/lib/secure-data"
 import { SUBSCRIPTION_PLAN_CODE, SUBSCRIPTION_PLAN_NAME, SUBSCRIPTION_PRICE_PAISE, SUBSCRIPTION_CURRENCY } from "@/lib/subscription"
 import { writeAuditLog } from "@/lib/audit"
 
@@ -29,10 +28,6 @@ export async function POST(req: Request) {
     const session = await getSafeServerSession()
     if (!session?.user?.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
-    }
-
-    if (!hasPaymentsDataKeyConfigured()) {
-      return NextResponse.json({ message: "Payment encryption key is not configured." }, { status: 503 })
     }
 
     let parsed: { idempotencyKey?: string } = {}

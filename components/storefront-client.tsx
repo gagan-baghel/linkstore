@@ -6,12 +6,10 @@ import {
   Facebook,
   Globe,
   Instagram,
-  Lock,
   MoreVertical,
   Search,
-  Share2,
   ShoppingBag,
-  X,
+  Twitter,
   Youtube,
 } from "lucide-react"
 
@@ -100,7 +98,7 @@ function ensureUrl(value: string) {
   return `https://${trimmed}`
 }
 
-function truncateTitle(value: string, max = 20) {
+function truncateTitle(value: string, max = 24) {
   if (value.length <= max) return value
   return `${value.slice(0, max - 3)}...`
 }
@@ -112,11 +110,22 @@ function getProductImage(product: StorefrontProduct) {
 }
 
 function getProfileImage(user: StorefrontUser) {
-  return user.storeLogo || user.image || "/placeholder-user.jpg"
+  const storeLogo = (user.storeLogo || "").trim()
+  return storeLogo || "/placeholder-logo.png"
+}
+
+function hasCustomStoreLogo(user: StorefrontUser) {
+  return (user.storeLogo || "").trim().length > 0
 }
 
 function buildSocialItems(user: StorefrontUser): SocialItem[] {
   const raw: Array<Omit<SocialItem, "href"> & { value?: string }> = [
+    {
+      key: "twitter",
+      label: "Twitter",
+      value: user.socialTwitter,
+      icon: Twitter,
+    },
     {
       key: "youtube",
       label: "Youtube",
@@ -154,7 +163,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
   const [sortBy, setSortBy] = useState<"performance" | "latest" | "name">("performance")
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [filtersOpen, setFiltersOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState<"links" | "shop">("shop")
+  const [activeTab, setActiveTab] = useState<"links" | "shop">("links")
   const [source, setSource] = useState("storefront")
   const [sessionId, setSessionId] = useState("")
   const [currentPath, setCurrentPath] = useState("")
@@ -172,18 +181,16 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
     () => products.map((product) => ({ ...product, category: normalizeCategory(product.category) })),
     [products],
   )
-
   const latestProducts = useMemo(
     () => [...normalizedProducts].sort((a, b) => b.createdAt - a.createdAt),
     [normalizedProducts],
   )
 
   const socialItems = useMemo(() => buildSocialItems(user), [user])
-
+  const featuredProducts = useMemo(() => latestProducts.slice(0, 6), [latestProducts])
   const mobileFilteredProducts = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
     if (!normalizedQuery) return latestProducts
-
     return latestProducts.filter((product) => {
       const category = normalizeCategory(product.category)
       return (
@@ -193,16 +200,6 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
       )
     })
   }, [latestProducts, query])
-
-  const postOrderMap = useMemo(() => {
-    const map = new Map<string, number>()
-    latestProducts.forEach((product, index) => {
-      map.set(product._id, latestProducts.length - index)
-    })
-    return map
-  }, [latestProducts])
-
-  const featuredProducts = useMemo(() => latestProducts.slice(0, 6), [latestProducts])
 
   const categoryCounts = useMemo(() => {
     const counts = new Map<string, number>()
@@ -279,9 +276,46 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
   const bannerText =
     user.storeBio?.trim() ||
     "Find the product by searching the post number from the video caption. I may earn a small commission."
-
   const displayName = (user.name || "Store").trim()
-  const storePathLabel = user.username ? `linkstore/${user.username}` : "linkstore"
+  const usesFallbackLogo = !hasCustomStoreLogo(user)
+  const mobileSocialIcons = socialItems.filter((item) => item.key === "instagram" || item.key === "youtube").slice(0, 2)
+  const hasCreatorLinks = socialItems.length > 0
+  const showcaseProducts = useMemo(() => {
+    const pool = ["/placeholder.jpg", "/placeholder.svg", "/placeholder-user.jpg"]
+    const items = featuredProducts.map((product) => ({
+      id: product._id,
+      image: getProductImage(product),
+      title: product.title,
+      href: buildTrackHref(product._id),
+      trackId: product._id,
+    }))
+
+    if (items.length === 0) {
+      return pool.map((image, idx) => ({
+        id: `fill-${idx + 1}`,
+        image,
+        title: `Featured ${idx + 1}`,
+        href: "",
+        trackId: "",
+      }))
+    }
+
+    if (items.length < 3) {
+      const random = [...pool].sort(() => Math.random() - 0.5).slice(0, 2)
+      random.forEach((image, idx) => {
+        items.push({
+          id: `fill-extra-${idx + 1}`,
+          image,
+          title: `Featured ${idx + 1}`,
+          href: "",
+          trackId: "",
+        })
+      })
+    }
+
+    return items.slice(0, 6)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [featuredProducts, source, sessionId, currentPath])
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -351,299 +385,270 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
     setSortBy("performance")
   }
 
-  function renderMobileProductCard(product: StorefrontProduct) {
-    const postNumber = postOrderMap.get(product._id) || 1
+  function renderShowcaseCard() {
+    const cardTone = !hasCreatorLinks
+      ? "bg-black text-white"
+      : isDarkMode
+        ? "border border-slate-700 bg-slate-900/80 text-slate-100"
+        : "border border-white/65 bg-white/85 text-slate-900"
+
+    const captionClass = !hasCreatorLinks ? "text-white/70" : isDarkMode ? "text-slate-400" : "text-slate-500"
 
     return (
-      <a
-        key={product._id}
-        href={buildTrackHref(product._id)}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={() => trackEvent("product_card_click", product._id)}
-        className="block"
-      >
-        <article className="overflow-hidden rounded-2xl border border-white/5 bg-black shadow-[0_10px_24px_rgba(0,0,0,0.35)]">
-          <div className="aspect-square overflow-hidden bg-white">
-            <img
-              src={getProductImage(product)}
-              alt={product.title}
-              className="h-full w-full object-cover"
-              loading="lazy"
-              decoding="async"
-            />
-          </div>
-          <div className="flex items-center gap-2 px-3 py-2.5 text-white">
-            <p className="min-w-0 flex-1 truncate text-lg font-semibold leading-tight">
-              {`Post ${postNumber} - ${truncateTitle(product.title, 24)}`}
-            </p>
-            <MoreVertical className="h-4 w-4 shrink-0 text-white/80" />
-          </div>
-        </article>
-      </a>
+      <div className={cn("overflow-hidden rounded-2xl p-3 shadow-[0_10px_26px_rgba(0,0,0,0.35)]", cardTone)}>
+        <div className="grid grid-cols-3 gap-1">
+          {showcaseProducts.slice(0, 1).map((product) =>
+            product.href ? (
+              <a
+                key={product.id}
+                href={product.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => product.trackId && trackEvent("product_card_click", product.trackId)}
+                className="col-span-2 row-span-2 block overflow-hidden rounded-lg bg-white"
+              >
+                <img src={product.image} alt={product.title} className="h-full w-full object-cover" loading="lazy" decoding="async" />
+              </a>
+            ) : (
+              <div key={product.id} className="col-span-2 row-span-2 block overflow-hidden rounded-lg bg-white">
+                <img src={product.image} alt={product.title} className="h-full w-full object-cover" loading="lazy" decoding="async" />
+              </div>
+            ),
+          )}
+          {showcaseProducts.slice(1, 6).map((product) =>
+            product.href ? (
+              <a
+                key={product.id}
+                href={product.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => product.trackId && trackEvent("product_card_click", product.trackId)}
+                className="block overflow-hidden rounded-lg bg-white"
+              >
+                <div className="aspect-square">
+                  <img src={product.image} alt={product.title} className="h-full w-full object-cover" loading="lazy" decoding="async" />
+                </div>
+              </a>
+            ) : (
+              <div key={product.id} className="block overflow-hidden rounded-lg bg-white">
+                <div className="aspect-square">
+                  <img src={product.image} alt={product.title} className="h-full w-full object-cover" loading="lazy" decoding="async" />
+                </div>
+              </div>
+            ),
+          )}
+        </div>
+        <button type="button" onClick={() => setActiveTab("shop")} className="mt-2.5 w-full rounded-xl py-1.5 text-center">
+          <p className="text-[20px] font-extrabold">See Full Shop</p>
+          <p className={cn("text-xs", captionClass)}>{latestProducts.length} products</p>
+        </button>
+      </div>
     )
   }
 
   return (
     <div className="min-h-screen">
-      <div className="relative min-h-screen overflow-x-hidden bg-[#090909] text-white md:hidden">
-        <div
-          className="pointer-events-none fixed inset-0"
-          style={{
-            background:
-              "radial-gradient(circle at 20% 18%, rgba(130, 0, 0, 0.52), transparent 38%), radial-gradient(circle at 75% 30%, rgba(89, 8, 8, 0.35), transparent 45%), linear-gradient(180deg, #090909 0%, #210305 33%, #2a0d0d 64%, #12080a 100%)",
-          }}
-        />
+      <div className={cn("relative min-h-screen overflow-x-hidden md:hidden", isDarkMode ? "bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-900")}>
+        <div className={cn("pointer-events-none absolute -left-24 top-8 h-56 w-56 rounded-full blur-3xl", isDarkMode ? "bg-sky-500/15" : "bg-sky-300/25")} />
+        <div className={cn("pointer-events-none absolute right-0 top-0 h-60 w-60 rounded-full blur-3xl", isDarkMode ? "bg-violet-500/15" : "bg-violet-300/25")} />
 
-        <div className="relative z-10 mx-auto w-full max-w-[430px]">
-          <header className="sticky top-0 z-30 border-b border-white/10 bg-[#08080b]/95 backdrop-blur-md">
-            <div className="flex items-center gap-3 px-4 py-3">
-              <button
-                type="button"
-                className="grid h-10 w-10 place-items-center rounded-full text-white/95"
-                aria-label="Close"
-              >
-                <X className="h-8 w-8" />
-              </button>
-
-              <div className="min-w-0 flex-1">
-                <p className="text-sm text-white/55">Threads</p>
-                <p className="flex items-center gap-1.5 truncate text-2xl font-semibold leading-none text-white/95">
-                  <Lock className="h-3.5 w-3.5" />
-                  {storePathLabel}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                className="grid h-10 w-10 place-items-center rounded-full border border-white/30 text-white"
-                aria-label="Menu"
-              >
-                <MoreVertical className="h-5 w-5" />
-              </button>
-            </div>
-          </header>
-
-          <main className="px-4 pb-14 pt-5">
-            <div className="mb-5 flex items-center justify-between">
-              <button
-                type="button"
-                className="grid h-12 w-12 place-items-center rounded-full bg-[#d9d4d4] text-black shadow-[0_6px_16px_rgba(0,0,0,0.35)]"
-                aria-label="Brand"
-              >
-                <span className="text-3xl font-black leading-none">*</span>
-              </button>
-              <button
-                type="button"
-                className="grid h-12 w-12 place-items-center rounded-full bg-[#d9d4d4] text-black shadow-[0_6px_16px_rgba(0,0,0,0.35)]"
-                aria-label="Share"
-              >
-                <Share2 className="h-5 w-5" />
-              </button>
+        <main className="relative z-10 mx-auto w-full max-w-[430px] px-3 pb-6 pt-5">
+          <section className="text-center">
+            <div
+              className={cn(
+                "mx-auto h-20 w-20 overflow-hidden rounded-full border shadow-[0_8px_20px_rgba(0,0,0,0.18)]",
+                isDarkMode ? "border-slate-700 bg-slate-800" : "border-white/65 bg-white",
+              )}
+            >
+              <img
+                src={getProfileImage(user)}
+                alt={displayName}
+                className={cn(
+                  "h-full w-full",
+                  usesFallbackLogo ? "object-contain p-1.5" : "object-cover",
+                  usesFallbackLogo && isDarkMode ? "mix-blend-lighten contrast-110 brightness-95" : "",
+                )}
+                loading="eager"
+                decoding="async"
+              />
             </div>
 
-            <section className="text-center">
-              <div className="mx-auto h-36 w-36 rounded-full bg-[#d40000] p-1.5 shadow-[0_12px_30px_rgba(0,0,0,0.45)]">
-                <img
-                  src={getProfileImage(user)}
-                  alt={displayName}
-                  className="h-full w-full rounded-full border-4 border-white object-cover"
-                  loading="eager"
-                  decoding="async"
+            <h1 className={cn("mt-2 text-[28px] font-extrabold tracking-tight", isDarkMode ? "text-slate-100" : "text-slate-900")}>{displayName}</h1>
+            <p className={cn("mx-auto mt-1 max-w-[300px] text-[12px] leading-[1.4]", isDarkMode ? "text-slate-300" : "text-slate-600")}>{bannerText}</p>
+
+            <div className="mt-3 flex items-center justify-center gap-3">
+              {mobileSocialIcons.map((item) => {
+                const Icon = item.icon
+                return (
+                  <a
+                    key={item.key}
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(
+                      "grid h-8 w-8 place-items-center rounded-full border",
+                      isDarkMode ? "border-slate-600 bg-slate-900 text-slate-100" : "border-white/65 bg-white text-slate-700",
+                    )}
+                    aria-label={item.label}
+                  >
+                    <Icon className="h-4 w-4" />
+                  </a>
+                )
+              })}
+            </div>
+          </section>
+
+          <div
+            className={cn(
+              "mx-auto mt-4 flex w-[210px] rounded-full p-1 text-[13px] font-semibold shadow-[0_8px_20px_rgba(0,0,0,0.16)]",
+              isDarkMode ? "bg-slate-800 text-slate-200" : "bg-white text-slate-700",
+            )}
+          >
+            <button
+              type="button"
+              onClick={() => setActiveTab("links")}
+              className={cn(
+                "flex-1 rounded-full py-1.5 transition",
+                activeTab === "links"
+                  ? isDarkMode
+                    ? "bg-slate-100 text-slate-900"
+                    : "bg-slate-900 text-white"
+                  : isDarkMode
+                    ? "text-slate-300"
+                    : "text-slate-600",
+              )}
+            >
+              Links
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("shop")}
+              className={cn(
+                "flex-1 rounded-full py-1.5 transition",
+                activeTab === "shop"
+                  ? isDarkMode
+                    ? "bg-slate-100 text-slate-900"
+                    : "bg-slate-900 text-white"
+                  : isDarkMode
+                    ? "text-slate-300"
+                    : "text-slate-600",
+              )}
+            >
+              Shop
+            </button>
+          </div>
+
+          {activeTab === "links" ? (
+            <section className="mt-4 space-y-3">
+              {socialItems.map((item) => {
+                const Icon = item.icon
+                return (
+                  <a
+                    key={item.key}
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(
+                      "flex items-center gap-3 rounded-2xl border px-3 py-2.5 shadow-[0_8px_20px_rgba(0,0,0,0.16)]",
+                      isDarkMode ? "border-slate-700 bg-slate-900/85 text-slate-100" : "border-white/65 bg-white/90 text-slate-900",
+                    )}
+                  >
+                    <div className={cn("grid h-10 w-10 place-items-center rounded-lg", isDarkMode ? "bg-slate-800" : "bg-slate-100")}>
+                      <Icon className={cn("h-5 w-5", isDarkMode ? "text-slate-100" : "text-slate-700")} />
+                    </div>
+                    <p className="flex-1 text-[14px] font-semibold tracking-tight">{item.label}</p>
+                    <MoreVertical className={cn("h-4 w-4", isDarkMode ? "text-slate-400" : "text-slate-500")} />
+                  </a>
+                )
+              })}
+
+              {renderShowcaseCard()}
+            </section>
+          ) : (
+            <section className="mt-4">
+              <div
+                className={cn(
+                  "flex items-center gap-2.5 rounded-full border px-3 py-2 shadow-[0_8px_20px_rgba(0,0,0,0.14)]",
+                  isDarkMode ? "border-slate-700 bg-slate-900 text-slate-100" : "border-white/65 bg-white text-slate-900",
+                )}
+              >
+                <Search className={cn("h-4 w-4", isDarkMode ? "text-slate-400" : "text-slate-500")} />
+                <input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder={`Search ${displayName}'s products`}
+                  className={cn(
+                    "w-full border-none bg-transparent text-[13px] leading-tight outline-none",
+                    isDarkMode ? "text-slate-100 placeholder:text-slate-500" : "text-slate-900 placeholder:text-slate-400",
+                  )}
                 />
               </div>
 
-              <h1 className="mt-4 text-[50px] font-extrabold leading-[0.92] tracking-tight">{displayName}</h1>
-              <p className="mx-auto mt-3 max-w-[340px] text-[14px] font-semibold leading-[1.35] text-white/95">{bannerText}</p>
-
-              <div className="mt-5 flex items-center justify-center gap-5">
-                {socialItems.slice(0, 2).map((item) => {
-                  const Icon = item.icon
-                  return (
+              {mobileFilteredProducts.length > 0 ? (
+                <div className="mt-3 grid grid-cols-2 gap-2.5">
+                  {mobileFilteredProducts.map((product) => (
                     <a
-                      key={item.key}
-                      href={item.href}
+                      key={product._id}
+                      href={buildTrackHref(product._id)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="grid h-11 w-11 place-items-center rounded-full border border-white/30 text-white"
-                      aria-label={item.label}
+                      onClick={() => trackEvent("product_card_click", product._id)}
+                      className={cn(
+                        "overflow-hidden rounded-xl border shadow-[0_8px_18px_rgba(0,0,0,0.14)]",
+                        isDarkMode ? "border-slate-700 bg-slate-900" : "border-white/65 bg-white",
+                      )}
                     >
-                      <Icon className="h-6 w-6" />
-                    </a>
-                  )
-                })}
-              </div>
-            </section>
-
-            <div className="mx-auto mt-6 flex w-[264px] rounded-full bg-[#d3cccc] p-1 text-[30px] font-bold text-black shadow-[0_8px_20px_rgba(0,0,0,0.32)]">
-              <button
-                type="button"
-                onClick={() => setActiveTab("links")}
-                className={cn(
-                  "flex-1 rounded-full py-2.5 transition",
-                  activeTab === "links" ? "bg-black text-white" : "text-black",
-                )}
-              >
-                Links
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("shop")}
-                className={cn(
-                  "flex-1 rounded-full py-2.5 transition",
-                  activeTab === "shop" ? "bg-black text-white" : "text-black",
-                )}
-              >
-                Shop
-              </button>
-            </div>
-
-            {activeTab === "links" ? (
-              <section className="mt-5 space-y-5">
-                {featuredProducts.length > 0 ? (
-                  <div className="overflow-hidden rounded-2xl bg-black p-3 shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
-                    <div className="grid grid-cols-3 gap-1">
-                      {featuredProducts.slice(0, 1).map((product) => (
-                        <a
-                          key={product._id}
-                          href={buildTrackHref(product._id)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={() => trackEvent("product_card_click", product._id)}
-                          className="col-span-2 row-span-2 block overflow-hidden rounded-lg bg-white"
-                        >
-                          <img
-                            src={getProductImage(product)}
-                            alt={product.title}
-                            className="h-full w-full object-cover"
-                            loading="lazy"
-                            decoding="async"
-                          />
-                        </a>
-                      ))}
-
-                      {featuredProducts.slice(1, 6).map((product) => (
-                        <a
-                          key={product._id}
-                          href={buildTrackHref(product._id)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={() => trackEvent("product_card_click", product._id)}
-                          className="block overflow-hidden rounded-lg bg-white"
-                        >
-                          <div className="aspect-square">
-                            <img
-                              src={getProductImage(product)}
-                              alt={product.title}
-                              className="h-full w-full object-cover"
-                              loading="lazy"
-                              decoding="async"
-                            />
-                          </div>
-                        </a>
-                      ))}
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab("shop")}
-                      className="mt-3 w-full rounded-xl bg-black py-2 text-center"
-                    >
-                      <p className="text-2xl font-extrabold text-white">See Full Shop</p>
-                      <p className="text-sm text-white/65">{latestProducts.length} products</p>
-                    </button>
-                  </div>
-                ) : null}
-
-                {socialItems.map((item) => {
-                  const Icon = item.icon
-                  return (
-                    <a
-                      key={item.key}
-                      href={item.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-4 rounded-2xl bg-black px-3 py-2.5 shadow-[0_10px_24px_rgba(0,0,0,0.35)]"
-                    >
-                      <div className="grid h-14 w-14 place-items-center rounded-lg bg-white">
-                        <Icon className="h-8 w-8 text-black" />
+                      <div className={cn("aspect-square overflow-hidden", isDarkMode ? "bg-slate-800" : "bg-slate-100")}>
+                        <img src={getProductImage(product)} alt={product.title} className="h-full w-full object-cover" loading="lazy" decoding="async" />
                       </div>
-                      <p className="flex-1 text-[31px] font-semibold tracking-tight text-white">{item.label}</p>
-                      <MoreVertical className="h-5 w-5 text-white/80" />
+                      <div className={cn("flex items-center gap-2 px-2.5 py-2", isDarkMode ? "text-slate-100" : "text-slate-800")}>
+                        <p className="min-w-0 flex-1 truncate text-[11px] font-semibold">{truncateTitle(product.title, 18)}</p>
+                        <MoreVertical className={cn("h-3.5 w-3.5 shrink-0", isDarkMode ? "text-slate-400" : "text-slate-500")} />
+                      </div>
                     </a>
-                  )
-                })}
-
-                <a
-                  href="/auth/register"
-                  className="mt-8 block rounded-full bg-white px-5 py-4 text-center text-[35px] font-bold leading-tight text-black shadow-[0_10px_24px_rgba(0,0,0,0.25)]"
-                >
-                  Join {user.username || displayName} on Linkstore
-                </a>
-              </section>
-            ) : (
-              <section className="mt-5">
-                <div className="flex items-center gap-3 rounded-full bg-white px-4 py-3 text-black shadow-[0_8px_20px_rgba(0,0,0,0.28)]">
-                  <Search className="h-5 w-5 text-black/65" />
-                  <input
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder={`Search ${user.username || displayName}'s products`}
-                    className="w-full border-none bg-transparent text-[24px] leading-tight text-black outline-none placeholder:text-black/40"
-                  />
+                  ))}
                 </div>
-
-                {mobileFilteredProducts.length > 0 ? (
-                  <div className="mt-5 grid grid-cols-2 gap-4">{mobileFilteredProducts.map((product) => renderMobileProductCard(product))}</div>
-                ) : (
-                  <div className="mt-8 rounded-2xl bg-black/85 px-4 py-8 text-center">
-                    <ShoppingBag className="mx-auto h-9 w-9 text-white/70" />
-                    <h3 className="mt-3 text-2xl font-bold">No products found</h3>
-                    <p className="mt-1 text-sm text-white/65">
-                      {products.length === 0 ? "This store has not added products yet." : "Try another search term."}
-                    </p>
-                  </div>
-                )}
-              </section>
-            )}
-
-            <div className="mt-8 flex items-center justify-center">
-              <a
-                href="/"
-                className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2 text-sm font-semibold text-black shadow-[0_10px_24px_rgba(0,0,0,0.25)]"
-              >
-                linkstore/you
-                <ExternalLink className="h-4 w-4" style={{ color: themePrimaryColor }} />
-              </a>
-            </div>
-          </main>
-        </div>
+              ) : (
+                <div
+                  className={cn(
+                    "mt-5 rounded-2xl border px-4 py-6 text-center",
+                    isDarkMode ? "border-slate-700 bg-slate-900/85" : "border-white/65 bg-white/90",
+                  )}
+                >
+                  <ShoppingBag className={cn("mx-auto h-7 w-7", isDarkMode ? "text-slate-400" : "text-slate-500")} />
+                  <h3 className={cn("mt-2 text-base font-bold", isDarkMode ? "text-slate-100" : "text-slate-900")}>No products found</h3>
+                  <p className={cn("mt-1 text-xs", isDarkMode ? "text-slate-400" : "text-slate-500")}>
+                    {products.length === 0 ? "This store has not added products yet." : "Try another search term."}
+                  </p>
+                </div>
+              )}
+            </section>
+          )}
+        </main>
       </div>
 
-      <div className={cn("relative hidden min-h-screen overflow-x-hidden pb-10 sm:pb-8 md:block", isDarkMode ? "bg-slate-950 text-slate-100" : "") }>
+      <div className={cn("relative hidden min-h-screen overflow-x-hidden pb-8 md:block", isDarkMode ? "bg-slate-950 text-slate-100" : "")}>
         <div className={cn("pointer-events-none absolute -left-28 top-16 h-72 w-72 rounded-full blur-3xl", isDarkMode ? "bg-sky-500/20" : "bg-sky-300/30")} />
         <div className={cn("pointer-events-none absolute right-0 top-0 h-80 w-80 rounded-full blur-3xl", isDarkMode ? "bg-violet-500/20" : "bg-violet-300/30")} />
         <div className={cn("pointer-events-none absolute bottom-10 left-1/3 h-64 w-64 rounded-full blur-3xl", isDarkMode ? "bg-emerald-500/20" : "bg-emerald-200/30")} />
 
         <header className={cn("sticky top-0 z-40 backdrop-blur-md", isDarkMode ? "border-b border-slate-700/80 bg-slate-900/80" : "border-b border-white/55 bg-white/60")}>
           <div className="w-full px-2 sm:px-3 md:px-4 lg:px-5">
-            <div className="flex items-center gap-2 py-2 sm:py-2.5">
+            <div className="flex items-center gap-1.5 py-1.5 sm:gap-2 sm:py-2">
               <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                {user.storeLogo || user.image ? (
-                  <img
-                    src={user.storeLogo || user.image || "/placeholder.svg"}
-                    alt={user.name}
-                    className="h-9 w-9 rounded-full object-cover"
-                    loading="eager"
-                    decoding="async"
-                  />
-                ) : (
-                  <div className={cn("flex h-9 w-9 items-center justify-center rounded-full", isDarkMode ? "bg-slate-800" : "bg-white/75")}>
-                    <ShoppingBag className="h-4.5 w-4.5" style={{ color: themePrimaryColor }} />
-                  </div>
-                )}
+                <img
+                  src={getProfileImage(user)}
+                  alt={user.name}
+                  className={cn(
+                    "h-8 w-8 rounded-full sm:h-9 sm:w-9",
+                    usesFallbackLogo ? "object-contain p-1" : "object-cover",
+                    usesFallbackLogo && isDarkMode ? "mix-blend-lighten contrast-110 brightness-95" : "",
+                  )}
+                  loading="eager"
+                  decoding="async"
+                />
                 <div className="min-w-0">
-                  <p className={cn("truncate text-base font-bold leading-tight sm:text-2xl", isDarkMode ? "text-slate-100" : "text-slate-800")}>
+                  <p className={cn("truncate text-sm font-bold leading-tight sm:text-lg md:text-xl", isDarkMode ? "text-slate-100" : "text-slate-800")}>
                     {storeTitle}
                   </p>
                 </div>
@@ -657,7 +662,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                     onChange={(event) => setQuery(event.target.value)}
                     placeholder="Search products"
                     className={cn(
-                      "h-9 w-[150px] pl-8 text-xs shadow-none focus-visible:ring-2 sm:w-[240px] sm:text-sm md:w-[300px]",
+                      "h-8 w-[124px] pl-7 text-[11px] shadow-none focus-visible:ring-2 sm:h-9 sm:w-[220px] sm:pl-8 sm:text-xs md:w-[280px] md:text-sm",
                       isDarkMode
                         ? "border-slate-600 bg-slate-900/90 text-slate-100 placeholder:text-slate-400 focus-visible:ring-slate-500"
                         : "border-white/70 bg-white/92 text-slate-800 placeholder:text-slate-500 focus-visible:ring-white",
@@ -669,7 +674,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                   variant="outline"
                   size="sm"
                   className={cn(
-                    "h-9 px-2.5 shadow-none sm:px-3",
+                    "h-8 px-2 text-[11px] shadow-none sm:h-9 sm:px-3 sm:text-xs",
                     isDarkMode
                       ? "border-slate-600 bg-slate-900/90 text-slate-100 hover:bg-slate-800"
                       : "border-white/70 bg-white/92 text-slate-800 hover:bg-white",
@@ -677,26 +682,26 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                   )}
                   onClick={() => setFiltersOpen(true)}
                 >
-                  <span className="text-xs font-semibold sm:text-sm">Filters</span>
+                  <span className="text-[11px] font-semibold sm:text-xs md:text-sm">Filters</span>
                 </Button>
               </div>
             </div>
           </div>
         </header>
 
-        <main className="w-full space-y-4 px-2 pt-3 sm:px-3 sm:pt-4 md:px-4 lg:px-5">
+        <main className="w-full space-y-3 px-2 pt-2 sm:space-y-4 sm:px-3 sm:pt-3 md:px-4 lg:px-5">
           <section id="catalog">
             <div className="mb-3 flex items-center justify-between">
-              <h2 className={cn("text-xl font-bold tracking-tight sm:text-2xl", isDarkMode ? "text-slate-100" : "text-slate-800")}>All Products</h2>
+              <h2 className={cn("text-base font-bold tracking-tight sm:text-lg md:text-xl", isDarkMode ? "text-slate-100" : "text-slate-800")}>All Products</h2>
             </div>
 
             {groupedProducts.length > 0 ? (
               groupedProducts.map((section) => (
                 <div key={section.category} className="mb-4 last:mb-0">
                   <div className="mb-2">
-                    <h3 className={cn("text-sm font-semibold uppercase tracking-wide", isDarkMode ? "text-slate-300" : "text-slate-500")}>{section.category}</h3>
+                    <h3 className={cn("text-[11px] font-semibold uppercase tracking-wide sm:text-xs", isDarkMode ? "text-slate-300" : "text-slate-500")}>{section.category}</h3>
                   </div>
-                  <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-2.5 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                     {section.products.map((product) => (
                       <a
                         key={product._id}
@@ -718,8 +723,8 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                             decoding="async"
                           />
                         </div>
-                        <div className="pointer-events-none absolute inset-x-0 bottom-0 translate-y-2 bg-gradient-to-t from-black/80 via-black/45 to-transparent px-3 pb-3 pt-8 opacity-0 transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100">
-                          <h4 className="line-clamp-2 text-sm font-semibold text-white">{product.title}</h4>
+                        <div className="pointer-events-none absolute inset-x-0 bottom-0 translate-y-2 bg-gradient-to-t from-black/80 via-black/45 to-transparent px-2.5 pb-2.5 pt-7 opacity-0 transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100">
+                          <h4 className="line-clamp-2 text-xs font-semibold text-white sm:text-sm">{product.title}</h4>
                           <p className="mt-1 text-[11px] text-white/85">{section.category}</p>
                         </div>
                         <span className="sr-only">{product.title}</span>

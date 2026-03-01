@@ -11,7 +11,6 @@ import {
   Share2,
   ShoppingBag,
   Store,
-  Upload,
 } from "lucide-react"
 
 import { DashboardHeader } from "@/components/dashboard-header"
@@ -142,9 +141,6 @@ export default function DashboardClientPage({
   const productsHref = canUseShopActions
     ? "/dashboard/products"
     : `${subscriptionRedirectBase}&from=${encodeURIComponent("/dashboard/products")}`
-  const bulkUploadHref = canUseShopActions
-    ? "/dashboard/products/bulk"
-    : `${subscriptionRedirectBase}&from=${encodeURIComponent("/dashboard/products/bulk")}`
   const openStoreHref = isStorePublic
     ? storePath
     : `${subscriptionRedirectBase}&from=${encodeURIComponent("/dashboard/open-store")}`
@@ -231,15 +227,6 @@ export default function DashboardClientPage({
         text="Everything you need to run, optimize, and grow your affiliate storefront."
       >
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-          <Link href={bulkUploadHref}>
-            <Button
-              variant="outline"
-              className="h-8 w-full border-[#cfd8ea] bg-white text-xs text-[#1f2a44] shadow-none hover:bg-[#f3f6fc] sm:h-9 sm:w-auto sm:text-sm"
-            >
-              <Upload className="mr-2 h-4 w-4" />
-              Bulk Upload
-            </Button>
-          </Link>
           <Link href={addProductHref}>
             <Button className="h-8 w-full border border-[#3e55df] bg-[#4a63f6] text-xs text-white shadow-none hover:bg-[#3f56de] sm:h-9 sm:w-auto sm:text-sm">
               <PlusCircle className="mr-2 h-4 w-4" />
@@ -398,12 +385,18 @@ export default function DashboardClientPage({
                             : `${subscriptionRedirectBase}&from=${encodeURIComponent(`/dashboard/products/${product._id.toString()}/edit`)}`
                         }
                       >
-                        <Button variant="outline" size="sm" className="h-8 px-3 text-xs">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 border-[#cfd8ea] bg-white px-3 text-xs text-[#1f2a44] shadow-none hover:bg-[#f3f6fc] hover:text-[#12213c]"
+                        >
                           Edit
                         </Button>
                       </Link>
                       <a href={`/api/track/${product._id.toString()}`} target="_blank" rel="noopener noreferrer">
-                        <Button size="sm" className="h-8 px-3 text-xs">View</Button>
+                        <Button size="sm" className="h-8 border border-[#3e55df] bg-[#4a63f6] px-3 text-xs text-white shadow-none hover:bg-[#3f56de]">
+                          View
+                        </Button>
                       </a>
                     </div>
                   </div>

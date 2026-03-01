@@ -229,7 +229,12 @@ export function SubscriptionStatusCard({ initialAccess, userName, userEmail }: S
         >
           {isProcessing ? "Processing..." : access?.effectiveStatus === "active" ? "Renew +30 Days" : "Pay ₹149 Now"}
         </Button>
-        <Button variant="outline" onClick={refreshStatus} className="h-9 w-full rounded-md sm:w-auto" disabled={isProcessing}>
+        <Button
+          variant="outline"
+          onClick={refreshStatus}
+          className="h-9 w-full rounded-md border-slate-300 bg-white text-slate-700 hover:bg-slate-100 hover:text-slate-900 sm:w-auto"
+          disabled={isProcessing}
+        >
           Refresh Status
         </Button>
       </div>

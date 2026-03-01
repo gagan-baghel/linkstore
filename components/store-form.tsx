@@ -17,6 +17,8 @@ import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/components/ui/use-toast"
 
+const CATEGORY_STORAGE_KEY = "affiliatehub_product_categories"
+
 const storeFormSchema = z.object({
   storeBannerText: z.string().min(2, {
     message: "Store banner text must be at least 2 characters.",
@@ -62,6 +64,7 @@ export function StoreForm({
   const [isEditing, setIsEditing] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
+  const [newCategory, setNewCategory] = useState("")
 
   const defaultValues: StoreFormValues = {
     storeBannerText: storeBannerText || "",
@@ -89,6 +92,41 @@ export function StoreForm({
     { name: "Instagram", value: values.socialInstagram?.trim() || "", icon: <Instagram className="h-4 w-4" /> },
     { name: "YouTube", value: values.socialYoutube?.trim() || "", icon: <Youtube className="h-4 w-4" /> },
   ].filter((item) => item.value.length > 0)
+
+  function handleAddCategory() {
+    const normalized = newCategory.trim()
+    if (normalized.length < 2) {
+      toast({
+        title: "Category is too short",
+        description: "Use at least 2 characters.",
+        variant: "destructive",
+      })
+      return
+    }
+    try {
+      const raw = localStorage.getItem(CATEGORY_STORAGE_KEY)
+      let existing: string[] = []
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed)) {
+          existing = parsed.filter((item) => typeof item === "string")
+        }
+      }
+      const merged = Array.from(new Set([...existing, normalized])).slice(0, 30)
+      localStorage.setItem(CATEGORY_STORAGE_KEY, JSON.stringify(merged))
+      setNewCategory("")
+      toast({
+        title: "Category added",
+        description: `"${normalized}" is now available in Product form.`,
+      })
+    } catch {
+      toast({
+        title: "Could not save category",
+        description: "Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -220,6 +258,21 @@ export function StoreForm({
                   <p className="text-sm text-slate-600">No social links added yet.</p>
                 )}
               </div>
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:col-span-12">
+            <h3 className="text-sm font-semibold text-slate-900">Product Categories</h3>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+              <Input
+                value={newCategory}
+                onChange={(e) => setNewCategory(e.target.value)}
+                placeholder="Create category (e.g. Gadgets)"
+                className="h-10 border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400"
+              />
+              <Button type="button" variant="outline" className="h-10 border-slate-300 bg-white text-slate-800" onClick={handleAddCategory}>
+                Add Category
+              </Button>
             </div>
           </section>
         </div>

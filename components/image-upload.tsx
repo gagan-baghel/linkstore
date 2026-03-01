@@ -16,16 +16,17 @@ interface ImageUploadProps {
 
 export function ImageUpload({ images, onChange, maxImages = 5 }: ImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
+  const isSingleMode = maxImages === 1
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-
+  const uploadFiles = async (files: FileList | File[]) => {
     if (!files || files.length === 0) return
+    const file = files[0]
 
-    if (images.length + files.length > maxImages) {
+    if (maxImages > 1 && images.length >= maxImages) {
       toast({
         title: "Error",
-        description: `You can only upload up to ${maxImages} images.`,
+        description: `Only ${maxImages} images are allowed.`,
         variant: "destructive",
       })
       return
@@ -34,30 +35,24 @@ export function ImageUpload({ images, onChange, maxImages = 5 }: ImageUploadProp
     setIsUploading(true)
 
     try {
-      const newImages = [...images]
+      const formData = new FormData()
+      formData.append("file", file)
 
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i]
-        const formData = new FormData()
-        formData.append("file", file)
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      })
 
-        const response = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-        })
-
-        if (!response.ok) {
-          throw new Error("Failed to upload image")
-        }
-
-        const uploadData = await response.json()
-        newImages.push(uploadData.url)
+      if (!response.ok) {
+        throw new Error("Failed to upload image")
       }
 
-      onChange(newImages)
+      const uploadData = await response.json()
+      const nextImages = maxImages === 1 ? [uploadData.url] : [...images, uploadData.url].slice(0, maxImages)
+      onChange(nextImages)
       toast({
         title: "Success",
-        description: "Images uploaded successfully",
+        description: "Image uploaded successfully",
       })
     } catch (error) {
       console.error(error)
@@ -71,6 +66,22 @@ export function ImageUpload({ images, onChange, maxImages = 5 }: ImageUploadProp
     }
   }
 
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+    await uploadFiles(files)
+    e.target.value = ""
+  }
+
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    setIsDragging(false)
+    if (isUploading) return
+    const files = e.dataTransfer.files
+    if (!files || files.length === 0) return
+    await uploadFiles(files)
+  }
+
   const removeImage = (index: number) => {
     const newImages = [...images]
     newImages.splice(index, 1)
@@ -79,14 +90,14 @@ export function ImageUpload({ images, onChange, maxImages = 5 }: ImageUploadProp
 
   return (
     <div className="space-y-2">
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-5">
+      <div className={isSingleMode ? "grid grid-cols-1 gap-3" : "grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-5"}>
         {images.map((image, index) => (
           <Card key={index} className="overflow-hidden">
             <CardContent className="p-0 relative">
               <img
                 src={image || "/placeholder.svg"}
                 alt={`Product image ${index + 1}`}
-                className="h-28 w-full object-cover"
+                className={isSingleMode ? "h-44 w-full object-cover" : "h-28 w-full object-cover"}
                 loading="lazy"
                 decoding="async"
               />
@@ -103,12 +114,25 @@ export function ImageUpload({ images, onChange, maxImages = 5 }: ImageUploadProp
           </Card>
         ))}
         {images.length < maxImages && (
-          <Card className="flex h-28 items-center justify-center">
-            <CardContent className="p-0">
+          <Card
+            className={`flex items-center justify-center border border-dashed border-slate-300 bg-slate-50 ${
+              isSingleMode ? "h-44" : "h-28"
+            } ${isDragging ? "border-slate-500 bg-slate-100" : ""}`}
+            onDragOver={(e) => {
+              e.preventDefault()
+              if (!isDragging) setIsDragging(true)
+            }}
+            onDragLeave={(e) => {
+              e.preventDefault()
+              setIsDragging(false)
+            }}
+            onDrop={handleDrop}
+          >
+            <CardContent className="w-full p-3">
               <Button
                 type="button"
                 variant="outline"
-                className="h-full w-full relative px-3 text-sm"
+                className="h-full w-full relative border-slate-300 bg-white px-3 text-sm text-slate-700 shadow-none hover:bg-slate-100 hover:text-slate-900"
                 disabled={isUploading}
                 onClick={() => document.getElementById("image-upload")?.click()}
               >
@@ -116,14 +140,14 @@ export function ImageUpload({ images, onChange, maxImages = 5 }: ImageUploadProp
                   id="image-upload"
                   type="file"
                   accept="image/*"
-                  multiple
                   className="sr-only"
                   onChange={handleUpload}
                   disabled={isUploading}
                 />
-                <Upload className="mr-2 h-4 w-4" />
-                {isUploading ? "Uploading..." : "Upload Image"}
+                <Upload className="mr-2 h-4 w-4 text-slate-600" />
+                {isUploading ? "Uploading..." : "Upload / Drop Image"}
               </Button>
+              {isSingleMode && <p className="mt-2 text-center text-xs text-slate-500">Use one clear product image.</p>}
             </CardContent>
           </Card>
         )}

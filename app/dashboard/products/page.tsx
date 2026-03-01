@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { PlusCircle, Upload } from "lucide-react"
+import { PlusCircle } from "lucide-react"
 
 import { getSafeServerSession } from "@/lib/auth"
 import { Button } from "@/components/ui/button"
@@ -64,12 +64,6 @@ export default async function ProductsPage() {
     return (
       <DashboardShell>
         <div className="mb-3 flex flex-col gap-2 sm:mb-4 sm:flex-row sm:items-center sm:justify-end">
-          <Link href="/dashboard/products/bulk">
-            <Button variant="outline" className="h-8 w-full rounded-md border-slate-300 bg-white px-3 text-xs shadow-none sm:h-9 sm:w-auto sm:text-sm">
-              <Upload className="mr-2 h-4 w-4" />
-              Bulk Upload
-            </Button>
-          </Link>
           <Link href="/dashboard/products/new">
             <Button className="h-8 w-full rounded-md border border-slate-900 bg-slate-900 px-3 text-xs text-white shadow-none hover:bg-slate-800 sm:h-9 sm:w-auto sm:text-sm">
               <PlusCircle className="mr-2 h-4 w-4" />
@@ -93,7 +87,7 @@ export default async function ProductsPage() {
                 You don&apos;t have any products yet. Start adding products to your store.
               </EmptyPlaceholder.Description>
               <Link href="/dashboard/products/new">
-                <Button>
+                <Button className="h-10 rounded-md border border-slate-900 bg-slate-900 px-5 text-white shadow-none hover:bg-slate-800">
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Add Product
                 </Button>
@@ -110,12 +104,6 @@ export default async function ProductsPage() {
     return (
       <DashboardShell>
         <div className="mb-3 flex flex-col gap-2 sm:mb-4 sm:flex-row sm:items-center sm:justify-end">
-          <Link href="/dashboard/products/bulk">
-            <Button variant="outline" className="h-8 w-full rounded-md border-slate-300 bg-white px-3 text-xs shadow-none sm:h-9 sm:w-auto sm:text-sm">
-              <Upload className="mr-2 h-4 w-4" />
-              Bulk Upload
-            </Button>
-          </Link>
           <Link href="/dashboard/products/new">
             <Button className="h-8 w-full rounded-md border border-slate-900 bg-slate-900 px-3 text-xs text-white shadow-none hover:bg-slate-800 sm:h-9 sm:w-auto sm:text-sm">
               <PlusCircle className="mr-2 h-4 w-4" />

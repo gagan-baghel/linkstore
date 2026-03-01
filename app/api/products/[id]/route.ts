@@ -18,10 +18,10 @@ const imageUrlSchema = z
 
 const productSchema = z.object({
   title: z.string().trim().min(2).max(160),
-  description: z.string().trim().min(10).max(4000),
+  description: z.string().trim().max(4000).optional().default(""),
   affiliateUrl: z.string().trim().min(1),
   category: z.string().trim().min(2).max(60).optional().default("General"),
-  images: z.array(imageUrlSchema).max(10).optional().default([]),
+  images: z.array(imageUrlSchema).max(1).optional().default([]),
   videoUrl: z.string().trim().url().max(1000).optional().or(z.literal("")),
 })
 
@@ -130,7 +130,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     finalImages = finalImages
       .map((img) => img.trim())
       .filter((img) => img.startsWith("/") || Boolean(tryNormalizeAffiliateUrl(img)))
-      .slice(0, 10)
+      .slice(0, 1)
     if (finalImages.length === 0) {
       finalImages = ["/placeholder.jpg"]
     }
@@ -213,9 +213,6 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     if (!session?.user?.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
-
-    const access = await requireActiveSubscription(session.user.id, "delete_product")
-    if (!access.ok) return access.response
 
     const result = await convexMutation<{ productId: string; userId: string }, { ok: boolean; message?: string; code?: string }>(
       "products:deleteByIdForUser",
