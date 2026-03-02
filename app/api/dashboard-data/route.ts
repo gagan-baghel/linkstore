@@ -24,9 +24,9 @@ export async function POST(req: Request) {
 
     let data = await convexQuery<{ userId: string }, any>("analytics:getDashboardData", { userId: primaryUserId })
 
-    // Recover gracefully if a stale session contains an old user id.
+    // Recover gracefully if a previous local mapping points to an old user id.
     if (!data?.ok && sessionEmail) {
-      const userByEmail = await convexQuery<{ email: string }, any | null>("users:getForAuthByEmail", {
+      const userByEmail = await convexQuery<{ email: string }, any | null>("users:getByEmail", {
         email: sessionEmail,
       })
 

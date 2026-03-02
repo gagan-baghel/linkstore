@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState } from "react"
+import Image from "next/image"
 import { Upload, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -93,13 +94,14 @@ export function ImageUpload({ images, onChange, maxImages = 5 }: ImageUploadProp
       <div className={isSingleMode ? "grid grid-cols-1 gap-3" : "grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-5"}>
         {images.map((image, index) => (
           <Card key={index} className="overflow-hidden">
-            <CardContent className="p-0 relative">
-              <img
+            <CardContent className={isSingleMode ? "relative h-44 p-0" : "relative h-28 p-0"}>
+              <Image
                 src={image || "/placeholder.svg"}
                 alt={`Product image ${index + 1}`}
-                className={isSingleMode ? "h-44 w-full object-cover" : "h-28 w-full object-cover"}
-                loading="lazy"
-                decoding="async"
+                className="object-cover"
+                fill
+                unoptimized
+                sizes={isSingleMode ? "(max-width: 1024px) 100vw, 420px" : "(max-width: 1024px) 50vw, 220px"}
               />
               <Button
                 type="button"

@@ -1,8 +1,10 @@
-import type { User } from "next-auth"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 interface UserAvatarProps {
-  user: Pick<User, "name" | "image">
+  user: {
+    name?: string | null
+    image?: string | null
+  }
   className?: string
 }
 

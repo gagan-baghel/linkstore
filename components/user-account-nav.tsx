@@ -3,8 +3,7 @@
 import type React from "react"
 
 import Link from "next/link"
-import type { User } from "next-auth"
-import { signOut } from "next-auth/react"
+import { useClerk } from "@clerk/nextjs"
 
 import {
   DropdownMenu,
@@ -16,10 +15,16 @@ import {
 import { UserAvatar } from "@/components/user-avatar"
 
 interface UserAccountNavProps extends React.HTMLAttributes<HTMLDivElement> {
-  user: Pick<User, "name" | "image" | "email">
+  user: {
+    name?: string | null
+    image?: string | null
+    email?: string | null
+  }
 }
 
 export function UserAccountNav({ user }: UserAccountNavProps) {
+  const { signOut } = useClerk()
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="flex items-center gap-1.5 overflow-hidden rounded-full border border-slate-200 bg-slate-100 px-1.5 py-1 text-[#1c2433] hover:bg-slate-200 focus-visible:outline-none sm:gap-2 sm:px-2">
@@ -46,7 +51,7 @@ export function UserAccountNav({ user }: UserAccountNavProps) {
           onSelect={(event) => {
             event.preventDefault()
             signOut({
-              callbackUrl: `${window.location.origin}/auth/login`,
+              redirectUrl: `${window.location.origin}/auth/login`,
             })
           }}
         >

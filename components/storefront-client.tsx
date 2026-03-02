@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState, type ComponentType } from "react"
+import Image from "next/image"
 import {
   ExternalLink,
   Facebook,
@@ -407,11 +408,29 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                 onClick={() => product.trackId && trackEvent("product_card_click", product.trackId)}
                 className="col-span-2 row-span-2 block overflow-hidden rounded-lg bg-white"
               >
-                <img src={product.image} alt={product.title} className="h-full w-full object-cover" loading="lazy" decoding="async" />
+                <div className="relative h-full w-full">
+                  <Image
+                    src={product.image}
+                    alt={product.title}
+                    className="object-cover"
+                    fill
+                    unoptimized
+                    sizes="(max-width: 768px) 66vw, 280px"
+                  />
+                </div>
               </a>
             ) : (
               <div key={product.id} className="col-span-2 row-span-2 block overflow-hidden rounded-lg bg-white">
-                <img src={product.image} alt={product.title} className="h-full w-full object-cover" loading="lazy" decoding="async" />
+                <div className="relative h-full w-full">
+                  <Image
+                    src={product.image}
+                    alt={product.title}
+                    className="object-cover"
+                    fill
+                    unoptimized
+                    sizes="(max-width: 768px) 66vw, 280px"
+                  />
+                </div>
               </div>
             ),
           )}
@@ -425,14 +444,28 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                 onClick={() => product.trackId && trackEvent("product_card_click", product.trackId)}
                 className="block overflow-hidden rounded-lg bg-white"
               >
-                <div className="aspect-square">
-                  <img src={product.image} alt={product.title} className="h-full w-full object-cover" loading="lazy" decoding="async" />
+                <div className="relative aspect-square">
+                  <Image
+                    src={product.image}
+                    alt={product.title}
+                    className="object-cover"
+                    fill
+                    unoptimized
+                    sizes="(max-width: 768px) 33vw, 120px"
+                  />
                 </div>
               </a>
             ) : (
               <div key={product.id} className="block overflow-hidden rounded-lg bg-white">
-                <div className="aspect-square">
-                  <img src={product.image} alt={product.title} className="h-full w-full object-cover" loading="lazy" decoding="async" />
+                <div className="relative aspect-square">
+                  <Image
+                    src={product.image}
+                    alt={product.title}
+                    className="object-cover"
+                    fill
+                    unoptimized
+                    sizes="(max-width: 768px) 33vw, 120px"
+                  />
                 </div>
               </div>
             ),
@@ -460,7 +493,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                 isDarkMode ? "border-slate-700 bg-slate-800" : "border-white/65 bg-white",
               )}
             >
-              <img
+              <Image
                 src={getProfileImage(user)}
                 alt={displayName}
                 className={cn(
@@ -468,8 +501,10 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                   usesFallbackLogo ? "object-contain p-1.5" : "object-cover",
                   usesFallbackLogo && isDarkMode ? "mix-blend-lighten contrast-110 brightness-95" : "",
                 )}
-                loading="eager"
-                decoding="async"
+                width={80}
+                height={80}
+                unoptimized
+                sizes="80px"
               />
             </div>
 
@@ -598,8 +633,15 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                         isDarkMode ? "border-slate-700 bg-slate-900" : "border-white/65 bg-white",
                       )}
                     >
-                      <div className={cn("aspect-square overflow-hidden", isDarkMode ? "bg-slate-800" : "bg-slate-100")}>
-                        <img src={getProductImage(product)} alt={product.title} className="h-full w-full object-cover" loading="lazy" decoding="async" />
+                      <div className={cn("relative aspect-square overflow-hidden", isDarkMode ? "bg-slate-800" : "bg-slate-100")}>
+                        <Image
+                          src={getProductImage(product)}
+                          alt={product.title}
+                          className="object-cover"
+                          fill
+                          unoptimized
+                          sizes="(max-width: 768px) 50vw, 160px"
+                        />
                       </div>
                       <div className={cn("flex items-center gap-2 px-2.5 py-2", isDarkMode ? "text-slate-100" : "text-slate-800")}>
                         <p className="min-w-0 flex-1 truncate text-[11px] font-semibold">{truncateTitle(product.title, 18)}</p>
@@ -636,7 +678,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
           <div className="w-full px-2 sm:px-3 md:px-4 lg:px-5">
             <div className="flex items-center gap-1.5 py-1.5 sm:gap-2 sm:py-2">
               <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                <img
+                <Image
                   src={getProfileImage(user)}
                   alt={user.name}
                   className={cn(
@@ -644,8 +686,10 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                     usesFallbackLogo ? "object-contain p-1" : "object-cover",
                     usesFallbackLogo && isDarkMode ? "mix-blend-lighten contrast-110 brightness-95" : "",
                   )}
-                  loading="eager"
-                  decoding="async"
+                  width={36}
+                  height={36}
+                  unoptimized
+                  sizes="36px"
                 />
                 <div className="min-w-0">
                   <p className={cn("truncate text-sm font-bold leading-tight sm:text-lg md:text-xl", isDarkMode ? "text-slate-100" : "text-slate-800")}>
@@ -714,13 +758,14 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                           isDarkMode ? "border-slate-700 bg-slate-900/80 focus-visible:ring-slate-500" : "border-white/65 bg-white/80 focus-visible:ring-white",
                         )}
                       >
-                        <div className={cn("aspect-[4/5] overflow-hidden", isDarkMode ? "bg-slate-800/80" : "bg-slate-100/70")}>
-                          <img
+                        <div className={cn("relative aspect-[4/5] overflow-hidden", isDarkMode ? "bg-slate-800/80" : "bg-slate-100/70")}>
+                          <Image
                             src={product.images?.[0] || "/placeholder.svg?height=600&width=600"}
                             alt={product.title}
-                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]"
-                            loading="lazy"
-                            decoding="async"
+                            className="object-cover transition-transform duration-300 group-hover:scale-[1.04]"
+                            fill
+                            unoptimized
+                            sizes="(max-width: 768px) 50vw, (max-width: 1280px) 20vw, 220px"
                           />
                         </div>
                         <div className="pointer-events-none absolute inset-x-0 bottom-0 translate-y-2 bg-gradient-to-t from-black/80 via-black/45 to-transparent px-2.5 pb-2.5 pt-7 opacity-0 transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100">

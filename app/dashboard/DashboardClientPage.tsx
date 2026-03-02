@@ -2,6 +2,7 @@
 
 import { type ReactNode, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import {
   CheckCircle2,
   Circle,
@@ -365,13 +366,14 @@ export default function DashboardClientPage({
           <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
             {recentProducts.map((product: any) => (
               <div key={product._id.toString()} className="overflow-hidden rounded-lg border border-[#d8e2f3] bg-white">
-                <div className="aspect-video w-full overflow-hidden">
-                  <img
+                <div className="relative aspect-video w-full overflow-hidden">
+                  <Image
                     src={product.images?.[0] || "/placeholder.svg?height=200&width=300"}
                     alt={product.title}
-                    className="h-full w-full object-cover"
-                    loading="lazy"
-                    decoding="async"
+                    className="object-cover"
+                    fill
+                    unoptimized
+                    sizes="(max-width: 768px) 100vw, 33vw"
                   />
                 </div>
                   <div className="p-3">

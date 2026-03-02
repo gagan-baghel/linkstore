@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { CheckCircle2, Rocket, Sparkles } from "lucide-react"
-import { LoginForm } from "@/components/login-form"
+import { SignIn } from "@clerk/nextjs"
 
 export const metadata: Metadata = {
   title: "Login - AffiliateHub",
@@ -9,6 +9,8 @@ export const metadata: Metadata = {
 }
 
 export default function LoginPage() {
+  const hasClerkKey = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY)
+
   return (
     <div className="grid w-full items-stretch gap-6 lg:grid-cols-[0.95fr_1.05fr]">
       <div className="w-full rounded-[2rem] border border-white/65 bg-linear-to-br from-white/88 to-indigo-50/84 p-7 shadow-[14px_14px_30px_rgba(155,171,219,0.3),-11px_-11px_24px_rgba(255,255,255,0.86)] dark:border-white/10 dark:bg-linear-to-br dark:from-slate-900/88 dark:to-slate-800/78 dark:shadow-none sm:p-8">
@@ -16,7 +18,27 @@ export default function LoginPage() {
           <h1 className="text-3xl font-bold tracking-tight">Welcome back</h1>
           <p className="text-sm text-muted-foreground">Sign in to continue managing your storefront.</p>
         </div>
-        <LoginForm />
+        {hasClerkKey ? (
+          <div className="flex justify-center">
+            <SignIn
+              routing="path"
+              path="/auth/login"
+              signUpUrl="/auth/register"
+              forceRedirectUrl="/dashboard"
+              appearance={{
+                elements: {
+                  rootBox: "w-full",
+                  card: "w-full border-none bg-transparent shadow-none p-0",
+                },
+              }}
+            />
+          </div>
+        ) : (
+          <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            Authentication is not configured. Add `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` in your
+            environment.
+          </div>
+        )}
         <p className="mt-5 text-center text-sm text-muted-foreground">
           <Link href="/auth/register" className="font-semibold text-primary underline-offset-4 hover:underline">
             Don&apos;t have an account? Sign up

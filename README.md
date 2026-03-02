@@ -23,7 +23,7 @@ Social media platforms often limit users to a single "link in bio", making it di
 *   **Backend:** Next.js API Routes + Convex functions
 *   **Database:** Convex
 *   **Link Scraping/Metadata Fetching:** Cheerio or Puppeteer (to extract Open Graph tags from affiliate links)
-*   **Authentication:** NextAuth.js or Clerk
+*   **Authentication:** Clerk
 *   **Hosting:** Vercel (Frontend) & Supabase/Neon (Database)
 
 ## 🏗️ How It Works (User Flow)
@@ -52,6 +52,8 @@ cp .env.example .env.local
 # Set your Convex deployment URL in .env.local
 # CONVEX_URL=...
 # NEXT_PUBLIC_CONVEX_URL=...
+# NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=...
+# CLERK_SECRET_KEY=...
 
 # Start the development server
 npm run dev
