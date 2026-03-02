@@ -52,13 +52,6 @@ export const getByUsername = queryGeneric({
     }
 
     if (!user) {
-      const allUsers = await ctx.db.query("users").collect()
-      user =
-        allUsers.find((candidate) => normalizeUsernameInput(candidate.username).toLowerCase() === normalizedUsername) ??
-        null
-    }
-
-    if (!user) {
       return null
     }
 

@@ -54,10 +54,42 @@ cp .env.example .env.local
 # NEXT_PUBLIC_CONVEX_URL=...
 # NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=...
 # CLERK_SECRET_KEY=...
+# RAZORPAY_KEY_ID=...
+# RAZORPAY_KEY_SECRET=...
+# RAZORPAY_WEBHOOK_SECRET=...
+# PAYMENTS_DATA_KEY=...
 
 # Start the development server
 npm run dev
 ```
+
+## ✅ MVP/MBP Launch Checklist
+
+- Configure all required env vars in production (`CONVEX_URL`/`NEXT_PUBLIC_CONVEX_URL`, Clerk keys, Razorpay keys + webhook secret, `PAYMENTS_DATA_KEY`).
+- Verify runtime readiness via `GET /api/health` (should return `ok: true`).
+- Test auth flows:
+  - email/password sign in
+  - Google sign in
+  - signup email verification
+  - logout/session refresh
+- Test payments end-to-end in Razorpay:
+  - checkout order creation
+  - successful payment verification
+  - webhook processing
+  - failure/refund edge cases
+- Validate legal/support pages:
+  - `/privacy`
+  - `/terms`
+  - `/refunds`
+  - `/contact`
+- Run release checks:
+- `npm run lint`
+- `npm run build`
+- manual smoke test on mobile + desktop
+- edge-case QA from `docs/release-checklist.md` section 8.
+
+Detailed release steps: `docs/release-checklist.md`.
+Incident response notes: `docs/incident-runbook.md`.
 
 ## 🤝 Contributing
 Contributions, issues, and feature requests are welcome!

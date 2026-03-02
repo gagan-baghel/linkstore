@@ -50,9 +50,7 @@ export function UserAccountNav({ user }: UserAccountNavProps) {
           className="cursor-pointer"
           onSelect={(event) => {
             event.preventDefault()
-            signOut({
-              redirectUrl: `${window.location.origin}/auth/login`,
-            })
+            signOut({ redirectUrl: `${window.location.origin}/auth/login` })
           }}
         >
           Sign out

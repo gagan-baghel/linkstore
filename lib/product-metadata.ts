@@ -1,4 +1,5 @@
-import { assertSafePublicHttpUrl, normalizeAffiliateUrl, tryNormalizeAffiliateUrl } from "@/lib/affiliate-url"
+import { normalizeAffiliateUrl, tryNormalizeAffiliateUrl } from "@/lib/affiliate-url"
+import { assertSafePublicHttpUrlForServerFetch } from "@/lib/affiliate-url-server"
 
 export interface ProductMetadata {
   title?: string
@@ -389,8 +390,7 @@ async function fetchHtmlWithSafeRedirects(initialUrl: string): Promise<{ html: s
   let currentUrl = initialUrl
 
   for (let hop = 0; hop < 6; hop += 1) {
-    const parsed = new URL(currentUrl)
-    assertSafePublicHttpUrl(parsed)
+    await assertSafePublicHttpUrlForServerFetch(currentUrl)
 
     const response = await fetch(currentUrl, {
       redirect: "manual",
@@ -404,9 +404,7 @@ async function fetchHtmlWithSafeRedirects(initialUrl: string): Promise<{ html: s
       if (!location) throw new Error("Redirect without location header")
 
       const nextUrl = new URL(location, currentUrl).toString()
-      const parsedNextUrl = new URL(nextUrl)
-      assertSafePublicHttpUrl(parsedNextUrl)
-      currentUrl = parsedNextUrl.toString()
+      currentUrl = nextUrl
       continue
     }
 

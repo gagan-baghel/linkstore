@@ -1,6 +1,7 @@
 import crypto from "crypto"
 
 import { SUBSCRIPTION_CURRENCY, SUBSCRIPTION_PRICE_PAISE } from "@/lib/subscription"
+import { getRazorpayCredentials } from "@/lib/runtime-config"
 
 type RazorpayOrder = {
   id: string
@@ -36,8 +37,7 @@ function safeEqualHex(leftHex: string, rightHex: string) {
 }
 
 function getRazorpayConfig() {
-  const keyId = process.env.RAZORPAY_KEY?.trim()
-  const keySecret = process.env.RAZORPAY_SECRET?.trim()
+  const { keyId, keySecret } = getRazorpayCredentials()
 
   if (!keyId || !keySecret) {
     throw new Error("Razorpay credentials are not configured.")
@@ -132,4 +132,12 @@ export function verifyRazorpayWebhookSignature(rawBody: string, signatureHeader:
 
 export function getPublicRazorpayKeyId() {
   return getRazorpayConfig().keyId
+}
+
+export function isRazorpayConfigured() {
+  return getRazorpayCredentials().configured
+}
+
+export function isRazorpayWebhookConfigured() {
+  return Boolean(process.env.RAZORPAY_WEBHOOK_SECRET?.trim())
 }

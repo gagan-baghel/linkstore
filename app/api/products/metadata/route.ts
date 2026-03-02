@@ -3,6 +3,7 @@ import { z } from "zod"
 
 import { getSafeServerSession } from "@/lib/auth"
 import { normalizeAffiliateUrl } from "@/lib/affiliate-url"
+import { assertSafePublicHttpUrlForServerFetch } from "@/lib/affiliate-url-server"
 import { fetchProductMetadata } from "@/lib/product-metadata"
 import { checkRateLimit, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
 import { requireActiveSubscription } from "@/lib/subscription-access"
@@ -33,6 +34,7 @@ export async function POST(req: Request) {
     const body = await req.json()
     const { affiliateUrl: rawAffiliateUrl } = metadataSchema.parse(body)
     const affiliateUrl = normalizeAffiliateUrl(rawAffiliateUrl)
+    await assertSafePublicHttpUrlForServerFetch(affiliateUrl)
 
     const metadata = await fetchProductMetadata(affiliateUrl)
 

@@ -380,6 +380,32 @@ export const getReusablePendingOrder = queryGeneric({
   },
 })
 
+export const getOrderByIdempotencyKey = queryGeneric({
+  args: {
+    userId: v.id("users"),
+    idempotencyKey: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const row = await ctx.db
+      .query("subscriptionOrders")
+      .withIndex("by_idempotencyKey", (q: any) => q.eq("idempotencyKey", args.idempotencyKey))
+      .first()
+
+    if (!row) return null
+
+    return {
+      conflict: row.userId !== args.userId,
+      razorpayOrderId: row.razorpayOrderId,
+      amountPaise: row.amountPaise,
+      currency: row.currency,
+      status: row.status,
+      expiresAt: row.expiresAt,
+      createdAt: row.createdAt,
+      paidAt: row.paidAt,
+    }
+  },
+})
+
 export const createCheckoutOrderRecord = mutationGeneric({
   args: {
     userId: v.id("users"),
@@ -805,6 +831,14 @@ export const processWebhookEvent = mutationGeneric({
         })
       }
 
+      const user = await ctx.db.get(order.userId)
+      if (user) {
+        await ctx.db.patch(user._id, {
+          storeEnabled: false,
+          updatedAt: now,
+        })
+      }
+
       await writeAudit(ctx, {
         actorType: "webhook",
         actorUserId: order.userId,
@@ -844,6 +878,14 @@ export const expireDueSubscriptions = mutationGeneric({
         deactivationReason: "time_elapsed",
         updatedAt: now,
       })
+
+      const user = await ctx.db.get(sub.userId)
+      if (user) {
+        await ctx.db.patch(user._id, {
+          storeEnabled: false,
+          updatedAt: now,
+        })
+      }
 
       await writeAudit(ctx, {
         actorType: "system",
@@ -896,11 +938,19 @@ export const adminOverride = mutationGeneric({
         deactivationReason: args.reason || "manual_cancel",
         updatedAt: now,
       })
+      await ctx.db.patch(targetUser._id, {
+        storeEnabled: false,
+        updatedAt: now,
+      })
     } else if (args.action === "expire") {
       await ctx.db.patch(resolved.subscription._id, {
         status: "expired",
         expiresAt: now,
         deactivationReason: args.reason || "manual_expire",
+        updatedAt: now,
+      })
+      await ctx.db.patch(targetUser._id, {
+        storeEnabled: false,
         updatedAt: now,
       })
     } else if (args.action === "reactivate") {

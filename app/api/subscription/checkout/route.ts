@@ -6,7 +6,7 @@ import { z } from "zod"
 import { getSafeServerSession } from "@/lib/auth"
 import { convexMutation, convexQuery } from "@/lib/convex"
 import { checkRateLimit, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
-import { createRazorpayOrder, getPublicRazorpayKeyId } from "@/lib/razorpay"
+import { createRazorpayOrder, getPublicRazorpayKeyId, isRazorpayConfigured } from "@/lib/razorpay"
 import { SUBSCRIPTION_PLAN_CODE, SUBSCRIPTION_PLAN_NAME, SUBSCRIPTION_PRICE_PAISE, SUBSCRIPTION_CURRENCY } from "@/lib/subscription"
 import { writeAuditLog } from "@/lib/audit"
 
@@ -16,6 +16,10 @@ const checkoutSchema = z.object({
 
 export async function POST(req: Request) {
   try {
+    if (!isRazorpayConfigured()) {
+      return NextResponse.json({ message: "Billing is temporarily unavailable. Razorpay is not configured." }, { status: 503 })
+    }
+
     const csrfBlock = enforceSameOrigin(req)
     if (csrfBlock) return csrfBlock
 
@@ -61,6 +65,49 @@ export async function POST(req: Request) {
       })
     }
 
+    const existingByIdempotency = await convexQuery<
+      { userId: string; idempotencyKey: string },
+      {
+        conflict: boolean
+        razorpayOrderId: string
+        amountPaise: number
+        currency: string
+        status: string
+        expiresAt: number
+      } | null
+    >("subscriptions:getOrderByIdempotencyKey", {
+      userId: session.user.id,
+      idempotencyKey,
+    })
+
+    if (existingByIdempotency?.conflict) {
+      return NextResponse.json({ message: "Idempotency key conflict." }, { status: 409 })
+    }
+
+    if (existingByIdempotency?.status === "paid") {
+      return NextResponse.json({ message: "This payment request has already been completed." }, { status: 409 })
+    }
+
+    if (
+      existingByIdempotency?.status === "pending" &&
+      typeof existingByIdempotency.expiresAt === "number" &&
+      existingByIdempotency.expiresAt > now &&
+      existingByIdempotency.amountPaise === SUBSCRIPTION_PRICE_PAISE &&
+      existingByIdempotency.currency === SUBSCRIPTION_CURRENCY
+    ) {
+      return NextResponse.json({
+        checkout: {
+          keyId: getPublicRazorpayKeyId(),
+          orderId: existingByIdempotency.razorpayOrderId,
+          amountPaise: existingByIdempotency.amountPaise,
+          currency: existingByIdempotency.currency,
+          planCode: SUBSCRIPTION_PLAN_CODE,
+          planName: SUBSCRIPTION_PLAN_NAME,
+          reused: true,
+        },
+      })
+    }
+
     const receipt = `sub_${session.user.id.slice(-10)}_${now}`.slice(0, 40)
     const order = await createRazorpayOrder({
       receipt,
@@ -80,7 +127,18 @@ export async function POST(req: Request) {
         idempotencyKey: string
         pendingTtlMs?: number
       },
-      { ok: boolean; message?: string; code?: string }
+      {
+        ok: boolean
+        message?: string
+        code?: string
+        reused?: boolean
+        order?: {
+          razorpayOrderId: string
+          status: string
+          amountPaise: number
+          currency: string
+        }
+      }
     >("subscriptions:createCheckoutOrderRecord", {
       userId: session.user.id,
       razorpayOrderId: order.id,
@@ -103,6 +161,31 @@ export async function POST(req: Request) {
         details: JSON.stringify({ code: record.code || "UNKNOWN", message: record.message || "Unknown" }),
       })
       return NextResponse.json({ message: record.message || "Unable to create checkout order" }, { status: 409 })
+    }
+
+    if (record.reused && record.order?.razorpayOrderId) {
+      if (record.order.status === "paid") {
+        return NextResponse.json({ message: "This payment request has already been completed." }, { status: 409 })
+      }
+
+      if (record.order.status !== "pending") {
+        return NextResponse.json(
+          { message: "Unable to reuse the previous checkout order. Please retry checkout." },
+          { status: 409 },
+        )
+      }
+
+      return NextResponse.json({
+        checkout: {
+          keyId: getPublicRazorpayKeyId(),
+          orderId: record.order.razorpayOrderId,
+          amountPaise: record.order.amountPaise,
+          currency: record.order.currency,
+          planCode: SUBSCRIPTION_PLAN_CODE,
+          planName: SUBSCRIPTION_PLAN_NAME,
+          reused: true,
+        },
+      })
     }
 
     await writeAuditLog({

@@ -1,7 +1,8 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { CheckCircle2, Sparkles, Store } from "lucide-react"
-import { SignUp } from "@clerk/nextjs"
+
+import { RegisterForm } from "@/components/register-form"
 
 export const metadata: Metadata = {
   title: "Register - AffiliateHub",
@@ -9,8 +10,6 @@ export const metadata: Metadata = {
 }
 
 export default function RegisterPage() {
-  const hasClerkKey = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY)
-
   return (
     <div className="grid w-full items-stretch gap-6 lg:grid-cols-[1.05fr_0.95fr]">
       <div className="hidden rounded-[2rem] border border-white/65 bg-linear-to-br from-indigo-500/85 via-violet-500/75 to-sky-400/75 p-8 text-white shadow-[14px_14px_30px_rgba(121,104,226,0.35),-11px_-11px_24px_rgba(255,255,255,0.2)] dark:border-white/15 dark:from-indigo-500/58 dark:via-violet-500/55 dark:to-sky-500/52 dark:shadow-none lg:block">
@@ -48,27 +47,7 @@ export default function RegisterPage() {
           <h1 className="text-3xl font-bold tracking-tight">Create account</h1>
           <p className="text-sm text-muted-foreground">Set up your profile and launch your store.</p>
         </div>
-        {hasClerkKey ? (
-          <div className="flex justify-center">
-            <SignUp
-              routing="path"
-              path="/auth/register"
-              signInUrl="/auth/login"
-              forceRedirectUrl="/dashboard"
-              appearance={{
-                elements: {
-                  rootBox: "w-full",
-                  card: "w-full border-none bg-transparent shadow-none p-0",
-                },
-              }}
-            />
-          </div>
-        ) : (
-          <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-            Authentication is not configured. Add `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` in your
-            environment.
-          </div>
-        )}
+        <RegisterForm />
         <p className="mt-5 text-center text-sm text-muted-foreground">
           <Link href="/auth/login" className="font-semibold text-primary underline-offset-4 hover:underline">
             Already have an account? Sign in

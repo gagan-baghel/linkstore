@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 
 import { convexMutation } from "@/lib/convex"
-import { verifyRazorpayWebhookSignature } from "@/lib/razorpay"
+import { isRazorpayWebhookConfigured, verifyRazorpayWebhookSignature } from "@/lib/razorpay"
 import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/security"
 import { encryptSensitive, hashSensitive, hasPaymentsDataKeyConfigured } from "@/lib/secure-data"
 import { writeAuditLog } from "@/lib/audit"
@@ -32,6 +32,10 @@ export async function POST(req: Request) {
   const ip = getClientIp(req.headers)
 
   try {
+    if (!isRazorpayWebhookConfigured()) {
+      return NextResponse.json({ message: "Webhook endpoint is not configured." }, { status: 503 })
+    }
+
     const rate = checkRateLimit({ key: `api:subscription:webhook:${ip}`, windowMs: 60 * 1000, max: 240 })
     if (!rate.allowed) {
       return tooManyRequests(rate.retryAfterSec)

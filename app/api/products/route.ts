@@ -4,6 +4,7 @@ import { z } from "zod"
 
 import { getSafeServerSession } from "@/lib/auth"
 import { normalizeAffiliateUrl, tryNormalizeAffiliateUrl } from "@/lib/affiliate-url"
+import { assertSafePublicHttpUrlForServerFetch } from "@/lib/affiliate-url-server"
 import { convexMutation, convexQuery } from "@/lib/convex"
 import { fetchProductMetadata } from "@/lib/product-metadata"
 import { checkRateLimit, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
@@ -24,6 +25,17 @@ const productSchema = z.object({
   images: z.array(imageUrlSchema).max(1).optional().default([]),
   videoUrl: z.string().trim().url().max(1000).optional().or(z.literal("")),
 })
+
+function isAffiliateUrlValidationError(error: unknown): error is Error {
+  if (!(error instanceof Error)) return false
+  return (
+    error.message.includes("affiliate URL") ||
+    error.message.includes("Only http/https URLs are supported") ||
+    error.message.includes("embedded credentials") ||
+    error.message.includes("host is not allowed") ||
+    error.message.includes("Unable to resolve URL host")
+  )
+}
 
 async function revalidateStoreForUser(userId: string) {
   const user = await convexQuery<{ userId: string }, any | null>("users:getById", { userId }).catch(() => null)
@@ -55,6 +67,7 @@ export async function POST(req: Request) {
     const body = await req.json()
     const { title, description, affiliateUrl: rawAffiliateUrl, category, images, videoUrl } = productSchema.parse(body)
     const affiliateUrl = normalizeAffiliateUrl(rawAffiliateUrl)
+    await assertSafePublicHttpUrlForServerFetch(affiliateUrl)
 
     let finalImages = images.filter(Boolean)
     if (finalImages.length === 0) {
@@ -134,6 +147,9 @@ export async function POST(req: Request) {
     console.error("Product creation error:", error)
     if (error instanceof z.ZodError) {
       return NextResponse.json({ message: "Invalid data", errors: error.errors }, { status: 400 })
+    }
+    if (isAffiliateUrlValidationError(error)) {
+      return NextResponse.json({ message: error.message }, { status: 400 })
     }
     return NextResponse.json({ message: "Internal server error" }, { status: 500 })
   }

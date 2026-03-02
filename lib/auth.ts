@@ -1,4 +1,5 @@
 import { auth, currentUser } from "@clerk/nextjs/server"
+
 import { convexMutation, convexQuery } from "@/lib/convex"
 
 type SessionUser = {
@@ -37,7 +38,6 @@ function getPrimaryEmail(user: Awaited<ReturnType<typeof currentUser>>, clerkUse
     user?.emailAddresses.find((entry) => entry.id === user.primaryEmailAddressId)?.emailAddress?.trim().toLowerCase() || ""
   if (email) return email
 
-  // Fallback for providers/scenarios where the primary email is unavailable.
   return `${clerkUserId}@users.clerk.local`
 }
 

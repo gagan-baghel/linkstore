@@ -56,3 +56,7 @@ test-results/
 Thumbs.db
 .idea/
 .vscode/
+
+.agent
+.agents
+.claude

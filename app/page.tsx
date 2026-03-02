@@ -69,7 +69,7 @@ const featureRows = [
   {
     icon: ShieldCheck,
     title: "Secure auth and account recovery",
-    text: "Clerk-powered login with Google and built-in recovery flows from your account security settings.",
+    text: "Clerk-backed authentication with email/password and Google sign-in, plus built-in recovery controls.",
   },
 ]
 
@@ -94,11 +94,11 @@ const testimonials = [
 const faqs = [
   {
     q: "Can I sign in with Google?",
-    a: "Yes. Google login is supported through Clerk and can run alongside email/password authentication.",
+    a: "Yes. Use the Google option on the login form to sign in with your Google account.",
   },
   {
     q: "How do I recover my password?",
-    a: "Use the forgot-password flow from sign-in or open Account > Security Settings to manage password and recovery.",
+    a: "Use Account > Security Settings to manage password and recovery via Clerk.",
   },
   {
     q: "Does it work on mobile-first audiences?",

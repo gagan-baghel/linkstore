@@ -4,7 +4,7 @@ import { z } from "zod"
 import { getSafeServerSession } from "@/lib/auth"
 import { convexMutation } from "@/lib/convex"
 import { writeAuditLog } from "@/lib/audit"
-import { fetchRazorpayPayment, verifyRazorpayPaymentSignature } from "@/lib/razorpay"
+import { fetchRazorpayPayment, isRazorpayConfigured, verifyRazorpayPaymentSignature } from "@/lib/razorpay"
 import { checkRateLimit, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
 import { encryptSensitive, hashSensitive, hasPaymentsDataKeyConfigured } from "@/lib/secure-data"
 import { SUBSCRIPTION_CURRENCY, SUBSCRIPTION_PRICE_PAISE } from "@/lib/subscription"
@@ -20,6 +20,10 @@ export async function POST(req: Request) {
   const userAgent = req.headers.get("user-agent") || ""
 
   try {
+    if (!isRazorpayConfigured()) {
+      return NextResponse.json({ message: "Billing is temporarily unavailable. Razorpay is not configured." }, { status: 503 })
+    }
+
     const csrfBlock = enforceSameOrigin(req)
     if (csrfBlock) return csrfBlock
 

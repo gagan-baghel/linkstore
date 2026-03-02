@@ -14,8 +14,8 @@
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx"
   },
   "dependencies": {
+    "@clerk/nextjs": "^6.39.0",
     "@hookform/resolvers": "^3.3.1",
-    "@clerk/nextjs": "^6.16.0",
     "@radix-ui/react-accordion": "1.2.12",
     "@radix-ui/react-alert-dialog": "1.1.15",
     "@radix-ui/react-aspect-ratio": "1.1.8",
@@ -61,6 +61,7 @@
     "react-hook-form": "^7.46.1",
     "react-resizable-panels": "^2.1.7",
     "recharts": "^2.8.0",
+    "skills": "^1.4.3",
     "sonner": "^1.7.1",
     "tailwind-merge": "^1.14.0",
     "tailwindcss-animate": "^1.0.7",

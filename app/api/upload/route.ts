@@ -90,7 +90,7 @@ export async function POST(req: Request) {
     }
 
     if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
-      return NextResponse.json({ message: "Cloudinary is not configured" }, { status: 500 })
+      return NextResponse.json({ message: "Cloudinary is not configured" }, { status: 503 })
     }
 
     const buffer = Buffer.from(await file.arrayBuffer())
