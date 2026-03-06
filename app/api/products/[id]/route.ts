@@ -19,11 +19,9 @@ const imageUrlSchema = z
 
 const productSchema = z.object({
   title: z.string().trim().min(2).max(160),
-  description: z.string().trim().max(4000).optional().default(""),
   affiliateUrl: z.string().trim().min(1),
   category: z.string().trim().min(2).max(60).optional().default("General"),
   images: z.array(imageUrlSchema).max(1).optional().default([]),
-  videoUrl: z.string().trim().url().max(1000).optional().or(z.literal("")),
 })
 
 const quickUpdateSchema = z.object({
@@ -36,6 +34,24 @@ const quickUpdateSchema = z.object({
 const routeParamsSchema = z.object({
   id: z.string().trim().min(1).max(128).regex(/^[a-zA-Z0-9_-]+$/),
 })
+
+function serializeProduct(product: any) {
+  return {
+    _id: product._id,
+    title: product.title,
+    affiliateUrl: product.affiliateUrl,
+    category: product.category || "General",
+    images: product.images,
+    userId: product.userId,
+    createdAt: product.createdAt,
+    updatedAt: product.updatedAt,
+    isArchived: product.isArchived === true,
+    isLinkHealthy: product.isLinkHealthy !== false,
+    lastLinkCheckAt: product.lastLinkCheckAt,
+    lastLinkStatus: product.lastLinkStatus,
+    lastLinkError: product.lastLinkError || "",
+  }
+}
 
 function isAffiliateUrlValidationError(error: unknown): error is Error {
   if (!(error instanceof Error)) return false
@@ -79,25 +95,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ message: "Product not found" }, { status: 404 })
     }
 
-    const serializedProduct = {
-      _id: product._id,
-      title: product.title,
-      description: product.description,
-      affiliateUrl: product.affiliateUrl,
-      category: product.category || "General",
-      images: product.images,
-      videoUrl: product.videoUrl,
-      userId: product.userId,
-      createdAt: product.createdAt,
-      updatedAt: product.updatedAt,
-      isArchived: product.isArchived === true,
-      isLinkHealthy: product.isLinkHealthy !== false,
-      lastLinkCheckAt: product.lastLinkCheckAt,
-      lastLinkStatus: product.lastLinkStatus,
-      lastLinkError: product.lastLinkError || "",
-    }
-
-    return NextResponse.json({ product: serializedProduct })
+    return NextResponse.json({ product: serializeProduct(product) })
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ message: "Invalid product id", errors: error.errors }, { status: 400 })
@@ -129,7 +127,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (!access.ok) return access.response
 
     const body = await req.json()
-    const { title, description, affiliateUrl: rawAffiliateUrl, category, images, videoUrl } = productSchema.parse(body)
+    const { title, affiliateUrl: rawAffiliateUrl, category, images } = productSchema.parse(body)
     const affiliateUrl = normalizeAffiliateUrl(rawAffiliateUrl)
     await assertSafePublicHttpUrlForServerFetch(affiliateUrl)
 
@@ -153,22 +151,18 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         productId: string
         userId: string
         title: string
-        description: string
         affiliateUrl: string
         category?: string
         images: string[]
-        videoUrl?: string
       },
       { ok: boolean; message?: string; code?: string; product?: any }
     >("products:updateByIdForUser", {
       productId: id,
       userId: session.user.id,
       title,
-      description,
       affiliateUrl,
       category,
       images: finalImages,
-      videoUrl: videoUrl || "",
     })
 
     if (!result.ok || !result.product) {
@@ -178,26 +172,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     await revalidateStoreForUser(session.user.id)
 
-    const serializedProduct = {
-      _id: result.product._id,
-      title: result.product.title,
-      description: result.product.description,
-      affiliateUrl: result.product.affiliateUrl,
-      category: result.product.category || "General",
-      images: result.product.images,
-      videoUrl: result.product.videoUrl,
-      userId: result.product.userId,
-      createdAt: result.product.createdAt,
-      updatedAt: result.product.updatedAt,
-      isArchived: result.product.isArchived === true,
-      isLinkHealthy: result.product.isLinkHealthy !== false,
-      lastLinkCheckAt: result.product.lastLinkCheckAt,
-      lastLinkStatus: result.product.lastLinkStatus,
-      lastLinkError: result.product.lastLinkError || "",
-    }
-
     return NextResponse.json({
-      product: serializedProduct,
+      product: serializeProduct(result.product),
       message: "Product updated successfully",
     })
   } catch (error) {
@@ -311,23 +287,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     return NextResponse.json({
       message: "Product updated",
-      product: {
-        _id: result.product._id,
-        title: result.product.title,
-        description: result.product.description,
-        affiliateUrl: result.product.affiliateUrl,
-        category: result.product.category || "General",
-        images: result.product.images,
-        videoUrl: result.product.videoUrl,
-        userId: result.product.userId,
-        createdAt: result.product.createdAt,
-        updatedAt: result.product.updatedAt,
-        isArchived: result.product.isArchived === true,
-        isLinkHealthy: result.product.isLinkHealthy !== false,
-        lastLinkCheckAt: result.product.lastLinkCheckAt,
-        lastLinkStatus: result.product.lastLinkStatus,
-        lastLinkError: result.product.lastLinkError || "",
-      },
+      product: serializeProduct(result.product),
     })
   } catch (error) {
     console.error("Product patch error:", error)

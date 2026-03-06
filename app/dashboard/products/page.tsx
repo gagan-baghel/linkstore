@@ -45,11 +45,9 @@ export default async function ProductsPage() {
         productsData.map((product) => ({
           _id: product._id,
           title: product.title,
-          description: product.description,
           affiliateUrl: product.affiliateUrl,
           category: product.category || "General",
           images: product.images,
-          videoUrl: product.videoUrl,
           createdAt: product.createdAt,
           updatedAt: product.updatedAt,
           isArchived: product.isArchived === true,

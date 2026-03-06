@@ -47,10 +47,8 @@ interface ProductFormProps {
     id: string
     title: string
     category?: string
-    description?: string
     affiliateUrl: string
     images: string[]
-    videoUrl?: string
   }
   isEditing?: boolean
 }
@@ -132,7 +130,7 @@ export function ProductForm({ initialData, isEditing = false }: ProductFormProps
 
   async function createProduct(payload: ProductFormValues) {
     const normalizedAffiliateUrl = normalizeAffiliateUrl(payload.affiliateUrl)
-    const body = { ...payload, affiliateUrl: normalizedAffiliateUrl, description: "" }
+    const body = { ...payload, affiliateUrl: normalizedAffiliateUrl }
     const url = isEditing ? `/api/products/${initialData?.id}` : "/api/products"
     const method = isEditing ? "PUT" : "POST"
 

@@ -12,11 +12,12 @@ function normalizeUsernameInput(input: string) {
 }
 
 function toProductView(product: any, performance: any) {
+  const { description, videoUrl, ...rest } = product
   return {
-    ...product,
-    category: product.category || "General",
-    isArchived: product.isArchived === true,
-    isLinkHealthy: product.isLinkHealthy !== false,
+    ...rest,
+    category: rest.category || "General",
+    isArchived: rest.isArchived === true,
+    isLinkHealthy: rest.isLinkHealthy !== false,
     ctr7d: performance.ctr7d,
     ctr30d: performance.ctr30d,
     clicks7d: performance.clicks7d,

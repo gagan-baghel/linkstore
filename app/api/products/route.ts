@@ -19,12 +19,28 @@ const imageUrlSchema = z
 
 const productSchema = z.object({
   title: z.string().trim().min(2).max(160),
-  description: z.string().trim().max(4000).optional().default(""),
   affiliateUrl: z.string().trim().min(1),
   category: z.string().trim().min(2).max(60).optional().default("General"),
   images: z.array(imageUrlSchema).max(1).optional().default([]),
-  videoUrl: z.string().trim().url().max(1000).optional().or(z.literal("")),
 })
+
+function serializeProduct(product: any) {
+  return {
+    _id: product._id,
+    title: product.title,
+    affiliateUrl: product.affiliateUrl,
+    category: product.category || "General",
+    images: product.images,
+    userId: product.userId,
+    createdAt: product.createdAt,
+    updatedAt: product.updatedAt,
+    isArchived: product.isArchived === true,
+    isLinkHealthy: product.isLinkHealthy !== false,
+    lastLinkCheckAt: product.lastLinkCheckAt,
+    lastLinkStatus: product.lastLinkStatus,
+    lastLinkError: product.lastLinkError || "",
+  }
+}
 
 function isAffiliateUrlValidationError(error: unknown): error is Error {
   if (!(error instanceof Error)) return false
@@ -65,7 +81,7 @@ export async function POST(req: Request) {
     if (!access.ok) return access.response
 
     const body = await req.json()
-    const { title, description, affiliateUrl: rawAffiliateUrl, category, images, videoUrl } = productSchema.parse(body)
+    const { title, affiliateUrl: rawAffiliateUrl, category, images } = productSchema.parse(body)
     const affiliateUrl = normalizeAffiliateUrl(rawAffiliateUrl)
     await assertSafePublicHttpUrlForServerFetch(affiliateUrl)
 
@@ -88,21 +104,17 @@ export async function POST(req: Request) {
       {
         userId: string
         title: string
-        description: string
         affiliateUrl: string
         category?: string
         images: string[]
-        videoUrl?: string
       },
       { ok: boolean; message?: string; code?: string; product?: any }
     >("products:createProduct", {
       userId: session.user.id,
       title,
-      description,
       affiliateUrl,
       category,
       images: finalImages,
-      videoUrl: videoUrl || "",
     })
 
     if (!result.ok || !result.product) {
@@ -117,28 +129,9 @@ export async function POST(req: Request) {
 
     await revalidateStoreForUser(session.user.id)
 
-    // Convert to plain object
-    const serializedProduct = {
-      _id: result.product._id,
-      title: result.product.title,
-      description: result.product.description,
-      affiliateUrl: result.product.affiliateUrl,
-      category: result.product.category || "General",
-      images: result.product.images,
-      videoUrl: result.product.videoUrl,
-      userId: result.product.userId,
-      createdAt: result.product.createdAt,
-      updatedAt: result.product.updatedAt,
-      isArchived: result.product.isArchived === true,
-      isLinkHealthy: result.product.isLinkHealthy !== false,
-      lastLinkCheckAt: result.product.lastLinkCheckAt,
-      lastLinkStatus: result.product.lastLinkStatus,
-      lastLinkError: result.product.lastLinkError || "",
-    }
-
     return NextResponse.json(
       {
-        product: serializedProduct,
+        product: serializeProduct(result.product),
         message: "Product created successfully",
       },
       { status: 201 },
@@ -174,23 +167,7 @@ export async function GET(req: Request) {
     })
 
     // Convert MongoDB documents to plain objects
-    const serializedProducts = products.map((product) => ({
-      _id: product._id,
-      title: product.title,
-      description: product.description,
-      affiliateUrl: product.affiliateUrl,
-      category: product.category || "General",
-      images: product.images,
-      videoUrl: product.videoUrl,
-      userId: product.userId,
-      createdAt: product.createdAt,
-      updatedAt: product.updatedAt,
-      isArchived: product.isArchived === true,
-      isLinkHealthy: product.isLinkHealthy !== false,
-      lastLinkCheckAt: product.lastLinkCheckAt,
-      lastLinkStatus: product.lastLinkStatus,
-      lastLinkError: product.lastLinkError || "",
-    }))
+    const serializedProducts = products.map(serializeProduct)
 
     return NextResponse.json({ products: serializedProducts })
   } catch (error) {

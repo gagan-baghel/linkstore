@@ -378,8 +378,7 @@ export default function DashboardClientPage({
                 </div>
                   <div className="p-3">
                     <h3 className="mb-1 line-clamp-1 text-xs font-semibold text-[#1c1917] sm:text-sm">{product.title}</h3>
-                    <p className="mb-3 line-clamp-2 text-[11px] text-[#5f6b7e] sm:text-xs">{product.description}</p>
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="mt-3 flex items-center justify-between gap-2">
                       <Link
                         href={
                           canUseShopActions

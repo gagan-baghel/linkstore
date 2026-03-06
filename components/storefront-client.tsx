@@ -47,7 +47,6 @@ interface StorefrontUser {
 interface StorefrontProduct {
   _id: string
   title: string
-  description: string
   category?: string
   affiliateUrl: string
   images?: string[]
@@ -234,11 +233,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
     if (!normalizedQuery) return latestProducts
     return latestProducts.filter((product) => {
       const category = normalizeCategory(product.category)
-      return (
-        product.title.toLowerCase().includes(normalizedQuery) ||
-        product.description.toLowerCase().includes(normalizedQuery) ||
-        category.toLowerCase().includes(normalizedQuery)
-      )
+      return product.title.toLowerCase().includes(normalizedQuery) || category.toLowerCase().includes(normalizedQuery)
     })
   }, [latestProducts, query])
 
@@ -264,11 +259,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
     if (normalizedQuery) {
       list = list.filter((product) => {
         const category = normalizeCategory(product.category)
-        return (
-          product.title.toLowerCase().includes(normalizedQuery) ||
-          category.toLowerCase().includes(normalizedQuery) ||
-          product.description.toLowerCase().includes(normalizedQuery)
-        )
+        return product.title.toLowerCase().includes(normalizedQuery) || category.toLowerCase().includes(normalizedQuery)
       })
     }
 

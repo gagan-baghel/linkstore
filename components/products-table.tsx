@@ -37,11 +37,9 @@ import {
 interface Product {
   _id: string
   title: string
-  description: string
   affiliateUrl: string
   category?: string
   images: string[]
-  videoUrl?: string
   createdAt: string | number
   updatedAt?: string | number
   isArchived?: boolean
@@ -206,7 +204,6 @@ export function ProductsTable({ products }: ProductsTableProps) {
                 <tr key={product._id.toString()} className="border-b border-slate-100 hover:bg-slate-50/70 last:border-0">
                   <td className="px-3 py-2.5 align-middle sm:px-4 sm:py-3">
                     <div className="line-clamp-1 text-xs font-medium text-slate-900 sm:text-sm">{product.title}</div>
-                    <div className="line-clamp-1 text-[11px] text-slate-500 sm:text-xs">{product.description}</div>
                   </td>
                   <td className="px-3 py-2.5 align-middle sm:px-4 sm:py-3">
                     <span className="inline-flex items-center rounded-md border border-slate-200 bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700 sm:text-xs">

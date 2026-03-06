@@ -8,6 +8,12 @@ function normalizeCategory(category?: string) {
   return normalized.length > 0 ? normalized : "General"
 }
 
+function sanitizeProduct(product: any) {
+  if (!product) return product
+  const { description, videoUrl, ...rest } = product
+  return rest
+}
+
 async function hasActiveSubscription(ctx: any, userId: string) {
   const rows = await ctx.db
     .query("subscriptions")
@@ -48,7 +54,8 @@ export const listByUser = queryGeneric({
     const includeArchived = args.includeArchived ?? true
     const filtered = includeArchived ? docs : docs.filter((product) => product.isArchived !== true)
 
-    return typeof args.limit === "number" ? filtered.slice(0, args.limit) : filtered
+    const limited = typeof args.limit === "number" ? filtered.slice(0, args.limit) : filtered
+    return limited.map(sanitizeProduct)
   },
 })
 
@@ -67,7 +74,7 @@ export const countByUser = queryGeneric({
 export const getById = queryGeneric({
   args: { productId: v.id("products") },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.productId)
+    return sanitizeProduct(await ctx.db.get(args.productId))
   },
 })
 
@@ -81,7 +88,7 @@ export const getByIdForUser = queryGeneric({
     if (!product || product.userId !== args.userId) {
       return null
     }
-    return product
+    return sanitizeProduct(product)
   },
 })
 
@@ -124,10 +131,8 @@ export const createProduct = mutationGeneric({
   args: {
     userId: v.id("users"),
     title: v.string(),
-    description: v.string(),
     affiliateUrl: v.string(),
     images: v.array(v.string()),
-    videoUrl: v.optional(v.string()),
     category: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -154,10 +159,8 @@ export const createProduct = mutationGeneric({
     const productId = await ctx.db.insert("products", {
       userId: args.userId,
       title: args.title.trim(),
-      description: args.description.trim(),
       affiliateUrl: args.affiliateUrl.trim(),
       images: args.images,
-      videoUrl: args.videoUrl || "",
       category: normalizeCategory(args.category),
       isArchived: false,
       isLinkHealthy: true,
@@ -170,7 +173,7 @@ export const createProduct = mutationGeneric({
     })
 
     const product = await ctx.db.get(productId)
-    return { ok: true, product }
+    return { ok: true, product: sanitizeProduct(product) }
   },
 })
 
@@ -179,10 +182,8 @@ export const updateByIdForUser = mutationGeneric({
     productId: v.id("products"),
     userId: v.id("users"),
     title: v.string(),
-    description: v.string(),
     affiliateUrl: v.string(),
     images: v.array(v.string()),
-    videoUrl: v.optional(v.string()),
     category: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -198,16 +199,14 @@ export const updateByIdForUser = mutationGeneric({
 
     await ctx.db.patch(args.productId, {
       title: args.title.trim(),
-      description: args.description.trim(),
       affiliateUrl: args.affiliateUrl.trim(),
       images: args.images,
-      videoUrl: args.videoUrl || "",
       category: normalizeCategory(args.category),
       updatedAt: Date.now(),
     })
 
     const updated = await ctx.db.get(args.productId)
-    return { ok: true, product: updated }
+    return { ok: true, product: sanitizeProduct(updated) }
   },
 })
 
@@ -239,7 +238,7 @@ export const quickUpdateByIdForUser = mutationGeneric({
 
     await ctx.db.patch(args.productId, patch)
     const updated = await ctx.db.get(args.productId)
-    return { ok: true, product: updated }
+    return { ok: true, product: sanitizeProduct(updated) }
   },
 })
 
@@ -298,10 +297,8 @@ export const duplicateByIdForUser = mutationGeneric({
     const duplicatedId = await ctx.db.insert("products", {
       userId: product.userId,
       title: `${product.title} (Copy)`,
-      description: product.description,
       affiliateUrl: product.affiliateUrl,
       images: product.images,
-      videoUrl: product.videoUrl || "",
       category: normalizeCategory(product.category),
       isArchived: true,
       isLinkHealthy: product.isLinkHealthy ?? true,
@@ -314,7 +311,7 @@ export const duplicateByIdForUser = mutationGeneric({
     })
 
     const duplicated = await ctx.db.get(duplicatedId)
-    return { ok: true, product: duplicated }
+    return { ok: true, product: sanitizeProduct(duplicated) }
   },
 })
 

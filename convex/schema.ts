@@ -127,7 +127,7 @@ export default defineSchema({
     .index("by_action_createdAt", ["action", "createdAt"]),
   products: defineTable({
     title: v.string(),
-    description: v.string(),
+    description: v.optional(v.string()),
     affiliateUrl: v.string(),
     images: v.array(v.string()),
     videoUrl: v.optional(v.string()),

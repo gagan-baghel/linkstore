@@ -11,6 +11,12 @@ function toDayKey(timestamp: number) {
   return new Date(timestamp).toISOString().slice(0, 10)
 }
 
+function sanitizeProduct(product: any) {
+  if (!product) return product
+  const { description, videoUrl, ...rest } = product
+  return rest
+}
+
 export const getDashboardData = queryGeneric({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
@@ -55,7 +61,7 @@ export const getDashboardData = queryGeneric({
       ok: true,
       user: withoutPassword(user),
       totalProducts: activeProducts.length,
-      recentProducts: activeProducts.slice(0, 3),
+      recentProducts: activeProducts.slice(0, 3).map(sanitizeProduct),
       quickMetrics: {
         storeViews30,
         cardClicks30,

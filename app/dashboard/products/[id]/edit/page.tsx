@@ -64,10 +64,8 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
             id: product._id,
             title: product.title,
             category: product.category || "General",
-            description: product.description,
             affiliateUrl: product.affiliateUrl,
             images: product.images,
-            videoUrl: product.videoUrl || "",
           }}
           isEditing
         />

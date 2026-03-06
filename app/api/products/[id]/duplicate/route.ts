@@ -10,6 +10,25 @@ const routeParamsSchema = z.object({
   id: z.string().trim().min(1).max(128).regex(/^[a-zA-Z0-9_-]+$/),
 })
 
+function serializeProduct(product: any) {
+  if (!product) return product
+  return {
+    _id: product._id,
+    title: product.title,
+    affiliateUrl: product.affiliateUrl,
+    category: product.category || "General",
+    images: product.images,
+    userId: product.userId,
+    createdAt: product.createdAt,
+    updatedAt: product.updatedAt,
+    isArchived: product.isArchived === true,
+    isLinkHealthy: product.isLinkHealthy !== false,
+    lastLinkCheckAt: product.lastLinkCheckAt,
+    lastLinkStatus: product.lastLinkStatus,
+    lastLinkError: product.lastLinkError || "",
+  }
+}
+
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const csrfBlock = enforceSameOrigin(req)
@@ -49,7 +68,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ message: result.message || "Product not found", code: result.code || "" }, { status })
     }
 
-    return NextResponse.json({ message: "Product duplicated", product: result.product }, { status: 201 })
+    return NextResponse.json({ message: "Product duplicated", product: serializeProduct(result.product) }, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ message: "Invalid product id", errors: error.errors }, { status: 400 })
