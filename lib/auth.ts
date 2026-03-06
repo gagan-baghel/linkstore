@@ -1,10 +1,20 @@
-import { auth, currentUser } from "@clerk/nextjs/server"
+import { cache } from "react"
+import { cookies } from "next/headers"
+import { NextResponse } from "next/server"
 
-import { convexMutation, convexQuery } from "@/lib/convex"
+import {
+  AUTH_JWT_AUDIENCE,
+  AUTH_JWT_ISSUER,
+  getAuthCookieName,
+  getAuthJwtSecret,
+  getAuthSessionTtlSeconds,
+  isSecureAuthCookie,
+} from "@/lib/auth-config"
+import { convexQuery } from "@/lib/convex"
+import { signJwtToken, verifyJwtToken } from "@/lib/jwt"
 
 type SessionUser = {
   id: string
-  clerkUserId: string
   name: string
   email: string
   image?: string
@@ -19,65 +29,101 @@ export type SafeSession = {
   user: SessionUser
 }
 
-function getNameFromClerkUser(user: Awaited<ReturnType<typeof currentUser>>) {
-  if (!user) return "User"
-
-  const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ").trim()
-  if (fullName) return fullName
-
-  if (user.username) return user.username
-
-  const primaryEmail = user.emailAddresses.find((entry) => entry.id === user.primaryEmailAddressId)?.emailAddress || ""
-  if (primaryEmail) return primaryEmail.split("@")[0]
-
-  return "User"
+type SessionTokenPayload = {
+  sub: string
+  sv: number
+  iat: number
+  exp: number
+  iss: string
+  aud: string
 }
 
-function getPrimaryEmail(user: Awaited<ReturnType<typeof currentUser>>, clerkUserId: string) {
-  const email =
-    user?.emailAddresses.find((entry) => entry.id === user.primaryEmailAddressId)?.emailAddress?.trim().toLowerCase() || ""
-  if (email) return email
-
-  return `${clerkUserId}@users.clerk.local`
+function getSessionCookieConfig(maxAge: number) {
+  return {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure: isSecureAuthCookie(),
+    path: "/",
+    maxAge,
+  }
 }
 
-export async function getSafeServerSession(): Promise<SafeSession | null> {
+function isValidSessionPayload(payload: Awaited<ReturnType<typeof verifyJwtToken<SessionTokenPayload>>>): payload is SessionTokenPayload {
+  return Boolean(
+    payload &&
+      typeof payload.sub === "string" &&
+      payload.sub &&
+      typeof payload.sv === "number" &&
+      Number.isFinite(payload.sv) &&
+      payload.sv > 0 &&
+      payload.iss === AUTH_JWT_ISSUER &&
+      payload.aud === AUTH_JWT_AUDIENCE,
+  )
+}
+
+export async function createSessionToken(input: { userId: string; authVersion?: number }) {
+  const ttl = getAuthSessionTtlSeconds()
+  const now = Math.floor(Date.now() / 1000)
+
+  return signJwtToken(
+    {
+      sub: input.userId,
+      sv: input.authVersion && input.authVersion > 0 ? input.authVersion : 1,
+      iat: now,
+      exp: now + ttl,
+      iss: AUTH_JWT_ISSUER,
+      aud: AUTH_JWT_AUDIENCE,
+    },
+    getAuthJwtSecret(),
+  )
+}
+
+export async function verifySessionToken(token: string) {
+  const payload = await verifyJwtToken<SessionTokenPayload>(token, getAuthJwtSecret())
+  return isValidSessionPayload(payload) ? payload : null
+}
+
+export async function applySessionCookie(response: NextResponse, input: { userId: string; authVersion?: number }) {
+  const ttl = getAuthSessionTtlSeconds()
+  const token = await createSessionToken(input)
+  response.cookies.set(getAuthCookieName(), token, getSessionCookieConfig(ttl))
+}
+
+export function clearSessionCookie(response: NextResponse) {
+  response.cookies.set(getAuthCookieName(), "", getSessionCookieConfig(0))
+}
+
+const loadSafeServerSession = cache(async (): Promise<SafeSession | null> => {
   try {
-    const { userId } = await auth()
-    if (!userId) return null
+    const cookieStore = await cookies()
+    const token = cookieStore.get(getAuthCookieName())?.value
+    if (!token) return null
 
-    const clerkUser = await currentUser()
-    const email = getPrimaryEmail(clerkUser, userId)
-    const name = getNameFromClerkUser(clerkUser)
-    const image = clerkUser?.imageUrl || ""
+    const payload = await verifySessionToken(token)
+    if (!payload) return null
 
-    const result = await convexMutation<
-      { clerkUserId: string; email: string; name: string; image?: string },
-      { ok: boolean; message?: string; user?: any }
-    >("users:upsertFromClerk", {
-      clerkUserId: userId,
-      email,
-      name,
-      image,
-    })
+    const [user, accessState] = await Promise.all([
+      convexQuery<{ userId: string }, any | null>("users:getById", { userId: payload.sub }),
+      convexQuery<{ userId: string }, any | null>("subscriptions:getAccessState", { userId: payload.sub }).catch(() => null),
+    ])
 
-    if (!result.ok || !result.user?._id) {
-      throw new Error(result.message || "Unable to resolve user account.")
+    if (!user?._id) {
+      return null
     }
 
-    const accessState = await convexQuery<{ userId: string }, any | null>("subscriptions:getAccessState", {
-      userId: result.user._id,
-    })
+    const authVersion = typeof user.authVersion === "number" && user.authVersion > 0 ? user.authVersion : 1
+    if (payload.sv !== authVersion) {
+      return null
+    }
 
     return {
       user: {
-        id: result.user._id,
-        clerkUserId: userId,
-        name: result.user.name || name,
-        email: result.user.email || email,
-        image: result.user.image || image,
-        username: result.user.username,
-        role: result.user.role === "admin" ? "admin" : "user",
+        id: user._id,
+        name: user.name || "User",
+        email: user.email || "",
+        image: user.image || "",
+        username: user.username,
+        role: user.role === "admin" ? "admin" : "user",
         subscriptionStatus: accessState?.effectiveStatus || "inactive",
         hasActiveSubscription: Boolean(accessState?.hasActiveSubscription),
         subscriptionExpiresAt: typeof accessState?.expiresAt === "number" ? accessState.expiresAt : null,
@@ -90,4 +136,8 @@ export async function getSafeServerSession(): Promise<SafeSession | null> {
     }
     return null
   }
+})
+
+export async function getSafeServerSession(): Promise<SafeSession | null> {
+  return loadSafeServerSession()
 }

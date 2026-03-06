@@ -1,58 +1,96 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import { CheckCircle2, Sparkles, Store } from "lucide-react"
+import { redirect } from "next/navigation"
+import { CheckCircle2, Sparkles, Store, Rocket } from "lucide-react"
 
 import { RegisterForm } from "@/components/register-form"
+import { getSafeServerSession } from "@/lib/auth"
 
 export const metadata: Metadata = {
   title: "Register - AffiliateHub",
   description: "Create your AffiliateHub account",
 }
 
-export default function RegisterPage() {
+export default async function RegisterPage() {
+  const session = await getSafeServerSession()
+  if (session?.user?.id) {
+    redirect("/dashboard")
+  }
+
   return (
-    <div className="grid w-full items-stretch gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-      <div className="hidden rounded-[2rem] border border-white/65 bg-linear-to-br from-indigo-500/85 via-violet-500/75 to-sky-400/75 p-8 text-white shadow-[14px_14px_30px_rgba(121,104,226,0.35),-11px_-11px_24px_rgba(255,255,255,0.2)] dark:border-white/15 dark:from-indigo-500/58 dark:via-violet-500/55 dark:to-sky-500/52 dark:shadow-none lg:block">
-        <span className="inline-flex items-center gap-2 rounded-full border border-white/35 bg-white/15 px-3 py-1 text-xs font-semibold tracking-wide">
-          <Sparkles className="h-3.5 w-3.5" />
-          Start your affiliate journey
-        </span>
-        <h2 className="mt-5 text-4xl font-extrabold tracking-tight">Build your own storefront in minutes</h2>
-        <p className="mt-3 max-w-md text-white/90">
-          Create a clean product hub, share one link everywhere, and track the clicks that matter.
-        </p>
-        <div className="mt-8 space-y-3">
-          {[
-            "Publish products with affiliate links fast",
-            "Get a mobile-ready public store instantly",
-            "Track clicks and optimize weekly",
-          ].map((item) => (
-            <div key={item} className="flex items-center gap-2 text-sm">
-              <CheckCircle2 className="h-4 w-4 text-white" />
-              <span>{item}</span>
-            </div>
-          ))}
-        </div>
-        <div className="mt-8 rounded-2xl border border-white/30 bg-white/10 p-4 backdrop-blur-sm">
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            <Store className="h-4 w-4" />
-            Ready-to-share affiliate store URL
+    <div className="grid min-h-[calc(100vh-140px)] w-full items-center gap-12 lg:grid-cols-[1fr_1fr] lg:gap-24 xl:gap-32">
+      {/* Left Column (Text & Features) - No Box */}
+      <div className="hidden flex-col justify-center space-y-12 lg:flex pl-4 lg:pl-8">
+        <div className="space-y-6">
+          <div className="inline-flex items-center gap-2 text-sm font-semibold tracking-wide text-indigo-600 dark:text-indigo-400">
+            <Sparkles className="h-5 w-5" />
+            <span>Start your affiliate journey</span>
           </div>
-          <p className="mt-1 text-sm text-white/85">Set up once, then use the same storefront link in all channels.</p>
+          <h1 className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-5xl xl:text-6xl">
+            Build your own<br />storefront in minutes
+          </h1>
+          <p className="text-lg text-slate-600 dark:text-slate-400 max-w-md">
+            Create a clean product hub, share one link everywhere, and track the clicks that matter.
+          </p>
+        </div>
+
+        <div className="space-y-8">
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 text-lg font-semibold text-slate-900 dark:text-white">
+              <Rocket className="h-6 w-6 text-indigo-500" />
+              Publish products fast
+            </div>
+            <p className="text-base text-slate-600 dark:text-slate-400 max-w-md">
+              Publish products with affiliate links in minutes to a mobile-ready public store.
+            </p>
+          </div>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 text-lg font-semibold text-slate-900 dark:text-white">
+              <Store className="h-6 w-6 text-indigo-500" />
+              Ready-to-share store URL
+            </div>
+            <p className="text-base text-slate-600 dark:text-slate-400 max-w-md">
+              Set up once, then use the exact same storefront transparent link across all channels.
+            </p>
+          </div>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 text-lg font-semibold text-slate-900 dark:text-white">
+              <CheckCircle2 className="h-6 w-6 text-indigo-500" />
+              Track and optimize weekly
+            </div>
+            <p className="text-base text-slate-600 dark:text-slate-400 max-w-md">
+              Track clicks natively to see what converts and optimize your sales weekly.
+            </p>
+          </div>
         </div>
       </div>
 
-      <div className="w-full rounded-[2rem] border border-white/65 bg-linear-to-br from-white/88 to-indigo-50/84 p-7 shadow-[14px_14px_30px_rgba(155,171,219,0.3),-11px_-11px_24px_rgba(255,255,255,0.86)] dark:border-white/10 dark:bg-linear-to-br dark:from-slate-900/88 dark:to-slate-800/78 dark:shadow-none sm:p-8">
-        <div className="mb-6 space-y-2 text-center">
-          <h1 className="text-3xl font-bold tracking-tight">Create account</h1>
-          <p className="text-sm text-muted-foreground">Set up your profile and launch your store.</p>
+      {/* Right Column (Glassmorphism Card) */}
+      <div className="w-full max-w-lg mx-auto">
+        <div className="relative overflow-hidden rounded-[2.5rem] border border-white/20 bg-white/40 p-8 shadow-2xl backdrop-blur-2xl dark:border-slate-700/50 dark:bg-[#131825]/60 sm:p-10">
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/40 to-transparent dark:from-white/5 dark:to-transparent" />
+
+          <div className="relative z-10">
+            <div className="mb-10 text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400">
+                <Store className="h-6 w-6" />
+              </div>
+              <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Create an account</h2>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Set up your profile and launch your storefront.</p>
+            </div>
+
+            <RegisterForm />
+
+            <div className="mt-8 border-t border-slate-200/50 pt-6 text-center dark:border-slate-800/80">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Already have an account?{" "}
+                <Link href="/auth/login" className="font-semibold text-indigo-600 transition-colors hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">
+                  Sign in
+                </Link>
+              </p>
+            </div>
+          </div>
         </div>
-        <RegisterForm />
-        <p className="mt-5 text-center text-sm text-muted-foreground">
-          <Link href="/auth/login" className="font-semibold text-primary underline-offset-4 hover:underline">
-            Already have an account? Sign in
-          </Link>
-        </p>
       </div>
     </div>
   )

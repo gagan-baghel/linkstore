@@ -1,10 +1,12 @@
 "use client"
 
+import { useState } from "react"
 import type React from "react"
 
 import Link from "next/link"
-import { useClerk } from "@clerk/nextjs"
+import { useRouter } from "next/navigation"
 
+import { logoutFromApp } from "@/lib/client-auth"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,7 +25,23 @@ interface UserAccountNavProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 export function UserAccountNav({ user }: UserAccountNavProps) {
-  const { signOut } = useClerk()
+  const router = useRouter()
+  const [isSigningOut, setIsSigningOut] = useState(false)
+
+  async function handleSignOut() {
+    if (isSigningOut) return
+
+    setIsSigningOut(true)
+
+    try {
+      await logoutFromApp()
+      router.push("/auth/login")
+      router.refresh()
+    } catch (error) {
+      console.error(error)
+      setIsSigningOut(false)
+    }
+  }
 
   return (
     <DropdownMenu>
@@ -50,10 +68,10 @@ export function UserAccountNav({ user }: UserAccountNavProps) {
           className="cursor-pointer"
           onSelect={(event) => {
             event.preventDefault()
-            signOut({ redirectUrl: `${window.location.origin}/auth/login` })
+            void handleSignOut()
           }}
         >
-          Sign out
+          {isSigningOut ? "Signing out..." : "Sign out"}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -7,7 +7,9 @@ import {
   Facebook,
   Globe,
   Instagram,
+  Mail,
   MoreVertical,
+  Phone,
   Search,
   ShoppingBag,
   Twitter,
@@ -99,6 +101,33 @@ function ensureUrl(value: string) {
   return `https://${trimmed}`
 }
 
+function createContactItem(contactInfo?: string): SocialItem | null {
+  const trimmed = (contactInfo || "").trim()
+  if (!trimmed) return null
+
+  if (/^mailto:/i.test(trimmed)) {
+    return { key: "contact-email", label: "Email", href: trimmed, icon: Mail }
+  }
+
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+    return { key: "contact-email", label: "Email", href: `mailto:${trimmed}`, icon: Mail }
+  }
+
+  if (/^tel:/i.test(trimmed)) {
+    return { key: "contact-phone", label: "Call", href: trimmed, icon: Phone }
+  }
+
+  if (/^\+?[\d\s().-]{7,}$/.test(trimmed)) {
+    const normalizedPhone = trimmed.replace(/[^\d+]/g, "")
+    if (normalizedPhone) {
+      return { key: "contact-phone", label: "Call", href: `tel:${normalizedPhone}`, icon: Phone }
+    }
+  }
+
+  const href = ensureUrl(trimmed)
+  return href ? { key: "contact-website", label: "Website", href, icon: Globe } : null
+}
+
 function truncateTitle(value: string, max = 24) {
   if (value.length <= max) return value
   return `${value.slice(0, max - 3)}...`
@@ -148,15 +177,26 @@ function buildSocialItems(user: StorefrontUser): SocialItem[] {
     {
       key: "website",
       label: "Website",
-      value: user.socialWebsite || user.contactInfo,
+      value: user.socialWebsite,
       icon: Globe,
     },
   ]
 
-  return raw
+  const socialItems = raw
     .map((item) => ({ ...item, href: ensureUrl(item.value || "") }))
     .filter((item) => item.href.length > 0)
     .map(({ value, ...item }) => item)
+
+  const contactItem = createContactItem(user.contactInfo)
+  const mergedItems = contactItem ? [...socialItems, contactItem] : socialItems
+  const seen = new Set<string>()
+
+  return mergedItems.filter((item) => {
+    const normalizedHref = item.href.trim().toLowerCase()
+    if (!normalizedHref || seen.has(normalizedHref)) return false
+    seen.add(normalizedHref)
+    return true
+  })
 }
 
 export function StorefrontClient({ user, products }: StorefrontClientProps) {
@@ -302,8 +342,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
     }
 
     if (items.length < 3) {
-      const random = [...pool].sort(() => Math.random() - 0.5).slice(0, 2)
-      random.forEach((image, idx) => {
+      pool.slice(0, 2).forEach((image, idx) => {
         items.push({
           id: `fill-extra-${idx + 1}`,
           image,

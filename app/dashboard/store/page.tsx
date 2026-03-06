@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { redirect } from "next/navigation"
 
 import { getSafeServerSession } from "@/lib/auth"
 import { DashboardShell } from "@/components/dashboard-shell"
@@ -14,23 +15,24 @@ export const metadata: Metadata = {
 
 export default async function StoreSettingsPage() {
   const session = await getSafeServerSession()
+  if (!session?.user.id) {
+    redirect("/auth/login")
+  }
 
   let user: any | null = null
   let subscriptionAccess: any | null = null
   let hasDataError = false
 
-  if (session?.user.id) {
-    try {
-      const [resolvedUser, resolvedAccess] = await Promise.all([
-        convexQuery<{ userId: string }, any | null>("users:getById", { userId: session.user.id }),
-        convexQuery<{ userId: string }, any | null>("subscriptions:getAccessState", { userId: session.user.id }),
-      ])
-      user = resolvedUser
-      subscriptionAccess = resolvedAccess
-    } catch (error) {
-      console.error("Store settings load error:", error)
-      hasDataError = true
-    }
+  try {
+    const [resolvedUser, resolvedAccess] = await Promise.all([
+      convexQuery<{ userId: string }, any | null>("users:getById", { userId: session.user.id }),
+      convexQuery<{ userId: string }, any | null>("subscriptions:getAccessState", { userId: session.user.id }),
+    ])
+    user = resolvedUser
+    subscriptionAccess = resolvedAccess
+  } catch (error) {
+    console.error("Store settings load error:", error)
+    hasDataError = true
   }
 
   return (

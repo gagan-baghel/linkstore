@@ -184,9 +184,9 @@ export function AccountForm({ name, email, username }: AccountFormProps) {
 
       <div className="rounded-xl border border-[#d8e2f3] bg-white p-5 md:p-6">
         <h2 className="text-base font-semibold text-[#162033]">Password & Recovery</h2>
-        <p className="mb-4 mt-1 text-xs text-[#60708a]">Manage password changes and forgot-password recovery options.</p>
+        <p className="mb-4 mt-1 text-xs text-[#60708a]">Manage password rotation and session security from one place.</p>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-[#4f5f7a]">Open security settings to reset your password with email verification when needed.</p>
+          <p className="text-xs text-[#4f5f7a]">Open security settings to update your password and invalidate older sessions.</p>
           <Button
             size="sm"
             className="h-9 w-full border-[#cfd8ea] bg-white px-3 text-xs text-[#1f2a44] shadow-none hover:bg-[#f3f6fc] sm:w-auto"

@@ -7,7 +7,7 @@ export default defineSchema({
     username: v.string(),
     email: v.string(),
     passwordHash: v.optional(v.string()),
-    clerkUserId: v.optional(v.string()),
+    authVersion: v.optional(v.number()),
     role: v.optional(v.union(v.literal("user"), v.literal("admin"))),
     image: v.optional(v.string()),
     storeEnabled: v.optional(v.boolean()),
@@ -31,8 +31,7 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_email", ["email"])
-    .index("by_username", ["username"])
-    .index("by_clerk_user_id", ["clerkUserId"]),
+    .index("by_username", ["username"]),
   subscriptions: defineTable({
     userId: v.id("users"),
     planCode: v.string(),

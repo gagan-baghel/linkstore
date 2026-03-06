@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { format } from "date-fns"
 import { MousePointerClick, Package, Store, TrendingUp } from "lucide-react"
+import { redirect } from "next/navigation"
 
 import { getSafeServerSession } from "@/lib/auth"
 import { DashboardShell } from "@/components/dashboard-shell"
@@ -21,7 +22,7 @@ export default async function AnalyticsPage() {
   const session = await getSafeServerSession()
 
   if (!session) {
-    return <div>Loading...</div>
+    redirect("/auth/login")
   }
 
   let analytics: any = null

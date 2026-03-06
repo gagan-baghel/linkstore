@@ -3,8 +3,7 @@
 ## 1. Configuration
 - Set required env vars in production:
   - `CONVEX_URL` (or `NEXT_PUBLIC_CONVEX_URL` for dev fallback)
-  - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
-  - `CLERK_SECRET_KEY`
+  - `AUTH_JWT_SECRET`
   - `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET`
   - `RAZORPAY_WEBHOOK_SECRET`
   - `PAYMENTS_DATA_KEY`
@@ -21,10 +20,9 @@
 
 ## 3. Authentication Smoke Tests
 - Sign up with email/password from `/auth/register`.
-- Complete email verification code flow.
 - Sign in with email/password from `/auth/login`.
-- Sign in with Google from `/auth/login`.
 - Verify sign out from dashboard menu and side nav.
+- Change password from `/dashboard/account/security` and confirm older sessions are invalidated.
 
 ## 4. Billing Smoke Tests (Razorpay)
 - Create checkout order (`/api/subscription/checkout`).
@@ -53,14 +51,10 @@
 ## 8. Edge-Case QA
 - Wrong password returns safe error (no sensitive leakage).
 - Repeated login attempts are rate-limited (429) and recover after window.
-- Signup verification:
-  - invalid OTP
-  - expired OTP
-  - resend OTP flow
-- Google OAuth:
-  - first-time user
-  - existing user re-login
-  - canceled OAuth consent
+- Password rotation:
+  - incorrect current password
+  - old password rejected after update
+  - current session remains valid after update
 - Billing:
   - duplicate verify call (idempotency behavior)
   - webhook retry delivery

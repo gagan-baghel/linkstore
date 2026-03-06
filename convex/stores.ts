@@ -59,25 +59,31 @@ export const getByUsername = queryGeneric({
       return null
     }
 
-    const allProducts = await ctx.db
-      .query("products")
-      .withIndex("by_userId_createdAt", (q) => q.eq("userId", user._id))
-      .order("desc")
-      .collect()
-
-    const products = allProducts.filter((product) => product.isArchived !== true && product.isLinkHealthy !== false)
-
     const now = Date.now()
     const last7Days = now - 7 * 24 * 60 * 60 * 1000
     const last30Days = now - 30 * 24 * 60 * 60 * 1000
 
-    const events = await ctx.db
-      .query("events")
-      .withIndex("by_userId_createdAt", (q) => q.eq("userId", user._id))
-      .order("desc")
-      .collect()
+    const [allProducts, relevantEvents, relevantClicks] = await Promise.all([
+      ctx.db
+        .query("products")
+        .withIndex("by_userId_createdAt", (q) => q.eq("userId", user._id))
+        .order("desc")
+        .collect(),
+      ctx.db
+        .query("events")
+        .withIndex("by_userId_createdAt", (q) => q.eq("userId", user._id))
+        .filter((q) => q.gte(q.field("createdAt"), last30Days))
+        .order("desc")
+        .collect(),
+      ctx.db
+        .query("clicks")
+        .withIndex("by_userId_createdAt", (q) => q.eq("userId", user._id))
+        .filter((q) => q.gte(q.field("createdAt"), last30Days))
+        .order("desc")
+        .collect(),
+    ])
 
-    const relevantEvents = events.filter((event) => event.createdAt >= last30Days)
+    const products = allProducts.filter((product) => product.isArchived !== true && product.isLinkHealthy !== false)
     const storeViews7 = relevantEvents.filter((event) => event.eventType === "store_view" && event.createdAt >= last7Days).length
     const storeViews30 = relevantEvents.filter((event) => event.eventType === "store_view").length
 
@@ -94,11 +100,12 @@ export const getByUsername = queryGeneric({
           cardClicks7.set(event.productId, (cardClicks7.get(event.productId) || 0) + 1)
         }
       }
-      if (event.eventType === "outbound_click") {
-        outbound30.set(event.productId, (outbound30.get(event.productId) || 0) + 1)
-        if (event.createdAt >= last7Days) {
-          outbound7.set(event.productId, (outbound7.get(event.productId) || 0) + 1)
-        }
+    }
+
+    for (const click of relevantClicks) {
+      outbound30.set(click.productId, (outbound30.get(click.productId) || 0) + 1)
+      if (click.createdAt >= last7Days) {
+        outbound7.set(click.productId, (outbound7.get(click.productId) || 0) + 1)
       }
     }
 

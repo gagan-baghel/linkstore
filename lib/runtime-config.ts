@@ -1,3 +1,5 @@
+import { hasAuthJwtSecretConfigured } from "@/lib/auth-config"
+
 type ReadinessCheck = {
   key: string
   required: boolean
@@ -27,7 +29,7 @@ export function getRazorpayCredentials() {
 export function getRuntimeReadinessChecks(): ReadinessCheck[] {
   const isProduction = process.env.NODE_ENV === "production"
   const convexConfigured = Boolean(readEnv("CONVEX_URL", "NEXT_PUBLIC_CONVEX_URL"))
-  const clerkConfigured = Boolean(readEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY") && readEnv("CLERK_SECRET_KEY"))
+  const authConfigured = hasAuthJwtSecretConfigured() || !isProduction
   const paymentsDataKeyConfigured = Boolean(readEnv("PAYMENTS_DATA_KEY"))
   const razorpay = getRazorpayCredentials()
   const appUrlConfigured = Boolean(readEnv("NEXT_PUBLIC_APP_URL"))
@@ -38,12 +40,17 @@ export function getRuntimeReadinessChecks(): ReadinessCheck[] {
 
   return [
     { key: "CONVEX_URL | NEXT_PUBLIC_CONVEX_URL", required: true, configured: convexConfigured },
-    { key: "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY + CLERK_SECRET_KEY", required: true, configured: clerkConfigured },
+    {
+      key: "AUTH_JWT_SECRET",
+      required: true,
+      configured: authConfigured,
+      note: "Required in production. Development falls back to an in-repo dev secret unless you override it.",
+    },
     {
       key: "NEXT_PUBLIC_APP_URL",
       required: isProduction,
       configured: appUrlConfigured,
-      note: "Required in production for canonical metadata and callback consistency.",
+      note: "Required in production for canonical metadata, redirects, and cookie consistency.",
     },
     {
       key: "RAZORPAY_KEY_ID + RAZORPAY_KEY_SECRET",

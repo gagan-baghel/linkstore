@@ -3,9 +3,10 @@
 ## P0 - Login Outage
 - Symptoms: users cannot sign in/sign up, frequent 401/500 responses.
 - Checks:
-  - Clerk dashboard status and credentials in deployment env.
+  - `AUTH_JWT_SECRET` and app URL values in deployment env.
   - `GET /api/health` for auth config readiness.
-  - Browser console/network for Clerk errors.
+  - Browser console/network for `/api/auth/login|register|password` failures.
+  - Confirm the session cookie is being set and not rejected by the browser.
 - Mitigation:
   - Roll back to last known good deploy if recent auth changes caused regression.
   - Announce temporary auth disruption in status channel.

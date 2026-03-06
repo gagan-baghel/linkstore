@@ -2,11 +2,11 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { useSignUp } from "@clerk/nextjs"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
+import { PASSWORD_MIN_LENGTH } from "@/lib/auth-config"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
@@ -20,32 +20,14 @@ const formSchema = z.object({
   email: z.string().email({
     message: "Please enter a valid email address.",
   }),
-  password: z.string().min(8, {
-    message: "Password must be at least 8 characters.",
+  password: z.string().min(PASSWORD_MIN_LENGTH, {
+    message: `Password must be at least ${PASSWORD_MIN_LENGTH} characters.`,
   }),
 })
 
-function getClerkErrorMessage(error: unknown, fallback: string) {
-  const maybeClerkError = error as { errors?: Array<{ longMessage?: string; message?: string }> }
-  return maybeClerkError?.errors?.[0]?.longMessage || maybeClerkError?.errors?.[0]?.message || fallback
-}
-
-function splitName(fullName: string) {
-  const parts = fullName.trim().split(/\s+/)
-  const firstName = parts[0] || "User"
-  const lastName = parts.slice(1).join(" ").trim() || undefined
-  return { firstName, lastName }
-}
-
 export function RegisterForm() {
   const router = useRouter()
-  const { isLoaded, signUp, setActive } = useSignUp()
   const [isLoading, setIsLoading] = useState(false)
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
-  const [isVerifying, setIsVerifying] = useState(false)
-  const [isResendingCode, setIsResendingCode] = useState(false)
-  const [pendingVerification, setPendingVerification] = useState(false)
-  const [verificationCode, setVerificationCode] = useState("")
   const [error, setError] = useState<string | null>(null)
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -58,184 +40,52 @@ export function RegisterForm() {
   })
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!isLoaded || !signUp || !setActive) {
-      setError("Authentication is still loading. Please try again.")
-      return
-    }
-
     setIsLoading(true)
     setError(null)
 
     try {
-      const emailAddress = values.email.trim().toLowerCase()
-      const { firstName, lastName } = splitName(values.name)
-
-      const created = await signUp.create({
-        emailAddress,
-        password: values.password,
-        firstName,
-        lastName,
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          name: values.name.trim(),
+          email: values.email.trim().toLowerCase(),
+          password: values.password,
+        }),
       })
 
-      if (created.status === "complete" && created.createdSessionId) {
-        await setActive({ session: created.createdSessionId })
-        router.push("/dashboard")
-        router.refresh()
-        return
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null)
+        throw new Error(errorData?.message || "Failed to create account. Please try again.")
       }
 
-      if (created.status === "missing_requirements") {
-        setError("More account information is required before signup can continue.")
-        return
-      }
-
-      await signUp.prepareEmailAddressVerification({ strategy: "email_code" })
-      setPendingVerification(true)
       toast({
-        title: "Verification required",
-        description: "We sent a verification code to your email.",
+        title: "Account created",
+        description: "Your storefront dashboard is ready.",
       })
+
+      router.push("/dashboard")
+      router.refresh()
     } catch (submitError) {
       console.error(submitError)
-      setError(getClerkErrorMessage(submitError, "Failed to create account. Please try again."))
+      setError(submitError instanceof Error ? submitError.message : "Failed to create account. Please try again.")
     } finally {
       setIsLoading(false)
     }
-  }
-
-  async function onVerifyEmail() {
-    if (!isLoaded || !signUp || !setActive) {
-      setError("Authentication is still loading. Please try again.")
-      return
-    }
-
-    if (!verificationCode.trim()) {
-      setError("Enter the verification code from your email.")
-      return
-    }
-
-    setIsVerifying(true)
-    setError(null)
-
-    try {
-      const completed = await signUp.attemptEmailAddressVerification({
-        code: verificationCode.trim(),
-      })
-
-      if (completed.status === "complete" && completed.createdSessionId) {
-        await setActive({ session: completed.createdSessionId })
-        router.push("/dashboard")
-        router.refresh()
-        return
-      }
-
-      setError("Verification is not complete yet. Please try again.")
-    } catch (submitError) {
-      console.error(submitError)
-      setError(getClerkErrorMessage(submitError, "Invalid verification code."))
-    } finally {
-      setIsVerifying(false)
-    }
-  }
-
-  async function onGoogleSignUp() {
-    if (!isLoaded || !signUp) {
-      setError("Authentication is still loading. Please try again.")
-      return
-    }
-
-    setError(null)
-    setIsGoogleLoading(true)
-
-    try {
-      await signUp.authenticateWithRedirect({
-        strategy: "oauth_google",
-        redirectUrl: "/auth/sso-callback",
-        redirectUrlComplete: "/dashboard",
-      })
-    } catch (submitError) {
-      console.error(submitError)
-      setError(getClerkErrorMessage(submitError, "Google sign up is unavailable right now."))
-    } finally {
-      setIsGoogleLoading(false)
-    }
-  }
-
-  async function onResendCode() {
-    if (!isLoaded || !signUp) {
-      setError("Authentication is still loading. Please try again.")
-      return
-    }
-
-    setError(null)
-    setIsResendingCode(true)
-    try {
-      await signUp.prepareEmailAddressVerification({ strategy: "email_code" })
-      toast({
-        title: "Code sent",
-        description: "A new verification code has been sent to your email.",
-      })
-    } catch (submitError) {
-      console.error(submitError)
-      setError(getClerkErrorMessage(submitError, "Unable to resend verification code."))
-    } finally {
-      setIsResendingCode(false)
-    }
-  }
-
-  if (pendingVerification) {
-    return (
-      <div className="grid gap-6">
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        <div className="space-y-2">
-          <h3 className="text-sm font-semibold">Verify your email</h3>
-          <p className="text-sm text-muted-foreground">Enter the code sent to your email address to activate your account.</p>
-        </div>
-
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-              Verification Code
-            </label>
-            <Input
-              value={verificationCode}
-              onChange={(event) => setVerificationCode(event.target.value)}
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              placeholder="123456"
-            />
-          </div>
-          <Button type="button" className="w-full" onClick={onVerifyEmail} disabled={isVerifying || !isLoaded}>
-            {isVerifying ? "Verifying..." : "Verify Email"}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={onResendCode}
-            disabled={isResendingCode || isVerifying || !isLoaded}
-          >
-            {isResendingCode ? "Sending..." : "Resend Code"}
-          </Button>
-        </div>
-      </div>
-    )
   }
 
   return (
     <div className="grid gap-6">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          {error && (
+          {error ? (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
             </Alert>
-          )}
+          ) : null}
           <FormField
             control={form.control}
             name="name"
@@ -269,32 +119,15 @@ export function RegisterForm() {
               <FormItem>
                 <FormLabel>Password</FormLabel>
                 <FormControl>
-                  <Input type="password" placeholder="••••••••" autoComplete="new-password" {...field} />
+                  <Input type="password" placeholder="Create a strong password" autoComplete="new-password" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-          <Button type="submit" className="w-full" disabled={isLoading || !isLoaded}>
+          <p className="text-xs text-muted-foreground">Use at least {PASSWORD_MIN_LENGTH} characters for a stronger password.</p>
+          <Button type="submit" className="w-full rounded-full border border-indigo-200/50 bg-indigo-500/20 backdrop-blur-md px-8 h-11 text-sm font-medium tracking-wide text-indigo-700 hover:bg-indigo-500/30 dark:border-indigo-400/30 dark:text-indigo-300 dark:hover:bg-indigo-400/20 transition-colors shadow-sm" disabled={isLoading}>
             {isLoading ? "Creating account..." : "Create Account"}
-          </Button>
-
-          <div className="relative py-1">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">or continue with</span>
-            </div>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={onGoogleSignUp}
-            disabled={isGoogleLoading || isLoading || !isLoaded}
-          >
-            {isGoogleLoading ? "Redirecting..." : "Continue with Google"}
           </Button>
         </form>
       </Form>

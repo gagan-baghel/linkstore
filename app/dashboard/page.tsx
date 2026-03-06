@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { redirect } from "next/navigation"
 
 import { getSafeServerSession } from "@/lib/auth"
 import { convexQuery } from "@/lib/convex"
@@ -13,7 +14,7 @@ export default async function DashboardPage() {
   const session = await getSafeServerSession()
 
   if (!session) {
-    return <div>Loading...</div>
+    redirect("/auth/login")
   }
 
   let initialData: {

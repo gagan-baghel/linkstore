@@ -61,7 +61,8 @@ export const getByEmail = queryGeneric({
   args: { email: v.string() },
   handler: async (ctx, args) => {
     const normalizedEmail = args.email.trim().toLowerCase()
-    return await ctx.db.query("users").withIndex("by_email", (q) => q.eq("email", normalizedEmail)).first()
+    const user = await ctx.db.query("users").withIndex("by_email", (q) => q.eq("email", normalizedEmail)).first()
+    return withoutPassword(user)
   },
 })
 
@@ -89,37 +90,36 @@ export const getPublicByUsername = queryGeneric({
   },
 })
 
-export const upsertFromClerk = mutationGeneric({
+export const getAuthByEmail = queryGeneric({
   args: {
-    clerkUserId: v.string(),
+    email: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const normalizedEmail = args.email.trim().toLowerCase()
+    return await ctx.db.query("users").withIndex("by_email", (q) => q.eq("email", normalizedEmail)).first()
+  },
+})
+
+export const getAuthById = queryGeneric({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.userId)
+  },
+})
+
+export const createLocalUser = mutationGeneric({
+  args: {
     email: v.string(),
     name: v.string(),
-    image: v.optional(v.string()),
+    passwordHash: v.string(),
   },
   handler: async (ctx, args) => {
     const normalizedEmail = args.email.trim().toLowerCase()
     const trimmedName = args.name.trim()
     const now = Date.now()
     const resolvedName = trimmedName || normalizedEmail.split("@")[0] || "User"
-
-    const existingByClerkId = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_user_id", (q) => q.eq("clerkUserId", args.clerkUserId))
-      .first()
-
-    if (existingByClerkId) {
-      const patch: Record<string, any> = {}
-      if (!existingByClerkId.clerkUserId) patch.clerkUserId = args.clerkUserId
-      if ((!existingByClerkId.image || existingByClerkId.image.trim() === "") && typeof args.image === "string") {
-        patch.image = args.image
-      }
-      if (Object.keys(patch).length > 0) {
-        patch.updatedAt = now
-        await ctx.db.patch(existingByClerkId._id, patch)
-      }
-      const user = await ctx.db.get(existingByClerkId._id)
-      return { ok: true, user: withoutPassword(user) }
-    }
 
     const existingByEmail = normalizedEmail
       ? await ctx.db
@@ -129,21 +129,7 @@ export const upsertFromClerk = mutationGeneric({
       : null
 
     if (existingByEmail) {
-      if (existingByEmail.clerkUserId && existingByEmail.clerkUserId !== args.clerkUserId) {
-        return { ok: false, message: "Email is already linked to another account" as const }
-      }
-
-      const patch: Record<string, any> = {
-        clerkUserId: args.clerkUserId,
-        updatedAt: now,
-      }
-      if ((!existingByEmail.image || existingByEmail.image.trim() === "") && typeof args.image === "string") {
-        patch.image = args.image
-      }
-      await ctx.db.patch(existingByEmail._id, patch)
-
-      const user = await ctx.db.get(existingByEmail._id)
-      return { ok: true, user: withoutPassword(user) }
+      return { ok: false, message: "An account with this email already exists" as const }
     }
 
     const generatedUsername = await generateUniqueUsername(ctx, resolvedName)
@@ -151,10 +137,10 @@ export const upsertFromClerk = mutationGeneric({
       name: resolvedName,
       username: generatedUsername,
       email: normalizedEmail,
-      passwordHash: undefined,
-      clerkUserId: args.clerkUserId,
+      passwordHash: args.passwordHash,
+      authVersion: 1,
       role: "user",
-      image: args.image || "",
+      image: "",
       storeEnabled: false,
       storeCreatedAt: undefined,
       storeBio: "",
@@ -200,6 +186,30 @@ export const upsertFromClerk = mutationGeneric({
 
     const user = await ctx.db.get(userId)
     return { ok: true, user: withoutPassword(user) }
+  },
+})
+
+export const updatePassword = mutationGeneric({
+  args: {
+    userId: v.id("users"),
+    passwordHash: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId)
+    if (!user) {
+      return { ok: false, message: "User not found" as const }
+    }
+
+    const nextAuthVersion = typeof user.authVersion === "number" && user.authVersion > 0 ? user.authVersion + 1 : 2
+
+    await ctx.db.patch(args.userId, {
+      passwordHash: args.passwordHash,
+      authVersion: nextAuthVersion,
+      updatedAt: Date.now(),
+    })
+
+    const updatedUser = await ctx.db.get(args.userId)
+    return { ok: true, authVersion: nextAuthVersion, user: withoutPassword(updatedUser) }
   },
 })
 

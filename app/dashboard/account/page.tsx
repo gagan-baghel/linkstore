@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { redirect } from "next/navigation"
 
 import { getSafeServerSession } from "@/lib/auth"
 import { DashboardShell } from "@/components/dashboard-shell"
@@ -13,17 +14,18 @@ export const metadata: Metadata = {
 
 export default async function AccountPage() {
   const session = await getSafeServerSession()
+  if (!session?.user.id) {
+    redirect("/auth/login")
+  }
 
   let user: any | null = null
   let hasDataError = false
 
-  if (session?.user.id) {
-    try {
-      user = await convexQuery<{ userId: string }, any | null>("users:getById", { userId: session.user.id })
-    } catch (error) {
-      console.error("Account page load error:", error)
-      hasDataError = true
-    }
+  try {
+    user = await convexQuery<{ userId: string }, any | null>("users:getById", { userId: session.user.id })
+  } catch (error) {
+    console.error("Account page load error:", error)
+    hasDataError = true
   }
 
   return (
