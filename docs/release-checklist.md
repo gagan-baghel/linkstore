@@ -4,9 +4,12 @@
 - Set required env vars in production:
   - `CONVEX_URL` (or `NEXT_PUBLIC_CONVEX_URL` for dev fallback)
   - `AUTH_JWT_SECRET`
+  - `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`
   - `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET`
   - `RAZORPAY_WEBHOOK_SECRET`
   - `PAYMENTS_DATA_KEY`
+- In Google Cloud Console, register the callback URL:
+  - `https://your-domain.com/api/auth/google/callback`
 - Optional:
   - `CLOUDINARY_*` for uploads
   - `SUPPORT_EMAIL` for contact page
@@ -19,10 +22,10 @@
 - In production, ensure `NEXT_PUBLIC_APP_URL` is explicitly set.
 
 ## 3. Authentication Smoke Tests
-- Sign up with email/password from `/auth/register`.
-- Sign in with email/password from `/auth/login`.
+- Start Google sign-in from `/auth/login`.
+- Verify first-time Google sign-in creates an account from `/auth/register`.
 - Verify sign out from dashboard menu and side nav.
-- Change password from `/dashboard/account/security` and confirm older sessions are invalidated.
+- Open `/dashboard/account/security` and confirm "Sign out other sessions" invalidates older sessions.
 
 ## 4. Billing Smoke Tests (Razorpay)
 - Create checkout order (`/api/subscription/checkout`).
@@ -49,12 +52,10 @@
 - Resolve any blocker before deploy.
 
 ## 8. Edge-Case QA
-- Wrong password returns safe error (no sensitive leakage).
-- Repeated login attempts are rate-limited (429) and recover after window.
-- Password rotation:
-  - incorrect current password
-  - old password rejected after update
-  - current session remains valid after update
+- Repeated Google auth starts/callback retries are rate-limited (429) and recover after window.
+- Session revocation:
+  - older session becomes invalid after revoke
+  - current session remains valid after revoke
 - Billing:
   - duplicate verify call (idempotency behavior)
   - webhook retry delivery

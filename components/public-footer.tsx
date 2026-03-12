@@ -10,10 +10,10 @@ export function PublicFooter() {
             Home
           </Link>
           <Link href="/auth/login" className="hover:text-slate-900 dark:hover:text-white">
-            Login
+            Google Sign-In
           </Link>
           <Link href="/auth/register" className="hover:text-slate-900 dark:hover:text-white">
-            Register
+            Start with Google
           </Link>
           <Link href="/privacy" className="hover:text-slate-900 dark:hover:text-white">
             Privacy

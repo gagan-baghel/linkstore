@@ -26,12 +26,24 @@ export function getRazorpayCredentials() {
   }
 }
 
+export function getGoogleOAuthCredentials() {
+  const clientId = readEnv("GOOGLE_CLIENT_ID")
+  const clientSecret = readEnv("GOOGLE_CLIENT_SECRET")
+
+  return {
+    clientId,
+    clientSecret,
+    configured: Boolean(clientId && clientSecret),
+  }
+}
+
 export function getRuntimeReadinessChecks(): ReadinessCheck[] {
   const isProduction = process.env.NODE_ENV === "production"
   const convexConfigured = Boolean(readEnv("CONVEX_URL", "NEXT_PUBLIC_CONVEX_URL"))
   const authConfigured = hasAuthJwtSecretConfigured() || !isProduction
   const paymentsDataKeyConfigured = Boolean(readEnv("PAYMENTS_DATA_KEY"))
   const razorpay = getRazorpayCredentials()
+  const googleOAuth = getGoogleOAuthCredentials()
   const appUrlConfigured = Boolean(readEnv("NEXT_PUBLIC_APP_URL"))
   const supportEmailConfigured = Boolean(readEnv("SUPPORT_EMAIL", "NEXT_PUBLIC_SUPPORT_EMAIL"))
   const cloudinaryConfigured = Boolean(
@@ -45,6 +57,12 @@ export function getRuntimeReadinessChecks(): ReadinessCheck[] {
       required: true,
       configured: authConfigured,
       note: "Required in production. Development falls back to an in-repo dev secret unless you override it.",
+    },
+    {
+      key: "GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET",
+      required: true,
+      configured: googleOAuth.configured,
+      note: "Required for Google-only authentication.",
     },
     {
       key: "NEXT_PUBLIC_APP_URL",

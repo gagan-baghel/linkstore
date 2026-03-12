@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { AtSign, Mail, PencilLine, User, X } from "lucide-react"
+import { AtSign, Mail, PencilLine, ShieldCheck, User, X } from "lucide-react"
 
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -16,9 +16,6 @@ import { toast } from "@/components/ui/use-toast"
 const accountFormSchema = z.object({
   name: z.string().min(2, {
     message: "Name must be at least 2 characters.",
-  }),
-  email: z.string().email({
-    message: "Please enter a valid email address.",
   }),
 })
 
@@ -38,7 +35,6 @@ export function AccountForm({ name, email, username }: AccountFormProps) {
 
   const defaultValues: AccountFormValues = {
     name: name || "",
-    email: email || "",
   }
 
   const form = useForm<AccountFormValues>({
@@ -55,7 +51,6 @@ export function AccountForm({ name, email, username }: AccountFormProps) {
     try {
       const payload = {
         name: data.name.trim(),
-        email: data.email.trim().toLowerCase(),
       }
 
       const response = await fetch("/api/account", {
@@ -123,8 +118,9 @@ export function AccountForm({ name, email, username }: AccountFormProps) {
               <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#60708a]">Email</p>
               <p className="flex items-center gap-2 break-all text-sm font-medium text-[#1f2a44]">
                 <Mail className="h-4 w-4 shrink-0 text-[#6a7a96]" />
-                {values.email || "Not set"}
+                {email || "Not set"}
               </p>
+              <p className="mt-2 text-xs text-[#60708a]">Managed by Google sign-in.</p>
             </div>
 
             <div className="rounded-lg border border-[#e7eefb] bg-[#fbfcff] p-4 sm:col-span-2 lg:col-span-1">
@@ -140,7 +136,7 @@ export function AccountForm({ name, email, username }: AccountFormProps) {
       ) : (
         <section className="rounded-xl border border-[#d8e2f3] bg-white p-5 md:p-6">
           <h2 className="text-base font-semibold text-[#162033]">Edit Profile</h2>
-          <p className="mt-1 text-xs text-[#60708a]">Update your public name and account email.</p>
+          <p className="mt-1 text-xs text-[#60708a]">Update your public display name. Your sign-in email stays managed by Google.</p>
 
           <Form {...form}>
             <form id="account-edit-form" onSubmit={form.handleSubmit(onSubmit)} className="mt-5 grid gap-4 md:grid-cols-2">
@@ -158,19 +154,11 @@ export function AccountForm({ name, email, username }: AccountFormProps) {
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs font-semibold uppercase tracking-wide text-[#41506a]">Email</FormLabel>
-                    <FormControl>
-                      <Input className="h-10 border-[#cfd8ea] bg-white text-sm text-[#1f2a44]" placeholder="name@example.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="rounded-lg border border-[#e7eefb] bg-[#fbfcff] p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#60708a]">Email</p>
+                <p className="mt-1 break-all text-sm font-medium text-[#1f2a44]">{email || "Not available"}</p>
+                <p className="mt-2 text-xs text-[#60708a]">Google controls this email address.</p>
+              </div>
 
               <div className="rounded-lg border border-[#e7eefb] bg-[#fbfcff] p-4 md:col-span-2">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-[#60708a]">Username</p>
@@ -183,16 +171,17 @@ export function AccountForm({ name, email, username }: AccountFormProps) {
       )}
 
       <div className="rounded-xl border border-[#d8e2f3] bg-white p-5 md:p-6">
-        <h2 className="text-base font-semibold text-[#162033]">Password & Recovery</h2>
-        <p className="mb-4 mt-1 text-xs text-[#60708a]">Manage password rotation and session security from one place.</p>
+        <h2 className="text-base font-semibold text-[#162033]">Authentication & Sessions</h2>
+        <p className="mb-4 mt-1 text-xs text-[#60708a]">Google handles identity. AffiliateHub handles session revocation.</p>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-[#4f5f7a]">Open security settings to update your password and invalidate older sessions.</p>
+          <p className="text-xs text-[#4f5f7a]">Open security settings to review your Google sign-in method and sign out older app sessions.</p>
           <Button
             size="sm"
             className="h-9 w-full border-[#cfd8ea] bg-white px-3 text-xs text-[#1f2a44] shadow-none hover:bg-[#f3f6fc] sm:w-auto"
             variant="outline"
             onClick={() => router.push("/dashboard/account/security")}
           >
+            <ShieldCheck className="mr-2 h-4 w-4" />
             Open Security Settings
           </Button>
         </div>

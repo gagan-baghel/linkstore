@@ -3,9 +3,9 @@
 ## P0 - Login Outage
 - Symptoms: users cannot sign in/sign up, frequent 401/500 responses.
 - Checks:
-  - `AUTH_JWT_SECRET` and app URL values in deployment env.
+  - `AUTH_JWT_SECRET`, `GOOGLE_CLIENT_ID`, and `GOOGLE_CLIENT_SECRET` values in deployment env.
   - `GET /api/health` for auth config readiness.
-  - Browser console/network for `/api/auth/login|register|password` failures.
+  - Browser console/network for `/api/auth/google/start|callback` failures.
   - Confirm the session cookie is being set and not rejected by the browser.
 - Mitigation:
   - Roll back to last known good deploy if recent auth changes caused regression.

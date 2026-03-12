@@ -1,21 +1,28 @@
 import type { Metadata } from "next"
-import Link from "next/link"
 import { redirect } from "next/navigation"
 import { CheckCircle2, Sparkles, Store, Rocket } from "lucide-react"
 
-import { RegisterForm } from "@/components/register-form"
+import { GoogleAuthPanel } from "@/components/google-auth-panel"
 import { getSafeServerSession } from "@/lib/auth"
+import { getGoogleAuthErrorMessage } from "@/lib/google-auth"
 
 export const metadata: Metadata = {
   title: "Register - AffiliateHub",
   description: "Create your AffiliateHub account",
 }
 
-export default async function RegisterPage() {
+export default async function RegisterPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>
+}) {
   const session = await getSafeServerSession()
   if (session?.user?.id) {
     redirect("/dashboard")
   }
+
+  const resolvedSearchParams = await searchParams
+  const error = getGoogleAuthErrorMessage(resolvedSearchParams?.error)
 
   return (
     <div className="grid min-h-[calc(100vh-140px)] w-full items-center gap-12 lg:grid-cols-[1fr_1fr] lg:gap-24 xl:gap-32">
@@ -76,19 +83,17 @@ export default async function RegisterPage() {
                 <Store className="h-6 w-6" />
               </div>
               <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Create an account</h2>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Set up your profile and launch your storefront.</p>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Start with Google and launch your storefront.</p>
             </div>
 
-            <RegisterForm />
-
-            <div className="mt-8 border-t border-slate-200/50 pt-6 text-center dark:border-slate-800/80">
-              <p className="text-sm text-slate-600 dark:text-slate-400">
-                Already have an account?{" "}
-                <Link href="/auth/login" className="font-semibold text-indigo-600 transition-colors hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">
-                  Sign in
-                </Link>
-              </p>
-            </div>
+            <GoogleAuthPanel
+              description="AffiliateHub now uses Google-only authentication. The first successful Google sign-in creates your account and keeps your verified email as the source of truth."
+              ctaLabel="Continue with Google"
+              alternateHref="/auth/login"
+              alternateLabel="Sign in"
+              alternatePrompt="Already have an account?"
+              error={error}
+            />
           </div>
         </div>
       </div>

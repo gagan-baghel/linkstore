@@ -1,21 +1,28 @@
 import type { Metadata } from "next"
-import Link from "next/link"
 import { redirect } from "next/navigation"
 import { CheckCircle2, Rocket, Sparkles } from "lucide-react"
 
-import { LoginForm } from "@/components/login-form"
+import { GoogleAuthPanel } from "@/components/google-auth-panel"
 import { getSafeServerSession } from "@/lib/auth"
+import { getGoogleAuthErrorMessage } from "@/lib/google-auth"
 
 export const metadata: Metadata = {
   title: "Login - AffiliateHub",
   description: "Login to your AffiliateHub account",
 }
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>
+}) {
   const session = await getSafeServerSession()
   if (session?.user?.id) {
     redirect("/dashboard")
   }
+
+  const resolvedSearchParams = await searchParams
+  const error = getGoogleAuthErrorMessage(resolvedSearchParams?.error)
 
   return (
     <div className="grid min-h-[calc(100vh-140px)] w-full items-center gap-12 lg:grid-cols-[1fr_1fr] lg:gap-24 xl:gap-32">
@@ -74,19 +81,17 @@ export default async function LoginPage() {
           <div className="relative z-10">
             <div className="mb-10 text-center">
               <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Welcome back</h2>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Sign in to continue managing your storefront.</p>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Use Google to continue managing your storefront.</p>
             </div>
 
-            <LoginForm />
-
-            <div className="mt-8 border-t border-slate-200/50 pt-6 text-center dark:border-slate-800/80">
-              <p className="text-sm text-slate-600 dark:text-slate-400">
-                Don&apos;t have an account?{" "}
-                <Link href="/auth/register" className="font-semibold text-indigo-600 transition-colors hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">
-                  Register
-                </Link>
-              </p>
-            </div>
+            <GoogleAuthPanel
+              description="Google is the only sign-in method. Your verified Google email is used to create or link your AffiliateHub account automatically."
+              ctaLabel="Continue with Google"
+              alternateHref="/auth/register"
+              alternateLabel="Create one"
+              alternatePrompt="Need your first account?"
+              error={error}
+            />
           </div>
         </div>
       </div>

@@ -10,7 +10,6 @@ import { getStoreCacheTag } from "@/lib/store-cache"
 
 const accountSchema = z.object({
   name: z.string().trim().min(2).max(80),
-  email: z.string().email(),
   image: z
     .string()
     .trim()
@@ -45,20 +44,18 @@ export async function PUT(req: Request) {
     }
 
     const body = await req.json()
-    const { name, email, image, storeLogo } = accountSchema.parse(body)
-    const normalizedEmail = email.trim().toLowerCase()
+    const { name, image, storeLogo } = accountSchema.parse(body)
     const existingUser = await convexQuery<{ userId: string }, any | null>("users:getById", { userId: session.user.id }).catch(
       () => null,
     )
     const previousUsername = existingUser?.username?.trim().toLowerCase() || ""
 
     const result = await convexMutation<
-      { userId: string; name: string; email: string; image?: string; storeLogo?: string },
+      { userId: string; name: string; image?: string; storeLogo?: string },
       { ok: boolean; message?: string }
     >("users:updateAccount", {
       userId: session.user.id,
       name,
-      email: normalizedEmail,
       image: image || "",
       storeLogo: storeLogo || "",
     })

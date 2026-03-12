@@ -23,7 +23,7 @@ Social media platforms often limit users to a single "link in bio", making it di
 *   **Backend:** Next.js API Routes + Convex functions
 *   **Database:** Convex
 *   **Link Scraping/Metadata Fetching:** Cheerio or Puppeteer (to extract Open Graph tags from affiliate links)
-*   **Authentication:** In-house email/password auth with signed JWT session cookies
+*   **Authentication:** Google OAuth with signed JWT session cookies
 *   **Hosting:** Vercel (Frontend) & Supabase/Neon (Database)
 
 ## 🏗️ How It Works (User Flow)
@@ -53,10 +53,15 @@ cp .env.example .env.local
 # CONVEX_URL=...
 # NEXT_PUBLIC_CONVEX_URL=...
 # AUTH_JWT_SECRET=...
+# GOOGLE_CLIENT_ID=...
+# GOOGLE_CLIENT_SECRET=...
 # RAZORPAY_KEY_ID=...
 # RAZORPAY_KEY_SECRET=...
 # RAZORPAY_WEBHOOK_SECRET=...
 # PAYMENTS_DATA_KEY=...
+
+# In Google Cloud Console, authorize:
+# http://localhost:3000/api/auth/google/callback
 
 # Start the development server
 npm run dev
@@ -64,12 +69,12 @@ npm run dev
 
 ## ✅ MVP/MBP Launch Checklist
 
-- Configure all required env vars in production (`CONVEX_URL`/`NEXT_PUBLIC_CONVEX_URL`, `AUTH_JWT_SECRET`, Razorpay keys + webhook secret, `PAYMENTS_DATA_KEY`).
+- Configure all required env vars in production (`CONVEX_URL`/`NEXT_PUBLIC_CONVEX_URL`, `AUTH_JWT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, Razorpay keys + webhook secret, `PAYMENTS_DATA_KEY`).
 - Verify runtime readiness via `GET /api/health` (should return `ok: true`).
 - Test auth flows:
-  - email/password sign in
-  - email/password sign up
-  - password change from `/dashboard/account/security`
+  - Google sign in from `/auth/login`
+  - first-time account creation from `/auth/register`
+  - session revocation from `/dashboard/account/security`
   - logout/session refresh
 - Test payments end-to-end in Razorpay:
   - checkout order creation

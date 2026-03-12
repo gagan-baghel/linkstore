@@ -2,8 +2,6 @@ const DEV_AUTH_JWT_SECRET = "linkstore-dev-auth-secret-change-me"
 
 export const AUTH_JWT_ISSUER = "linkstore"
 export const AUTH_JWT_AUDIENCE = "linkstore-app"
-export const PASSWORD_MIN_LENGTH = 12
-export const PASSWORD_MAX_LENGTH = 128
 
 function parsePositiveInteger(input: string | undefined, fallback: number) {
   const value = Number.parseInt((input || "").trim(), 10)

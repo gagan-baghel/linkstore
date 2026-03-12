@@ -6,6 +6,9 @@ export default defineSchema({
     name: v.string(),
     username: v.string(),
     email: v.string(),
+    googleSub: v.optional(v.string()),
+    authProvider: v.optional(v.union(v.literal("google"))),
+    emailVerified: v.optional(v.boolean()),
     passwordHash: v.optional(v.string()),
     authVersion: v.optional(v.number()),
     role: v.optional(v.union(v.literal("user"), v.literal("admin"))),
@@ -31,6 +34,7 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_email", ["email"])
+    .index("by_googleSub", ["googleSub"])
     .index("by_username", ["username"]),
   subscriptions: defineTable({
     userId: v.id("users"),

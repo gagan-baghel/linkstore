@@ -11,6 +11,52 @@ function withoutPassword(user: any) {
   return rest
 }
 
+function getDisplayName(name: string, email: string) {
+  const trimmedName = name.trim()
+  if (trimmedName) return trimmedName
+  return email.split("@")[0] || "User"
+}
+
+function buildUserDefaults(input: {
+  name: string
+  email: string
+  googleSub: string
+  image?: string
+  now: number
+  username: string
+}) {
+  return {
+    name: input.name,
+    username: input.username,
+    email: input.email,
+    googleSub: input.googleSub,
+    authProvider: "google" as const,
+    emailVerified: true,
+    authVersion: 1,
+    role: "user" as const,
+    image: input.image || "",
+    storeEnabled: false,
+    storeCreatedAt: undefined,
+    storeBio: "",
+    storeBannerText: "Store",
+    contactInfo: "",
+    storeLogo: "",
+    socialFacebook: "",
+    socialTwitter: "",
+    socialInstagram: "",
+    socialYoutube: "",
+    socialWebsite: "",
+    themePrimaryColor: "#4f46e5",
+    themeAccentColor: "#eef2ff",
+    themeBannerStyle: "gradient",
+    themeButtonStyle: "rounded",
+    themeCardStyle: "shadow",
+    themeMode: "system",
+    createdAt: input.now,
+    updatedAt: input.now,
+  }
+}
+
 function toUsernameBase(name: string) {
   const normalized = name
     .trim()
@@ -90,77 +136,85 @@ export const getPublicByUsername = queryGeneric({
   },
 })
 
-export const getAuthByEmail = queryGeneric({
+export const upsertGoogleUser = mutationGeneric({
   args: {
+    googleSub: v.string(),
     email: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const normalizedEmail = args.email.trim().toLowerCase()
-    return await ctx.db.query("users").withIndex("by_email", (q) => q.eq("email", normalizedEmail)).first()
-  },
-})
-
-export const getAuthById = queryGeneric({
-  args: {
-    userId: v.id("users"),
-  },
-  handler: async (ctx, args) => {
-    return await ctx.db.get(args.userId)
-  },
-})
-
-export const createLocalUser = mutationGeneric({
-  args: {
-    email: v.string(),
+    emailVerified: v.boolean(),
     name: v.string(),
-    passwordHash: v.string(),
+    image: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const normalizedEmail = args.email.trim().toLowerCase()
-    const trimmedName = args.name.trim()
-    const now = Date.now()
-    const resolvedName = trimmedName || normalizedEmail.split("@")[0] || "User"
+    if (!args.emailVerified) {
+      return { ok: false, message: "Google email is not verified." as const }
+    }
 
-    const existingByEmail = normalizedEmail
-      ? await ctx.db
-          .query("users")
-          .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
-          .first()
-      : null
+    const normalizedEmail = args.email.trim().toLowerCase()
+    const resolvedName = getDisplayName(args.name, normalizedEmail)
+    const image = (args.image || "").trim()
+    const now = Date.now()
+
+    const existingByGoogle = await ctx.db
+      .query("users")
+      .withIndex("by_googleSub", (q: any) => q.eq("googleSub", args.googleSub))
+      .first()
+
+    const existingByEmail = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q: any) => q.eq("email", normalizedEmail))
+      .first()
+
+    if (existingByGoogle) {
+      if (existingByEmail && existingByEmail._id !== existingByGoogle._id) {
+        return { ok: false, message: "Email is already linked to another account." as const }
+      }
+
+      await ctx.db.patch(existingByGoogle._id, {
+        name: resolvedName,
+        email: normalizedEmail,
+        googleSub: args.googleSub,
+        authProvider: "google",
+        emailVerified: true,
+        passwordHash: undefined,
+        image: image || existingByGoogle.image || "",
+        updatedAt: now,
+      })
+
+      const updatedUser = await ctx.db.get(existingByGoogle._id)
+      return { ok: true, user: withoutPassword(updatedUser) }
+    }
 
     if (existingByEmail) {
-      return { ok: false, message: "An account with this email already exists" as const }
+      if (existingByEmail.googleSub && existingByEmail.googleSub !== args.googleSub) {
+        return { ok: false, message: "Email is already linked to another Google account." as const }
+      }
+
+      await ctx.db.patch(existingByEmail._id, {
+        name: resolvedName,
+        googleSub: args.googleSub,
+        authProvider: "google",
+        emailVerified: true,
+        passwordHash: undefined,
+        image: image || existingByEmail.image || "",
+        updatedAt: now,
+      })
+
+      const updatedUser = await ctx.db.get(existingByEmail._id)
+      return { ok: true, user: withoutPassword(updatedUser) }
     }
 
     const generatedUsername = await generateUniqueUsername(ctx, resolvedName)
-    const userId = await ctx.db.insert("users", {
-      name: resolvedName,
-      username: generatedUsername,
-      email: normalizedEmail,
-      passwordHash: args.passwordHash,
-      authVersion: 1,
-      role: "user",
-      image: "",
-      storeEnabled: false,
-      storeCreatedAt: undefined,
-      storeBio: "",
-      storeBannerText: "Store",
-      contactInfo: "",
-      storeLogo: "",
-      socialFacebook: "",
-      socialTwitter: "",
-      socialInstagram: "",
-      socialYoutube: "",
-      socialWebsite: "",
-      themePrimaryColor: "#4f46e5",
-      themeAccentColor: "#eef2ff",
-      themeBannerStyle: "gradient",
-      themeButtonStyle: "rounded",
-      themeCardStyle: "shadow",
-      themeMode: "system",
-      createdAt: now,
-      updatedAt: now,
-    })
+    const userId = await ctx.db.insert(
+      "users",
+      buildUserDefaults({
+        name: resolvedName,
+        email: normalizedEmail,
+        googleSub: args.googleSub,
+        image,
+        now,
+        username: generatedUsername,
+      }),
+    )
 
     await ctx.db.insert("subscriptions", {
       userId,
@@ -189,10 +243,9 @@ export const createLocalUser = mutationGeneric({
   },
 })
 
-export const updatePassword = mutationGeneric({
+export const rotateAuthVersion = mutationGeneric({
   args: {
     userId: v.id("users"),
-    passwordHash: v.string(),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId)
@@ -203,7 +256,6 @@ export const updatePassword = mutationGeneric({
     const nextAuthVersion = typeof user.authVersion === "number" && user.authVersion > 0 ? user.authVersion + 1 : 2
 
     await ctx.db.patch(args.userId, {
-      passwordHash: args.passwordHash,
       authVersion: nextAuthVersion,
       updatedAt: Date.now(),
     })
@@ -217,29 +269,17 @@ export const updateAccount = mutationGeneric({
   args: {
     userId: v.id("users"),
     name: v.string(),
-    email: v.string(),
     image: v.optional(v.string()),
     storeLogo: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const normalizedEmail = args.email.trim().toLowerCase()
-
     const user = await ctx.db.get(args.userId)
     if (!user) {
       return { ok: false, message: "User not found" as const }
     }
 
-    const existingByEmail = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
-      .first()
-    if (existingByEmail && existingByEmail._id !== args.userId) {
-      return { ok: false, message: "Email is already in use" as const }
-    }
-
     await ctx.db.patch(args.userId, {
       name: args.name,
-      email: normalizedEmail,
       image: args.image ?? user.image ?? "",
       storeLogo: args.storeLogo ?? user.storeLogo ?? "",
       updatedAt: Date.now(),

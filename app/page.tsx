@@ -72,7 +72,7 @@ const featureRows = [
   {
     icon: ShieldCheck,
     title: "Secure auth & account control",
-    text: "First-party email/password authentication with signed session cookies and in-app password rotation controls.",
+    text: "Google-only sign-in paired with signed app sessions and one-click session revocation inside AffiliateHub.",
   },
 ]
 
@@ -97,11 +97,11 @@ const testimonials = [
 const faqs = [
   {
     q: "Can I sign in with Google?",
-    a: "No. Authentication is handled directly in AffiliateHub with email and password so your auth stack stays first-party.",
+    a: "Yes. AffiliateHub uses Google as the only authentication provider and then creates its own signed app session.",
   },
   {
-    q: "How do I change my password?",
-    a: "Open Account > Security Settings in the dashboard to rotate your password and invalidate older sessions.",
+    q: "How do I manage security now?",
+    a: "Google manages password resets and account recovery. In AffiliateHub, open Account > Security Settings to revoke older app sessions.",
   },
   {
     q: "Does it work on mobile-first audiences?",
@@ -113,7 +113,7 @@ export default async function Home() {
   const session = await getSafeServerSession()
   const isLoggedIn = Boolean(session)
   const primaryCtaHref = isLoggedIn ? "/dashboard" : "/auth/register"
-  const primaryCtaLabel = isLoggedIn ? "Open Dashboard" : "Start Building"
+  const primaryCtaLabel = isLoggedIn ? "Open Dashboard" : "Start with Google"
 
   return (
     <div className="relative min-h-screen overflow-x-clip bg-slate-50 text-slate-900 selection:bg-indigo-500/30 dark:bg-[#0B0F19] dark:text-slate-100">
@@ -159,7 +159,7 @@ export default async function Home() {
                 </Link>
                 <Link href={isLoggedIn ? "/dashboard/products/new" : "/auth/login"}>
                   <Button size="lg" variant="outline" className="h-12 w-full sm:w-auto rounded-full border border-slate-300/60 bg-white/60 backdrop-blur-xl px-8 text-sm font-bold tracking-wide text-slate-800 hover:bg-white/90 hover:border-slate-300 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:border-white/20 transition-all shadow-sm">
-                    {isLoggedIn ? "Add Product" : "Log In"}
+                    {isLoggedIn ? "Add Product" : "Google Sign-In"}
                   </Button>
                 </Link>
               </div>
