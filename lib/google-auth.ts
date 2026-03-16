@@ -179,6 +179,8 @@ export function getGoogleAuthErrorMessage(error: string | null | undefined) {
       return "Use a Google account with a verified email address."
     case "account_link_failed":
       return "Your account could not be linked right now. Please retry."
+    case "dev_login_failed":
+      return "Temporary dev login failed. Please retry."
     default:
       return null
   }

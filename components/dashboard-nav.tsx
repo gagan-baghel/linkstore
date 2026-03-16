@@ -1,7 +1,8 @@
 "use client"
 
+import { useEffect, useMemo } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { BarChart, Home, Package, Palette, Settings, Store } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -19,12 +20,28 @@ const navItems = [
 
 export function DashboardNav({ canUseShopFeatures }: { canUseShopFeatures: boolean }) {
   const pathname = usePathname()
+  const router = useRouter()
+  const resolvedNavItems = useMemo(
+    () =>
+      navItems.map((item) => ({
+        ...item,
+        targetHref: item.requiresPremium && !canUseShopFeatures ? getSubscriptionRedirectPath(item.href) : item.href,
+      })),
+    [canUseShopFeatures],
+  )
+
+  useEffect(() => {
+    for (const item of resolvedNavItems) {
+      if (item.targetHref !== pathname) {
+        router.prefetch(item.targetHref)
+      }
+    }
+  }, [pathname, resolvedNavItems, router])
 
   return (
     <nav className="grid gap-0.5">
-      {navItems.map((item) => {
-        const targetHref =
-          item.requiresPremium && !canUseShopFeatures ? getSubscriptionRedirectPath(item.href) : item.href
+      {resolvedNavItems.map((item) => {
+        const targetHref = item.targetHref
         const isActive =
           item.href === "/dashboard"
             ? pathname === item.href
@@ -41,7 +58,14 @@ export function DashboardNav({ canUseShopFeatures }: { canUseShopFeatures: boole
               !isActive && "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
             )}
           >
-            <Link href={targetHref} scroll={false} aria-current={isActive ? "page" : undefined}>
+            <Link
+              href={targetHref}
+              scroll={false}
+              prefetch
+              aria-current={isActive ? "page" : undefined}
+              onMouseEnter={() => router.prefetch(targetHref)}
+              onFocus={() => router.prefetch(targetHref)}
+            >
               <item.icon className="mr-2 h-4 w-4" />
               {item.title}
             </Link>

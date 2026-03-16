@@ -11,6 +11,7 @@ import {
   MoreVertical,
   Phone,
   Search,
+  ShieldCheck,
   ShoppingBag,
   Twitter,
   Youtube,
@@ -312,6 +313,8 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
   const usesFallbackLogo = !hasCustomStoreLogo(user)
   const mobileSocialIcons = socialItems.filter((item) => item.key === "instagram" || item.key === "youtube").slice(0, 2)
   const hasCreatorLinks = socialItems.length > 0
+  const affiliateDisclosure =
+    "Affiliate links may open external retailer pages in a new tab. The creator may earn a commission from qualifying purchases."
   const showcaseProducts = useMemo(() => {
     const pool = ["/placeholder.jpg", "/placeholder.svg", "/placeholder-user.jpg"]
     const items = featuredProducts.map((product) => ({
@@ -561,6 +564,21 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                 )
               })}
             </div>
+
+            <div
+              className={cn(
+                "mx-auto mt-3 max-w-[340px] rounded-2xl border px-3 py-2 text-left shadow-[0_10px_24px_rgba(0,0,0,0.12)]",
+                isDarkMode ? "border-slate-700 bg-slate-900/90 text-slate-200" : "border-white/70 bg-white/92 text-slate-700",
+              )}
+            >
+              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em]">
+                <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+                Creator trust note
+              </p>
+              <p className={cn("mt-1 text-[11px] leading-5", isDarkMode ? "text-slate-300" : "text-slate-600")}>
+                {affiliateDisclosure}
+              </p>
+            </div>
           </section>
 
           <div
@@ -605,6 +623,19 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
 
           {activeTab === "links" ? (
             <section className="mt-4 space-y-3">
+              {hasCreatorLinks ? (
+                <div
+                  className={cn(
+                    "rounded-2xl border px-3 py-3 text-left shadow-[0_8px_20px_rgba(0,0,0,0.12)]",
+                    isDarkMode ? "border-slate-700 bg-slate-900/85 text-slate-100" : "border-white/65 bg-white/90 text-slate-900",
+                  )}
+                >
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-600">Verified creator links</p>
+                  <p className={cn("mt-1 text-xs leading-5", isDarkMode ? "text-slate-300" : "text-slate-600")}>
+                    Use these direct creator channels if you want to confirm identity or see how products are used before opening retailer links.
+                  </p>
+                </div>
+              ) : null}
               {socialItems.map((item) => {
                 const Icon = item.icon
                 return (
@@ -642,6 +673,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder={`Search ${displayName}'s products`}
+                  aria-label={`Search ${displayName}'s products`}
                   className={cn(
                     "w-full border-none bg-transparent text-[13px] leading-tight outline-none",
                     isDarkMode ? "text-slate-100 placeholder:text-slate-500" : "text-slate-900 placeholder:text-slate-400",
@@ -658,6 +690,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() => trackEvent("product_card_click", product._id)}
+                      aria-label={`Open ${product.title} in a new tab`}
                       className={cn(
                         "overflow-hidden rounded-xl border shadow-[0_8px_18px_rgba(0,0,0,0.14)]",
                         isDarkMode ? "border-slate-700 bg-slate-900" : "border-white/65 bg-white",
@@ -725,6 +758,9 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                   <p className={cn("truncate text-sm font-bold leading-tight sm:text-lg md:text-xl", isDarkMode ? "text-slate-100" : "text-slate-800")}>
                     {storeTitle}
                   </p>
+                  <p className={cn("mt-0.5 hidden text-[11px] leading-5 md:block", isDarkMode ? "text-slate-400" : "text-slate-500")}>
+                    {affiliateDisclosure}
+                  </p>
                 </div>
               </div>
 
@@ -735,6 +771,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                     placeholder="Search products"
+                    aria-label="Search products"
                     className={cn(
                       "h-8 w-[124px] pl-7 text-[11px] shadow-none focus-visible:ring-2 sm:h-9 sm:w-[220px] sm:pl-8 sm:text-xs md:w-[280px] md:text-sm",
                       isDarkMode
@@ -764,6 +801,42 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
         </header>
 
         <main className="w-full space-y-3 px-2 pt-2 sm:space-y-4 sm:px-3 sm:pt-3 md:px-4 lg:px-5">
+          <section
+            className={cn(
+              "rounded-2xl border px-4 py-4 shadow-[0_18px_44px_rgba(15,23,42,0.08)]",
+              isDarkMode ? "border-slate-700 bg-slate-900/85" : "border-white/70 bg-white/88",
+            )}
+          >
+            <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-600">Creator storefront</p>
+                <h2 className={cn("mt-2 text-xl font-semibold tracking-tight", isDarkMode ? "text-slate-100" : "text-slate-900")}>
+                  Curated recommendations from {displayName}
+                </h2>
+                <p className={cn("mt-2 max-w-3xl text-sm leading-6", isDarkMode ? "text-slate-300" : "text-slate-600")}>
+                  {bannerText}
+                </p>
+              </div>
+              <div className="grid gap-2">
+                <div className={cn("rounded-xl border px-3 py-3", isDarkMode ? "border-slate-700 bg-slate-950/60" : "border-slate-200 bg-slate-50/90")}>
+                  <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+                    Trust
+                  </p>
+                  <p className={cn("mt-1 text-xs leading-5", isDarkMode ? "text-slate-300" : "text-slate-600")}>{affiliateDisclosure}</p>
+                </div>
+                <div className={cn("rounded-xl border px-3 py-3", isDarkMode ? "border-slate-700 bg-slate-950/60" : "border-slate-200 bg-slate-50/90")}>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Creator links</p>
+                  <p className={cn("mt-1 text-xs leading-5", isDarkMode ? "text-slate-300" : "text-slate-600")}>
+                    {hasCreatorLinks
+                      ? `${socialItems.length} verified creator link${socialItems.length === 1 ? "" : "s"} available before you open retailer pages.`
+                      : "No creator links added yet. Browse products directly below."}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
           <section id="catalog">
             <div className="mb-3 flex items-center justify-between">
               <h2 className={cn("text-base font-bold tracking-tight sm:text-lg md:text-xl", isDarkMode ? "text-slate-100" : "text-slate-800")}>All Products</h2>
@@ -783,6 +856,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={() => trackEvent("product_card_click", product._id)}
+                        aria-label={`Open ${product.title} in a new tab`}
                         className={cn(
                           "group relative overflow-hidden rounded-xl transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2",
                           isDarkMode ? "border-slate-700 bg-slate-900/80 focus-visible:ring-slate-500" : "border-white/65 bg-white/80 focus-visible:ring-white",

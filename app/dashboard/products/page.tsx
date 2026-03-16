@@ -10,7 +10,6 @@ import { EmptyPlaceholder } from "@/components/empty-placeholder"
 import { ProductsTable } from "@/components/products-table"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { convexQuery } from "@/lib/convex"
-import { getSubscriptionAccessState, hasPremiumAccess } from "@/lib/subscription-access"
 import { getSubscriptionRedirectPath } from "@/lib/subscription-routing"
 
 export const metadata: Metadata = {
@@ -25,8 +24,7 @@ export default async function ProductsPage() {
     redirect("/auth/login")
   }
 
-  const accessState = await getSubscriptionAccessState(session.user.id)
-  if (!hasPremiumAccess(accessState)) {
+  if (!session.user.hasActiveSubscription) {
     redirect(getSubscriptionRedirectPath("/dashboard/products"))
   }
 

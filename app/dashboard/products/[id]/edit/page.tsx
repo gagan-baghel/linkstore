@@ -7,7 +7,6 @@ import { DashboardShell } from "@/components/dashboard-shell"
 import { ProductForm } from "@/components/product-form"
 import { convexQuery } from "@/lib/convex"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { getSubscriptionAccessState, hasPremiumAccess } from "@/lib/subscription-access"
 import { getSubscriptionRedirectPath } from "@/lib/subscription-routing"
 
 export const metadata: Metadata = {
@@ -28,8 +27,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
     redirect("/auth/login")
   }
 
-  const accessState = await getSubscriptionAccessState(session.user.id)
-  if (!hasPremiumAccess(accessState)) {
+  if (!session.user.hasActiveSubscription) {
     redirect(getSubscriptionRedirectPath(`/dashboard/products/${id}/edit`))
   }
 

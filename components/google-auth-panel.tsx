@@ -34,6 +34,7 @@ export function GoogleAuthPanel({
   alternatePrompt,
   nextPath = "/dashboard",
   error,
+  showDevLogin = false,
 }: {
   description: string
   ctaLabel: string
@@ -42,6 +43,7 @@ export function GoogleAuthPanel({
   alternatePrompt: string
   nextPath?: string
   error?: string | null
+  showDevLogin?: boolean
 }) {
   return (
     <div className="grid gap-6">
@@ -64,6 +66,23 @@ export function GoogleAuthPanel({
       <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 px-4 py-3 text-sm text-slate-600">
         {description}
       </div>
+
+      {showDevLogin ? (
+        <div className="rounded-2xl border border-dashed border-amber-300 bg-amber-50/90 px-4 py-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-800">Temporary Dev Access</p>
+          <p className="mt-1 text-sm leading-6 text-amber-900">
+            Use this only for local checking before Google keys are configured. It is disabled in production.
+          </p>
+          <Link href={`/api/auth/dev-login?next=${encodeURIComponent(nextPath)}`} className="mt-3 block">
+            <Button
+              variant="outline"
+              className="h-11 w-full rounded-full border border-amber-300 bg-white px-5 text-sm font-semibold text-amber-900 shadow-none hover:bg-amber-100"
+            >
+              Temporary Login
+            </Button>
+          </Link>
+        </div>
+      ) : null}
 
       <div className="border-t border-slate-200/50 pt-6 text-center dark:border-slate-800/80">
         <p className="text-sm text-slate-600 dark:text-slate-400">

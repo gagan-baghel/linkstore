@@ -7,17 +7,42 @@ import { StoreForm } from "@/components/store-form"
 import { SubscriptionStatusCard } from "@/components/subscription-status-card"
 import { convexQuery } from "@/lib/convex"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { sanitizeSubscriptionReturnPath } from "@/lib/subscription-routing"
 
 export const metadata: Metadata = {
   title: "Store Settings - AffiliateHub",
   description: "Manage your store settings",
 }
 
-export default async function StoreSettingsPage() {
+function getReturnLabel(path: string) {
+  switch (path) {
+    case "/dashboard/products/new":
+      return "Add your first product"
+    case "/dashboard/products":
+      return "Manage products"
+    case "/dashboard":
+      return "Open dashboard"
+    default:
+      if (path.startsWith("/dashboard/products/") && path.endsWith("/edit")) {
+        return "Resume product editing"
+      }
+      return "Continue setup"
+  }
+}
+
+export default async function StoreSettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ upgrade?: string; from?: string }>
+}) {
   const session = await getSafeServerSession()
   if (!session?.user.id) {
     redirect("/auth/login")
   }
+
+  const resolvedSearchParams = await searchParams
+  const nextPath = sanitizeSubscriptionReturnPath(resolvedSearchParams?.from)
+  const nextLabel = resolvedSearchParams?.upgrade === "1" ? getReturnLabel(nextPath) : ""
 
   let user: any | null = null
   let subscriptionAccess: any | null = null
@@ -48,6 +73,8 @@ export default async function StoreSettingsPage() {
             initialAccess={subscriptionAccess}
             userName={user?.name || ""}
             userEmail={user?.email || ""}
+            nextPath={nextLabel ? nextPath : undefined}
+            nextLabel={nextLabel || undefined}
           />
           <StoreForm
             storeBannerText={user?.storeBannerText || ""}

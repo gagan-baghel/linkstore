@@ -23,6 +23,7 @@ export default async function LoginPage({
 
   const resolvedSearchParams = await searchParams
   const error = getGoogleAuthErrorMessage(resolvedSearchParams?.error)
+  const showDevLogin = process.env.NODE_ENV !== "production"
 
   return (
     <div className="grid min-h-[calc(100vh-140px)] w-full items-center gap-12 lg:grid-cols-[1fr_1fr] lg:gap-24 xl:gap-32">
@@ -91,6 +92,7 @@ export default async function LoginPage({
               alternateLabel="Create one"
               alternatePrompt="Need your first account?"
               error={error}
+              showDevLogin={showDevLogin}
             />
           </div>
         </div>

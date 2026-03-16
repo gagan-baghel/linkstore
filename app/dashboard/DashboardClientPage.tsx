@@ -9,7 +9,9 @@ import {
   ClipboardCopy,
   ExternalLink,
   PlusCircle,
+  Rocket,
   Share2,
+  ShieldCheck,
   ShoppingBag,
   Store,
 } from "lucide-react"
@@ -58,6 +60,21 @@ function MetricCard({
       <p className="mt-1 text-[11px] text-[#8a94a8] sm:text-xs">{hint}</p>
     </div>
   )
+}
+
+function getNextStepLabel(input: {
+  hasSubscription: boolean
+  hasStoreProfile: boolean
+  hasProducts: boolean
+  isStorePublic: boolean
+  hasBrokenLinks: boolean
+}) {
+  if (!input.hasSubscription) return "Unlock premium actions"
+  if (!input.hasStoreProfile) return "Finish your store profile"
+  if (!input.hasProducts) return "Add your first product"
+  if (!input.isStorePublic) return "Review store settings before sharing"
+  if (input.hasBrokenLinks) return "Fix broken product links"
+  return "Share your store and start tracking"
 }
 
 export default function DashboardClientPage({
@@ -131,10 +148,13 @@ export default function DashboardClientPage({
   }, [initialData, session.user.id])
 
   const baseUrl = origin || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+  const hasActiveSubscription = Boolean(session?.user?.hasActiveSubscription)
   const isStorePublic = Boolean(user?.username && user?.storeEnabled === true)
-  const canUseShopActions = Boolean(user?.storeEnabled === true)
+  const canUseShopActions = hasActiveSubscription
   const subscriptionRedirectBase = "/dashboard/store?upgrade=1"
   const storePath = isStorePublic ? `/stores/${encodeURIComponent(user.username)}` : ""
+  const hasStoreProfile = Boolean((user?.storeBannerText || "").trim()) && Boolean((user?.storeBio || "").trim())
+  const hasBrokenLinks = (linkHealth?.brokenCount || 0) > 0
   const fullStoreUrl = storePath ? `${baseUrl}${storePath}` : "Store URL will be available shortly"
   const addProductHref = canUseShopActions
     ? "/dashboard/products/new"
@@ -144,14 +164,34 @@ export default function DashboardClientPage({
     : `${subscriptionRedirectBase}&from=${encodeURIComponent("/dashboard/products")}`
   const openStoreHref = isStorePublic
     ? storePath
-    : `${subscriptionRedirectBase}&from=${encodeURIComponent("/dashboard/open-store")}`
+    : canUseShopActions
+      ? "/dashboard/store"
+      : `${subscriptionRedirectBase}&from=${encodeURIComponent("/dashboard/store")}`
+  const nextStepHref = !hasActiveSubscription
+    ? `${subscriptionRedirectBase}&from=${encodeURIComponent("/dashboard/products/new")}`
+    : !hasStoreProfile
+      ? "/dashboard/store"
+      : totalProducts === 0
+        ? "/dashboard/products/new"
+        : !isStorePublic
+          ? "/dashboard/store"
+          : hasBrokenLinks
+            ? "/dashboard/products"
+            : storePath || "/dashboard"
+  const nextStepLabel = getNextStepLabel({
+    hasSubscription: hasActiveSubscription,
+    hasStoreProfile,
+    hasProducts: totalProducts > 0,
+    isStorePublic,
+    hasBrokenLinks,
+  })
 
   const checklist = useMemo(
     () => [
       {
         id: "store",
         label: "Store profile configured",
-        done: Boolean((user?.storeBannerText || "").trim()) && Boolean((user?.storeBio || "").trim()),
+        done: hasStoreProfile,
         href: "/dashboard/store",
       },
       {
@@ -164,28 +204,24 @@ export default function DashboardClientPage({
         id: "share",
         label: "Store link ready to share",
         done: isStorePublic,
-        href: "/dashboard/account",
+        href: openStoreHref,
       },
       {
         id: "health",
         label: "No broken product links",
-        done: (linkHealth?.brokenCount || 0) === 0,
+        done: !hasBrokenLinks,
         href: productsHref,
       },
     ],
-    [addProductHref, isStorePublic, linkHealth?.brokenCount, productsHref, totalProducts, user?.storeBannerText, user?.storeBio],
+    [addProductHref, hasBrokenLinks, hasStoreProfile, isStorePublic, openStoreHref, productsHref, totalProducts],
   )
 
   const completedChecklistItems = checklist.filter((item) => item.done).length
   const completionPercent = Math.round((completedChecklistItems / checklist.length) * 100)
 
-  const redirectToSubscription = () => {
-    window.location.href = `${subscriptionRedirectBase}&from=${encodeURIComponent("/dashboard")}`
-  }
-
   const copyToClipboard = () => {
     if (!isStorePublic) {
-      redirectToSubscription()
+      window.location.href = canUseShopActions ? "/dashboard/store" : `${subscriptionRedirectBase}&from=${encodeURIComponent("/dashboard/store")}`
       return
     }
     navigator.clipboard.writeText(fullStoreUrl)
@@ -197,7 +233,7 @@ export default function DashboardClientPage({
 
   const shareStoreLink = async () => {
     if (!isStorePublic) {
-      redirectToSubscription()
+      window.location.href = canUseShopActions ? "/dashboard/store" : `${subscriptionRedirectBase}&from=${encodeURIComponent("/dashboard/store")}`
       return
     }
 
@@ -260,6 +296,66 @@ export default function DashboardClientPage({
         />
       </div>
 
+      <section className="mb-5 overflow-hidden rounded-2xl border border-[#d8e2f3] bg-[radial-gradient(circle_at_top_left,_rgba(99,102,241,0.16),_transparent_48%),linear-gradient(135deg,_#ffffff_0%,_#f6f9ff_52%,_#eef4ff_100%)] p-4 shadow-[0_16px_44px_rgba(27,52,92,0.08)] md:mb-6 md:p-5">
+        <div className="grid gap-4 lg:grid-cols-[1.3fr_0.9fr] lg:items-start">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-indigo-700">
+              <Rocket className="h-3.5 w-3.5" />
+              Launch path
+            </div>
+            <h2 className="mt-3 text-xl font-semibold tracking-tight text-[#162033] md:text-2xl">
+              Make your store feel ready in under 3 minutes.
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#52627b]">
+              Move in order: set your creator story, add products, then share a storefront that looks intentional and
+              trustworthy.
+            </p>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+              <Button asChild className="h-10 border border-[#3e55df] bg-[#4a63f6] px-4 text-sm text-white shadow-[0_10px_24px_rgba(74,99,246,0.28)] hover:bg-[#3f56de]">
+                <Link href={nextStepHref}>
+                  {nextStepLabel}
+                  <Rocket className="h-4 w-4" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="h-10 border-[#cfd8ea] bg-white/90 px-4 text-sm text-[#1f2a44] shadow-none hover:bg-[#f3f6fc]">
+                <Link href="/dashboard/store">Review store setup</Link>
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid gap-2.5">
+            <div className="rounded-xl border border-white/75 bg-white/80 p-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#5f6b7e]">Current blocker</p>
+              <p className="mt-1 text-sm font-semibold text-[#162033]">{nextStepLabel}</p>
+              <p className="mt-1 text-xs leading-5 text-[#60708a]">
+                {!hasActiveSubscription
+                  ? "You can explore the dashboard now, but premium actions unlock only after subscription activation."
+                  : !hasStoreProfile
+                    ? "A clear banner and short bio help buyers understand who you are before they click."
+                    : totalProducts === 0
+                      ? "Your store becomes meaningful once you add a few strong affiliate picks."
+                      : !isStorePublic
+                        ? "Check your store profile before you send traffic to it."
+                        : hasBrokenLinks
+                          ? "Broken links hurt trust fast. Clean them up before sharing heavily."
+                          : "Your setup is healthy. Start sharing and watch the 30-day numbers."}
+              </p>
+            </div>
+            <div className="rounded-xl border border-white/75 bg-white/80 p-3">
+              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-[#5f6b7e]">
+                <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+                Trust checklist
+              </p>
+              <ul className="mt-2 space-y-2 text-xs text-[#4f5f7a]">
+                <li>Write a short bio that explains what kind of products you recommend.</li>
+                <li>Add at least 3 products so your storefront feels curated, not empty.</li>
+                <li>Review your links before sharing to avoid broken buyer journeys.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <div className="mb-5 grid gap-5 border-t border-[#e7eefb] pt-5 md:mb-7 md:gap-6 md:pt-6 lg:grid-cols-[1.55fr_1fr] lg:items-start lg:divide-x lg:divide-[#e7eefb]">
         <section className="space-y-4 lg:pr-6">
           <div className="space-y-1 pb-2">
@@ -276,8 +372,15 @@ export default function DashboardClientPage({
               value={fullStoreUrl}
               readOnly
               disabled={isLoading || !isStorePublic}
+              aria-label="Your public storefront URL"
             />
-            <p className="text-xs text-[#60708a]">Use this exact link anywhere you share your storefront.</p>
+            <p className="text-xs text-[#60708a]">
+              {isStorePublic
+                ? "Use this exact link anywhere you share your storefront."
+                : canUseShopActions
+                  ? "Finish your store profile, then this public link becomes ready to share."
+                  : "Activate your plan to unlock your public storefront URL."}
+            </p>
           </div>
           <div className="space-y-2 pt-1">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-[#60708a]">Quick Actions</p>

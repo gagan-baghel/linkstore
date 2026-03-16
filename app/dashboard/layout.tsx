@@ -8,7 +8,6 @@ import { DashboardSignOutButton } from "@/components/dashboard-signout-button"
 import { DashboardTopbarContext } from "@/components/dashboard-topbar-context"
 import { MobileDashboardNav } from "@/components/mobile-dashboard-nav"
 import Link from "next/link"
-import { getSubscriptionAccessState, hasPremiumAccess } from "@/lib/subscription-access"
 
 export default async function DashboardLayout({
   children,
@@ -21,8 +20,7 @@ export default async function DashboardLayout({
     redirect("/auth/login")
   }
 
-  const accessState = await getSubscriptionAccessState(session.user.id)
-  const canUseShopFeatures = hasPremiumAccess(accessState)
+  const canUseShopFeatures = Boolean(session.user.hasActiveSubscription)
 
   return (
     <div className="dashboard-minimal min-h-screen md:grid md:grid-cols-[260px_1fr]">

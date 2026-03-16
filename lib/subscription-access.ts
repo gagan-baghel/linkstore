@@ -1,3 +1,4 @@
+import { cache } from "react"
 import { NextResponse } from "next/server"
 
 import { convexQuery } from "@/lib/convex"
@@ -7,7 +8,7 @@ export function hasPremiumAccess(state: SubscriptionAccessState | null | undefin
   return Boolean(state?.canUsePremiumActions && state?.hasActiveSubscription)
 }
 
-export async function getSubscriptionAccessState(userId: string): Promise<SubscriptionAccessState | null> {
+const loadSubscriptionAccessState = cache(async (userId: string): Promise<SubscriptionAccessState | null> => {
   try {
     const state = await convexQuery<{ userId: string }, SubscriptionAccessState | null>("subscriptions:getAccessState", {
       userId,
@@ -17,6 +18,10 @@ export async function getSubscriptionAccessState(userId: string): Promise<Subscr
     console.error("Subscription access state lookup failed:", error)
     return null
   }
+})
+
+export async function getSubscriptionAccessState(userId: string): Promise<SubscriptionAccessState | null> {
+  return loadSubscriptionAccessState(userId)
 }
 
 export async function requireActiveSubscription(userId: string, contextAction: string) {

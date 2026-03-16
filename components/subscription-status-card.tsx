@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
+import { ArrowRight, Sparkles } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -28,6 +30,8 @@ interface SubscriptionStatusCardProps {
   initialAccess: SubscriptionAccessState | null
   userName: string
   userEmail: string
+  nextPath?: string
+  nextLabel?: string
 }
 
 function formatDate(timestamp: number | null) {
@@ -55,7 +59,13 @@ function loadRazorpayCheckoutScript() {
   })
 }
 
-export function SubscriptionStatusCard({ initialAccess, userName, userEmail }: SubscriptionStatusCardProps) {
+export function SubscriptionStatusCard({
+  initialAccess,
+  userName,
+  userEmail,
+  nextPath,
+  nextLabel,
+}: SubscriptionStatusCardProps) {
   const router = useRouter()
   const [access, setAccess] = useState<SubscriptionAccessState | null>(initialAccess)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -98,11 +108,16 @@ export function SubscriptionStatusCard({ initialAccess, userName, userEmail }: S
     }
 
     setAccess(data.access || null)
+    if (nextPath) {
+      router.push(nextPath)
+    }
     router.refresh()
 
     toast({
       title: "Subscription activated",
-      description: "Your plan is active. Premium features are now unlocked.",
+      description: nextLabel
+        ? `Your plan is active. Continuing to ${nextLabel.toLowerCase()}.`
+        : "Your plan is active. Premium features are now unlocked.",
     })
   }
 
@@ -221,6 +236,20 @@ export function SubscriptionStatusCard({ initialAccess, userName, userEmail }: S
         </Alert>
       )}
 
+      {access?.hasActiveSubscription && nextPath ? (
+        <Alert className="mt-4 border-emerald-200 bg-emerald-50 text-emerald-900">
+          <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <span className="text-sm">You already have access. Continue where you left off.</span>
+            <Button asChild size="sm" className="h-8 w-full border border-emerald-700 bg-emerald-700 px-3 text-xs text-white hover:bg-emerald-800 sm:w-auto">
+              <Link href={nextPath}>
+                {nextLabel || "Continue"}
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </Button>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
       <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
         <Button
           onClick={handleCheckout}
@@ -238,6 +267,18 @@ export function SubscriptionStatusCard({ initialAccess, userName, userEmail }: S
           Refresh Status
         </Button>
       </div>
+
+      {nextLabel ? (
+        <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+          <p className="flex items-center gap-2 font-semibold text-slate-700">
+            <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
+            Next step after activation
+          </p>
+          <p className="mt-1">
+            {nextLabel} will open automatically once payment verification completes.
+          </p>
+        </div>
+      ) : null}
     </section>
   )
 }
