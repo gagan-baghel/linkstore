@@ -5,7 +5,7 @@ import { z } from "zod"
 import { getSafeServerSession } from "@/lib/auth"
 import { tryNormalizeAffiliateUrl } from "@/lib/affiliate-url"
 import { convexMutation, convexQuery } from "@/lib/convex"
-import { checkRateLimit, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
+import { checkRateLimitAsync, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
 import { getStoreCacheTag } from "@/lib/store-cache"
 
 const accountSchema = z.object({
@@ -32,7 +32,7 @@ export async function PUT(req: Request) {
     if (csrfBlock) return csrfBlock
 
     const ip = getClientIp(req.headers)
-    const rate = checkRateLimit({ key: `api:account:${ip}`, windowMs: 60 * 1000, max: 60 })
+    const rate = await checkRateLimitAsync({ key: `api:account:${ip}`, windowMs: 60 * 1000, max: 60 })
     if (!rate.allowed) {
       return tooManyRequests(rate.retryAfterSec)
     }

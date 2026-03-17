@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 
 import { convexMutation, convexQuery } from "@/lib/convex"
-import { checkRateLimit, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
+import { checkRateLimitAsync, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
 
 const trackEventSchema = z.object({
   eventType: z.enum(["store_view", "product_card_click", "outbound_click"]),
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     if (csrfBlock) return csrfBlock
 
     const ip = getClientIp(req.headers)
-    const rate = checkRateLimit({ key: `api:events:track:${ip}`, windowMs: 60 * 1000, max: 300 })
+    const rate = await checkRateLimitAsync({ key: `api:events:track:${ip}`, windowMs: 60 * 1000, max: 300 })
     if (!rate.allowed) {
       return tooManyRequests(rate.retryAfterSec)
     }

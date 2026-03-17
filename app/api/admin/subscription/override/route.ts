@@ -4,7 +4,7 @@ import { z } from "zod"
 import { getSafeServerSession } from "@/lib/auth"
 import { convexMutation } from "@/lib/convex"
 import { writeAuditLog } from "@/lib/audit"
-import { checkRateLimit, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
+import { checkRateLimitAsync, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
 
 const overrideSchema = z.object({
   targetUserId: z.string().trim().min(1).max(128).regex(/^[a-zA-Z0-9_-]+$/),
@@ -20,7 +20,7 @@ export async function PUT(req: Request) {
     const csrfBlock = enforceSameOrigin(req)
     if (csrfBlock) return csrfBlock
 
-    const rate = checkRateLimit({ key: `api:admin:subscription:override:${ip}`, windowMs: 60 * 1000, max: 30 })
+    const rate = await checkRateLimitAsync({ key: `api:admin:subscription:override:${ip}`, windowMs: 60 * 1000, max: 30 })
     if (!rate.allowed) {
       return tooManyRequests(rate.retryAfterSec)
     }

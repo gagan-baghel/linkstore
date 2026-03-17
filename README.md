@@ -15,7 +15,7 @@ Social media platforms often limit users to a single "link in bio", making it di
 *   **One-Click Product Import:** Simply paste an affiliate/referral link, and LinkStore automatically fetches the necessary product metadata (images, title, description, price).
 *   **E-Commerce Aesthetic:** Products are displayed in a clean, modern grid—just like a real online store, providing a better shopping experience for the creator's audience.
 *   **Easy Sharing:** Creators get a single, clean URL (e.g., `linkstore.io/username`) to put in their social media bios, directing followers to their entire curated product catalog.
-*   **Analytics Dashboard (Planned):** Track clicks, views, and conversions to understand which products are performing best.
+*   **Analytics Dashboard:** Built-in analytics surface store views, product card clicks, outbound affiliate clicks, conversion rate, top referrers, sources, and device breakdown so creators know what actually converts.
 
 ## 🛠️ Tech Stack
 
@@ -59,12 +59,22 @@ cp .env.example .env.local
 # RAZORPAY_KEY_SECRET=...
 # RAZORPAY_WEBHOOK_SECRET=...
 # PAYMENTS_DATA_KEY=...
+# Optional (recommended for production rate limiting):
+# UPSTASH_REDIS_REST_URL=...
+# UPSTASH_REDIS_REST_TOKEN=...
+# Optional (disable third-party metadata fallbacks if desired):
+# METADATA_ENABLE_JINA=false
+# METADATA_ENABLE_DDG=false
+# METADATA_FETCH_RETRIES=1
 
 # In Google Cloud Console, authorize:
 # http://localhost:3000/api/auth/google/callback
 
 # Start the development server
 npm run dev
+
+# Run unit tests
+npm run test
 ```
 
 ## ✅ MVP/MBP Launch Checklist

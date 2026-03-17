@@ -7,6 +7,35 @@ export interface ProductMetadata {
   image?: string
 }
 
+const METADATA_ENABLE_JINA = (process.env.METADATA_ENABLE_JINA ?? "true") !== "false"
+const METADATA_ENABLE_DDG = (process.env.METADATA_ENABLE_DDG ?? "true") !== "false"
+const METADATA_FETCH_RETRIES = Math.max(0, Number.parseInt(process.env.METADATA_FETCH_RETRIES || "1", 10))
+
+async function fetchWithRetries(
+  url: string,
+  options: Omit<RequestInit, "signal">,
+  timeoutMs: number,
+  attempts = METADATA_FETCH_RETRIES + 1,
+) {
+  let lastError: unknown
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: AbortSignal.timeout(timeoutMs),
+      })
+      if (response.status >= 500 && response.status < 600) {
+        lastError = new Error(`Upstream ${response.status}`)
+        continue
+      }
+      return response
+    } catch (error) {
+      lastError = error
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error("Metadata fetch failed")
+}
+
 // ─────────────────────────────────────────────
 // Small helpers
 // ─────────────────────────────────────────────
@@ -290,17 +319,17 @@ function gatherImageUrlsFromObject(obj: unknown, maxDepth = 6): string[] {
 // ─────────────────────────────────────────────
 
 async function fetchViaJina(url: string): Promise<string | undefined> {
+  if (!METADATA_ENABLE_JINA) return undefined
   try {
     const jinaUrl = `https://r.jina.ai/${url}`
-    const res = await fetch(jinaUrl, {
-      signal: AbortSignal.timeout(15000),
+    const res = await fetchWithRetries(jinaUrl, {
       headers: {
         "Accept": "text/markdown,text/plain",
         "X-Return-Format": "markdown",
         "User-Agent": "Mozilla/5.0 (compatible; Linkstore/1.0)",
       },
       cache: "no-store",
-    })
+    }, 15000)
     if (!res.ok) return undefined
     const md = await res.text()
 
@@ -326,6 +355,7 @@ async function fetchViaJina(url: string): Promise<string | undefined> {
 // ─────────────────────────────────────────────
 
 async function fetchViaDuckDuckGoImages(title: string, hostname: string): Promise<string | undefined> {
+  if (!METADATA_ENABLE_DDG) return undefined
   if (!title) return undefined
   try {
     const query = encodeURIComponent(`${title} ${hostname}`)
@@ -334,14 +364,13 @@ async function fetchViaDuckDuckGoImages(title: string, hostname: string): Promis
     if (!token) return undefined
 
     const searchUrl = `https://duckduckgo.com/i.js?l=us-en&o=json&q=${query}&vqd=${token}&f=,,,,,&p=1`
-    const res = await fetch(searchUrl, {
-      signal: AbortSignal.timeout(8000),
+    const res = await fetchWithRetries(searchUrl, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36",
         "Referer": "https://duckduckgo.com/",
         "Accept": "application/json",
       },
-    })
+    }, 8000)
     if (!res.ok) return undefined
     const json = await res.json()
     const results: { image?: string; thumbnail?: string }[] = json?.results || []
@@ -357,12 +386,11 @@ async function fetchViaDuckDuckGoImages(title: string, hostname: string): Promis
 
 async function getDDGToken(): Promise<string | undefined> {
   try {
-    const res = await fetch("https://duckduckgo.com/", {
-      signal: AbortSignal.timeout(8000),
+    const res = await fetchWithRetries("https://duckduckgo.com/", {
       headers: {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36",
       },
-    })
+    }, 8000)
     const html = await res.text()
     const m = html.match(/vqd=["']?([^"'&\s]+)/)
     return m?.[1]
@@ -392,12 +420,11 @@ async function fetchHtmlWithSafeRedirects(initialUrl: string): Promise<{ html: s
   for (let hop = 0; hop < 6; hop += 1) {
     await assertSafePublicHttpUrlForServerFetch(currentUrl)
 
-    const response = await fetch(currentUrl, {
+    const response = await fetchWithRetries(currentUrl, {
       redirect: "manual",
-      signal: AbortSignal.timeout(12000),
       headers: BROWSER_HEADERS,
       cache: "no-store",
-    })
+    }, 12000)
 
     if (response.status >= 300 && response.status < 400) {
       const location = response.headers.get("location")

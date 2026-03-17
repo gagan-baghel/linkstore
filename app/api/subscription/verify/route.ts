@@ -5,7 +5,7 @@ import { getSafeServerSession } from "@/lib/auth"
 import { convexMutation } from "@/lib/convex"
 import { writeAuditLog } from "@/lib/audit"
 import { fetchRazorpayPayment, isRazorpayConfigured, verifyRazorpayPaymentSignature } from "@/lib/razorpay"
-import { checkRateLimit, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
+import { checkRateLimitAsync, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
 import { encryptSensitive, hashSensitive, hasPaymentsDataKeyConfigured } from "@/lib/secure-data"
 import { SUBSCRIPTION_CURRENCY, SUBSCRIPTION_PRICE_PAISE } from "@/lib/subscription"
 
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
     const csrfBlock = enforceSameOrigin(req)
     if (csrfBlock) return csrfBlock
 
-    const rate = checkRateLimit({ key: `api:subscription:verify:${ip}`, windowMs: 60 * 1000, max: 40 })
+    const rate = await checkRateLimitAsync({ key: `api:subscription:verify:${ip}`, windowMs: 60 * 1000, max: 40 })
     if (!rate.allowed) {
       return tooManyRequests(rate.retryAfterSec)
     }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { getSafeServerSession } from "@/lib/auth"
 import { convexQuery } from "@/lib/convex"
-import { checkRateLimit, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
+import { checkRateLimitAsync, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
 
 export async function POST(req: Request) {
   try {
@@ -9,7 +9,7 @@ export async function POST(req: Request) {
     if (csrfBlock) return csrfBlock
 
     const ip = getClientIp(req.headers)
-    const rate = checkRateLimit({ key: `api:dashboard-data:${ip}`, windowMs: 60 * 1000, max: 120 })
+    const rate = await checkRateLimitAsync({ key: `api:dashboard-data:${ip}`, windowMs: 60 * 1000, max: 120 })
     if (!rate.allowed) {
       return tooManyRequests(rate.retryAfterSec)
     }

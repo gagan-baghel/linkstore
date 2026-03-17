@@ -2,13 +2,13 @@ import { NextResponse } from "next/server"
 
 import { getSafeServerSession } from "@/lib/auth"
 import { convexQuery } from "@/lib/convex"
-import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/security"
+import { checkRateLimitAsync, getClientIp, tooManyRequests } from "@/lib/security"
 import { SUBSCRIPTION_PLAN_CODE, SUBSCRIPTION_PLAN_NAME, SUBSCRIPTION_PRICE_PAISE, SUBSCRIPTION_CURRENCY, SUBSCRIPTION_PRODUCT_LIMIT } from "@/lib/subscription"
 
 export async function GET(req: Request) {
   try {
     const ip = getClientIp(req.headers)
-    const rate = checkRateLimit({ key: `api:subscription:status:${ip}`, windowMs: 60 * 1000, max: 120 })
+    const rate = await checkRateLimitAsync({ key: `api:subscription:status:${ip}`, windowMs: 60 * 1000, max: 120 })
     if (!rate.allowed) {
       return tooManyRequests(rate.retryAfterSec)
     }

@@ -49,6 +49,7 @@
 ## 7. Build/Quality Gates
 - `npm run lint`
 - `npm run build`
+- `npm run test`
 - Resolve any blocker before deploy.
 
 ## 8. Edge-Case QA

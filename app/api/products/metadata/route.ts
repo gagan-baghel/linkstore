@@ -5,7 +5,7 @@ import { getSafeServerSession } from "@/lib/auth"
 import { normalizeAffiliateUrl } from "@/lib/affiliate-url"
 import { assertSafePublicHttpUrlForServerFetch } from "@/lib/affiliate-url-server"
 import { fetchProductMetadata } from "@/lib/product-metadata"
-import { checkRateLimit, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
+import { checkRateLimitAsync, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
 import { requireActiveSubscription } from "@/lib/subscription-access"
 
 const metadataSchema = z.object({
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     if (csrfBlock) return csrfBlock
 
     const ip = getClientIp(req.headers)
-    const rate = checkRateLimit({ key: `api:products:metadata:${ip}`, windowMs: 60 * 1000, max: 30 })
+    const rate = await checkRateLimitAsync({ key: `api:products:metadata:${ip}`, windowMs: 60 * 1000, max: 30 })
     if (!rate.allowed) {
       return tooManyRequests(rate.retryAfterSec)
     }

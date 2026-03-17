@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { v2 as cloudinary } from "cloudinary"
 
 import { getSafeServerSession } from "@/lib/auth"
-import { checkRateLimit, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
+import { checkRateLimitAsync, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
 import { requireActiveSubscription } from "@/lib/subscription-access"
 
 // Configure Cloudinary with the environment variables
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
     if (csrfBlock) return csrfBlock
 
     const ip = getClientIp(req.headers)
-    const rate = checkRateLimit({ key: `api:upload:${ip}`, windowMs: 60 * 1000, max: 30 })
+    const rate = await checkRateLimitAsync({ key: `api:upload:${ip}`, windowMs: 60 * 1000, max: 30 })
     if (!rate.allowed) {
       return tooManyRequests(rate.retryAfterSec)
     }

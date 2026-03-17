@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 export default async function RegisterPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ error?: string; next?: string }>
 }) {
   const session = await getSafeServerSession()
   if (session?.user?.id) {
@@ -23,6 +23,7 @@ export default async function RegisterPage({
 
   const resolvedSearchParams = await searchParams
   const error = getGoogleAuthErrorMessage(resolvedSearchParams?.error)
+  const nextPath = typeof resolvedSearchParams?.next === "string" ? resolvedSearchParams.next : "/dashboard"
   const showDevLogin = process.env.NODE_ENV !== "production"
 
   return (
@@ -93,6 +94,7 @@ export default async function RegisterPage({
               alternateHref="/auth/login"
               alternateLabel="Sign in"
               alternatePrompt="Already have an account?"
+              nextPath={nextPath}
               error={error}
               showDevLogin={showDevLogin}
             />

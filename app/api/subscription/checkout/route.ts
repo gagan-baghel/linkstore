@@ -5,7 +5,7 @@ import { z } from "zod"
 
 import { getSafeServerSession } from "@/lib/auth"
 import { convexMutation, convexQuery } from "@/lib/convex"
-import { checkRateLimit, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
+import { checkRateLimitAsync, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
 import { createRazorpayOrder, getPublicRazorpayKeyId, isRazorpayConfigured } from "@/lib/razorpay"
 import { SUBSCRIPTION_PLAN_CODE, SUBSCRIPTION_PLAN_NAME, SUBSCRIPTION_PRICE_PAISE, SUBSCRIPTION_CURRENCY } from "@/lib/subscription"
 import { writeAuditLog } from "@/lib/audit"
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     if (csrfBlock) return csrfBlock
 
     const ip = getClientIp(req.headers)
-    const rate = checkRateLimit({ key: `api:subscription:checkout:${ip}`, windowMs: 60 * 1000, max: 25 })
+    const rate = await checkRateLimitAsync({ key: `api:subscription:checkout:${ip}`, windowMs: 60 * 1000, max: 25 })
     if (!rate.allowed) {
       return tooManyRequests(rate.retryAfterSec)
     }

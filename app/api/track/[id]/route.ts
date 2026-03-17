@@ -3,7 +3,7 @@ import { z } from "zod"
 
 import { normalizeAffiliateUrl } from "@/lib/affiliate-url"
 import { convexMutation } from "@/lib/convex"
-import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/security"
+import { checkRateLimitAsync, getClientIp, tooManyRequests } from "@/lib/security"
 
 const trackIdSchema = z.object({
   id: z.string().trim().min(1).max(128).regex(/^[a-zA-Z0-9_-]+$/),
@@ -32,7 +32,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const parsedParams = trackIdSchema.parse(await params)
     const { id } = parsedParams
     const ip = getClientIp(req.headers)
-    const rate = checkRateLimit({ key: `api:track:${ip}`, windowMs: 60 * 1000, max: 240 })
+    const rate = await checkRateLimitAsync({ key: `api:track:${ip}`, windowMs: 60 * 1000, max: 240 })
     if (!rate.allowed) {
       return tooManyRequests(rate.retryAfterSec)
     }

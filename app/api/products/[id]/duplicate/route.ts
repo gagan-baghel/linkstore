@@ -3,7 +3,7 @@ import { z } from "zod"
 
 import { getSafeServerSession } from "@/lib/auth"
 import { convexMutation } from "@/lib/convex"
-import { checkRateLimit, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
+import { checkRateLimitAsync, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
 import { requireActiveSubscription } from "@/lib/subscription-access"
 
 const routeParamsSchema = z.object({
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (csrfBlock) return csrfBlock
 
     const ip = getClientIp(req.headers)
-    const rate = checkRateLimit({ key: `api:products:duplicate:${ip}`, windowMs: 60 * 1000, max: 60 })
+    const rate = await checkRateLimitAsync({ key: `api:products:duplicate:${ip}`, windowMs: 60 * 1000, max: 60 })
     if (!rate.allowed) {
       return tooManyRequests(rate.retryAfterSec)
     }

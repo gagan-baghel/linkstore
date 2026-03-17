@@ -7,7 +7,7 @@ import { normalizeAffiliateUrl, tryNormalizeAffiliateUrl } from "@/lib/affiliate
 import { assertSafePublicHttpUrlForServerFetch } from "@/lib/affiliate-url-server"
 import { convexMutation, convexQuery } from "@/lib/convex"
 import { fetchProductMetadata } from "@/lib/product-metadata"
-import { checkRateLimit, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
+import { checkRateLimitAsync, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
 import { getStoreCacheTag } from "@/lib/store-cache"
 import { requireActiveSubscription } from "@/lib/subscription-access"
 
@@ -74,7 +74,7 @@ async function revalidateStoreForUser(userId: string) {
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const ip = getClientIp(req.headers)
-    const rate = checkRateLimit({ key: `api:products:get:${ip}`, windowMs: 60 * 1000, max: 240 })
+    const rate = await checkRateLimitAsync({ key: `api:products:get:${ip}`, windowMs: 60 * 1000, max: 240 })
     if (!rate.allowed) {
       return tooManyRequests(rate.retryAfterSec)
     }
@@ -111,7 +111,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (csrfBlock) return csrfBlock
 
     const ip = getClientIp(req.headers)
-    const rate = checkRateLimit({ key: `api:products:update:${ip}`, windowMs: 60 * 1000, max: 60 })
+    const rate = await checkRateLimitAsync({ key: `api:products:update:${ip}`, windowMs: 60 * 1000, max: 60 })
     if (!rate.allowed) {
       return tooManyRequests(rate.retryAfterSec)
     }
@@ -194,7 +194,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     if (csrfBlock) return csrfBlock
 
     const ip = getClientIp(req.headers)
-    const rate = checkRateLimit({ key: `api:products:delete:${ip}`, windowMs: 60 * 1000, max: 60 })
+    const rate = await checkRateLimitAsync({ key: `api:products:delete:${ip}`, windowMs: 60 * 1000, max: 60 })
     if (!rate.allowed) {
       return tooManyRequests(rate.retryAfterSec)
     }
@@ -237,7 +237,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (csrfBlock) return csrfBlock
 
     const ip = getClientIp(req.headers)
-    const rate = checkRateLimit({ key: `api:products:patch:${ip}`, windowMs: 60 * 1000, max: 80 })
+    const rate = await checkRateLimitAsync({ key: `api:products:patch:${ip}`, windowMs: 60 * 1000, max: 80 })
     if (!rate.allowed) {
       return tooManyRequests(rate.retryAfterSec)
     }

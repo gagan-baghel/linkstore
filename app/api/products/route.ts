@@ -7,7 +7,7 @@ import { normalizeAffiliateUrl, tryNormalizeAffiliateUrl } from "@/lib/affiliate
 import { assertSafePublicHttpUrlForServerFetch } from "@/lib/affiliate-url-server"
 import { convexMutation, convexQuery } from "@/lib/convex"
 import { fetchProductMetadata } from "@/lib/product-metadata"
-import { checkRateLimit, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
+import { checkRateLimitAsync, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
 import { getStoreCacheTag } from "@/lib/store-cache"
 import { requireActiveSubscription } from "@/lib/subscription-access"
 
@@ -66,7 +66,7 @@ export async function POST(req: Request) {
     if (csrfBlock) return csrfBlock
 
     const ip = getClientIp(req.headers)
-    const rate = checkRateLimit({ key: `api:products:create:${ip}`, windowMs: 60 * 1000, max: 40 })
+    const rate = await checkRateLimitAsync({ key: `api:products:create:${ip}`, windowMs: 60 * 1000, max: 40 })
     if (!rate.allowed) {
       return tooManyRequests(rate.retryAfterSec)
     }
@@ -151,7 +151,7 @@ export async function POST(req: Request) {
 export async function GET(req: Request) {
   try {
     const ip = getClientIp(req.headers)
-    const rate = checkRateLimit({ key: `api:products:list:${ip}`, windowMs: 60 * 1000, max: 240 })
+    const rate = await checkRateLimitAsync({ key: `api:products:list:${ip}`, windowMs: 60 * 1000, max: 240 })
     if (!rate.allowed) {
       return tooManyRequests(rate.retryAfterSec)
     }

@@ -10,7 +10,7 @@ import {
   getGoogleCallbackUrl,
   sanitizePostAuthPath,
 } from "@/lib/google-auth"
-import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/security"
+import { checkRateLimitAsync, getClientIp, tooManyRequests } from "@/lib/security"
 
 export const runtime = "nodejs"
 
@@ -35,7 +35,7 @@ function redirectWithError(req: NextRequest, error: string) {
 
 export async function GET(req: NextRequest) {
   const ip = getClientIp(req.headers)
-  const rate = checkRateLimit({ key: `api:auth:google:callback:${ip}`, windowMs: 60 * 1000, max: 60 })
+  const rate = await checkRateLimitAsync({ key: `api:auth:google:callback:${ip}`, windowMs: 60 * 1000, max: 60 })
   if (!rate.allowed) {
     return tooManyRequests(rate.retryAfterSec)
   }

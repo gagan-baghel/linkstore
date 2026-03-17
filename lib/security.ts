@@ -17,9 +17,15 @@ type RateLimitResult = {
   retryAfterSec: number
 }
 
+type RateLimitStore = {
+  check: (options: RateLimitOptions) => Promise<RateLimitResult> | RateLimitResult
+}
+
 declare global {
   // eslint-disable-next-line no-var
   var __linkstoreRateLimitStore: Map<string, RateLimitEntry> | undefined
+  // eslint-disable-next-line no-var
+  var __linkstoreRateLimitBackend: RateLimitStore | undefined
 }
 
 function getRateLimitStore() {
@@ -38,6 +44,131 @@ function maybeCleanupExpiredEntries(store: Map<string, RateLimitEntry>, now: num
   }
 }
 
+function getUpstashConfig() {
+  const url = process.env.UPSTASH_REDIS_REST_URL?.trim()
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN?.trim()
+  if (!url || !token) return null
+  return { url: url.replace(/\/+$/, ""), token }
+}
+
+async function upstashCommand<T = any>(command: any[], config: { url: string; token: string }) {
+  const response = await fetch(config.url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${config.token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(command),
+    cache: "no-store",
+  })
+
+  if (!response.ok) {
+    throw new Error(`Upstash request failed: ${response.status}`)
+  }
+
+  const data = await response.json()
+  return data?.result as T
+}
+
+async function upstashPipeline<T = any[]>(commands: any[][], config: { url: string; token: string }) {
+  const response = await fetch(`${config.url}/pipeline`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${config.token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(commands),
+    cache: "no-store",
+  })
+
+  if (!response.ok) {
+    throw new Error(`Upstash pipeline failed: ${response.status}`)
+  }
+
+  const data = await response.json()
+  return (Array.isArray(data) ? data : []).map((item) => item?.result) as T
+}
+
+function getRateLimitBackend(): RateLimitStore {
+  if (global.__linkstoreRateLimitBackend) {
+    return global.__linkstoreRateLimitBackend
+  }
+
+  const upstash = getUpstashConfig()
+  if (upstash) {
+    const backend: RateLimitStore = {
+      check: async (options) => {
+        const now = Date.now()
+        const key = `rl:${options.key}`
+
+        const [countRaw, ttlRaw] = await upstashPipeline<[number, number]>(
+          [
+            ["INCR", key],
+            ["PTTL", key],
+          ],
+          upstash,
+        )
+
+        const count = Number(countRaw || 0)
+        let ttlMs = Number(ttlRaw || -1)
+
+        if (!Number.isFinite(ttlMs) || ttlMs < 0) {
+          try {
+            await upstashCommand(["PEXPIRE", key, options.windowMs], upstash)
+            ttlMs = options.windowMs
+          } catch {
+            ttlMs = options.windowMs
+          }
+        }
+
+        const allowed = count <= options.max
+        const remaining = Math.max(options.max - count, 0)
+        const retryAfterSec = Math.max(Math.ceil(ttlMs / 1000), 1)
+
+        return { allowed, remaining, retryAfterSec }
+      },
+    }
+
+    global.__linkstoreRateLimitBackend = backend
+    return backend
+  }
+
+  const memoryBackend: RateLimitStore = {
+    check: (options) => {
+      const now = Date.now()
+      const store = getRateLimitStore()
+      maybeCleanupExpiredEntries(store, now)
+
+      const current = store.get(options.key)
+
+      if (!current || current.resetAt <= now) {
+        store.set(options.key, {
+          count: 1,
+          resetAt: now + options.windowMs,
+        })
+
+        return {
+          allowed: true,
+          remaining: Math.max(options.max - 1, 0),
+          retryAfterSec: Math.ceil(options.windowMs / 1000),
+        }
+      }
+
+      current.count += 1
+      store.set(options.key, current)
+
+      const allowed = current.count <= options.max
+      const remaining = Math.max(options.max - current.count, 0)
+      const retryAfterSec = Math.max(Math.ceil((current.resetAt - now) / 1000), 1)
+
+      return { allowed, remaining, retryAfterSec }
+    },
+  }
+
+  global.__linkstoreRateLimitBackend = memoryBackend
+  return memoryBackend
+}
+
 export function getClientIp(headers: Headers): string {
   const forwardedFor = headers.get("x-forwarded-for")
   if (forwardedFor) {
@@ -52,33 +183,51 @@ export function getClientIp(headers: Headers): string {
 }
 
 export function checkRateLimit(options: RateLimitOptions): RateLimitResult {
-  const now = Date.now()
-  const store = getRateLimitStore()
-  maybeCleanupExpiredEntries(store, now)
-
-  const current = store.get(options.key)
-
-  if (!current || current.resetAt <= now) {
-    store.set(options.key, {
-      count: 1,
-      resetAt: now + options.windowMs,
-    })
-
-    return {
-      allowed: true,
-      remaining: Math.max(options.max - 1, 0),
-      retryAfterSec: Math.ceil(options.windowMs / 1000),
+  const backend = getRateLimitBackend()
+  try {
+    const result = backend.check(options)
+    if (result instanceof Promise) {
+      throw new Error("Async rate limit backend not supported in sync path.")
     }
+    return result
+  } catch {
+    const fallback = getRateLimitStore()
+    const now = Date.now()
+    maybeCleanupExpiredEntries(fallback, now)
+
+    const current = fallback.get(options.key)
+
+    if (!current || current.resetAt <= now) {
+      fallback.set(options.key, {
+        count: 1,
+        resetAt: now + options.windowMs,
+      })
+
+      return {
+        allowed: true,
+        remaining: Math.max(options.max - 1, 0),
+        retryAfterSec: Math.ceil(options.windowMs / 1000),
+      }
+    }
+
+    current.count += 1
+    fallback.set(options.key, current)
+
+    const allowed = current.count <= options.max
+    const remaining = Math.max(options.max - current.count, 0)
+    const retryAfterSec = Math.max(Math.ceil((current.resetAt - now) / 1000), 1)
+
+    return { allowed, remaining, retryAfterSec }
   }
+}
 
-  current.count += 1
-  store.set(options.key, current)
-
-  const allowed = current.count <= options.max
-  const remaining = Math.max(options.max - current.count, 0)
-  const retryAfterSec = Math.max(Math.ceil((current.resetAt - now) / 1000), 1)
-
-  return { allowed, remaining, retryAfterSec }
+export async function checkRateLimitAsync(options: RateLimitOptions): Promise<RateLimitResult> {
+  const backend = getRateLimitBackend()
+  try {
+    return await backend.check(options)
+  } catch {
+    return checkRateLimit(options)
+  }
 }
 
 export function tooManyRequests(retryAfterSec: number) {

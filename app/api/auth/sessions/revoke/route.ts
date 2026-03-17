@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 
 import { applySessionCookie, getSafeServerSession } from "@/lib/auth"
 import { convexMutation } from "@/lib/convex"
-import { checkRateLimit, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
+import { checkRateLimitAsync, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
 
 export const runtime = "nodejs"
 
@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     if (csrfBlock) return csrfBlock
 
     const ip = getClientIp(req.headers)
-    const rate = checkRateLimit({ key: `api:auth:sessions:revoke:${ip}`, windowMs: 10 * 60 * 1000, max: 10 })
+    const rate = await checkRateLimitAsync({ key: `api:auth:sessions:revoke:${ip}`, windowMs: 10 * 60 * 1000, max: 10 })
     if (!rate.allowed) {
       return tooManyRequests(rate.retryAfterSec)
     }
