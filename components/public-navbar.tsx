@@ -24,14 +24,9 @@ export async function PublicNavbar() {
               <Button>Open Dashboard</Button>
             </Link>
           ) : (
-            <>
-              <Link href="/auth/login">
-                <Button variant="ghost" className="rounded-full px-5 text-sm font-medium tracking-wide text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/5 transition-colors">Google Sign-In</Button>
-              </Link>
-              <Link href="/auth/register">
-                <Button className="rounded-full border border-indigo-200/50 bg-indigo-500/20 backdrop-blur-md px-5 text-sm font-medium tracking-wide text-indigo-700 hover:bg-indigo-500/30 dark:border-indigo-400/30 dark:text-indigo-300 dark:hover:bg-indigo-400/20 transition-colors shadow-sm">Start with Google</Button>
-              </Link>
-            </>
+            <Link href="/auth/login">
+              <Button className="rounded-full border border-indigo-200/50 bg-indigo-500/20 backdrop-blur-md px-5 text-sm font-medium tracking-wide text-indigo-700 hover:bg-indigo-500/30 dark:border-indigo-400/30 dark:text-indigo-300 dark:hover:bg-indigo-400/20 transition-colors shadow-sm">Continue with Google</Button>
+            </Link>
           )}
         </div>
       </div>
