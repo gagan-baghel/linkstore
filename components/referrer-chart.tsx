@@ -23,7 +23,7 @@ export function ReferrerChart({ data }: ReferrerChartProps) {
   return (
     <ChartContainer
       config={Object.fromEntries(data.map((item, index) => [item.name, { label: item.name, color: COLORS[index % COLORS.length] }]))}
-      className="h-[260px] w-full sm:h-[300px]"
+      className="h-64 w-full sm:h-72"
     >
       <PieChart>
         <Pie

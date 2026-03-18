@@ -23,9 +23,9 @@ export default async function DashboardLayout({
   const canUseShopFeatures = Boolean(session.user.hasActiveSubscription)
 
   return (
-    <div className="dashboard-minimal min-h-screen md:grid md:grid-cols-[260px_1fr]">
-      <aside className="dashboard-sidebar hidden min-h-screen border-r border-slate-200 bg-white md:block">
-        <div className="px-6 py-6">
+    <div className="dashboard-minimal min-h-screen md:grid md:grid-cols-[16rem_minmax(0,1fr)]">
+      <aside className="dashboard-sidebar hidden h-screen border-r border-slate-200 bg-white md:sticky md:top-0 md:flex md:flex-col">
+        <div className="shrink-0 px-6 py-6">
           <Link href="/dashboard" className="flex items-center gap-2 text-xl font-bold text-slate-900">
             <div className="flex h-10 w-10 items-center justify-center">
               <Image src="/favicon-32x32.png" alt="Linkstore logo" width={32} height={32} />
@@ -33,9 +33,9 @@ export default async function DashboardLayout({
             <span>Linkstore</span>
           </Link>
         </div>
-        <div className="px-4 pb-6">
+        <div className="flex flex-1 flex-col px-4 pb-6">
           <DashboardNav canUseShopFeatures={canUseShopFeatures} />
-          <div className="mt-4">
+          <div className="mt-auto pt-4">
             <DashboardSignOutButton className="w-full justify-start" />
           </div>
         </div>

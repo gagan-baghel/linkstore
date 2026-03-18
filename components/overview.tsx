@@ -22,7 +22,7 @@ export function Overview({ data }: OverviewProps) {
   return (
     <ChartContainer
       config={{ value: { label: "Events", color: "#0ea5e9" } }}
-      className="h-[240px] w-full [--axis:#8a94a8] [--grid:#e8edf7] sm:h-[280px]"
+      className="h-60 w-full [--axis:#8a94a8] [--grid:#e8edf7] sm:h-72"
     >
       <BarChart data={chartData} margin={{ left: 8, right: 8, top: 8, bottom: 8 }}>
         <CartesianGrid vertical={false} stroke="var(--grid)" strokeDasharray="4 4" />

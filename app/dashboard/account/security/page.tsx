@@ -24,7 +24,7 @@ export default async function AccountSecurityPage() {
         text="Google manages account authentication. Linkstore manages your signed app sessions."
       />
       <div className="space-y-4">
-        <div className="rounded-xl border border-[#d8e2f3] bg-white p-4 text-sm text-[#4f5f7a]">
+        <div className="rounded-lg border border-[#d8e2f3] bg-white p-4 text-sm leading-6 text-[#4f5f7a] md:rounded-xl">
           Password changes, 2-step verification, and account recovery happen in Google. Use the control below to
           invalidate older Linkstore sessions.
         </div>

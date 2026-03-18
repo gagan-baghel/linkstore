@@ -3,7 +3,7 @@
 import { useEffect, useMemo } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { BarChart, Home, Package, Palette, Settings, Store } from "lucide-react"
+import { BarChart, Home, Link2, Package, Palette, Settings, Store } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -13,6 +13,7 @@ const navItems = [
   { title: "Dashboard", href: "/dashboard", icon: Home },
   { title: "Products", href: "/dashboard/products", icon: Package, requiresPremium: true },
   { title: "Store Settings", href: "/dashboard/store", icon: Store },
+  { title: "Social Links", href: "/dashboard/social-links", icon: Link2, requiresPremium: true },
   { title: "Store Theme", href: "/dashboard/store-theme", icon: Palette, requiresPremium: true },
   { title: "Analytics", href: "/dashboard/analytics", icon: BarChart },
   { title: "Account", href: "/dashboard/account", icon: Settings },

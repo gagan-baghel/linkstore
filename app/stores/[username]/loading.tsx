@@ -1,11 +1,11 @@
 export default function StoreLoading() {
   return (
     <div className="min-h-screen">
-      <div className="mx-auto w-full max-w-[430px] px-3 pb-6 pt-5 md:hidden">
+      <div className="mx-auto w-full max-w-md px-3 pb-6 pt-5 md:hidden">
         <div className="mx-auto h-20 w-20 animate-pulse rounded-full bg-slate-200" />
         <div className="mx-auto mt-3 h-7 w-44 animate-pulse rounded bg-slate-200" />
-        <div className="mx-auto mt-2 h-3 w-72 max-w-[92%] animate-pulse rounded bg-slate-200" />
-        <div className="mx-auto mt-5 h-11 w-[265px] animate-pulse rounded-full bg-slate-200" />
+        <div className="mx-auto mt-2 h-3 w-72 max-w-full animate-pulse rounded bg-slate-200" />
+        <div className="mx-auto mt-5 h-11 w-64 animate-pulse rounded-full bg-slate-200" />
 
         <div className="mt-5 h-12 w-full animate-pulse rounded-full bg-slate-200" />
 

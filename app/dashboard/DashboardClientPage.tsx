@@ -52,7 +52,7 @@ function MetricCard({
   icon: ReactNode
 }) {
   return (
-    <div className="rounded-lg border border-[#d8e2f3] bg-white p-3 shadow-[0_1px_3px_rgba(18,36,64,0.04),0_4px_12px_rgba(18,36,64,0.06)] sm:p-4">
+    <div className="rounded-lg border border-[#d8e2f3] bg-white p-3 shadow-none sm:p-4">
       <div className="mb-2 flex items-center justify-between sm:mb-3">
         <p className="text-[11px] font-medium uppercase tracking-wide text-[#5f6b7e] sm:text-xs">{title}</p>
         <span className="text-[#8a94a8]">{icon}</span>
@@ -266,7 +266,7 @@ export default function DashboardClientPage({
       >
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           <Link href={addProductHref}>
-            <Button className="h-8 w-full border border-[#3e55df] bg-[#4a63f6] text-xs text-white shadow-none hover:bg-[#3f56de] sm:h-9 sm:w-auto sm:text-sm">
+            <Button className="h-10 w-full border border-[#3e55df] bg-[#4a63f6] text-sm text-white shadow-none hover:bg-[#3f56de] sm:h-9 sm:w-auto sm:text-sm">
               <PlusCircle className="mr-2 h-4 w-4" />
               Add Product
             </Button>
@@ -276,7 +276,7 @@ export default function DashboardClientPage({
 
       {error && <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 sm:mb-6 sm:px-4 sm:py-3 sm:text-sm">{error}</div>}
 
-      <div className="mb-4 grid gap-3 md:mb-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="mb-4 grid gap-2.5 md:mb-6 md:grid-cols-2 lg:grid-cols-3">
         <MetricCard
           title="Products"
           value={isLoading ? "..." : totalProducts}
@@ -297,22 +297,22 @@ export default function DashboardClientPage({
         />
       </div>
 
-      <section className="mb-5 overflow-hidden rounded-2xl border border-[#d8e2f3] bg-[radial-gradient(circle_at_top_left,_rgba(99,102,241,0.16),_transparent_48%),linear-gradient(135deg,_#ffffff_0%,_#f6f9ff_52%,_#eef4ff_100%)] p-4 shadow-[0_16px_44px_rgba(27,52,92,0.08)] md:mb-6 md:p-5">
+      <section className="mb-5 overflow-hidden rounded-lg border border-[#d8e2f3] bg-white p-4 md:mb-6 md:rounded-2xl md:p-5">
         <div className="grid gap-4 lg:grid-cols-[1.3fr_0.9fr] lg:items-start">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-indigo-700">
+            <div className="inline-flex items-center gap-2 rounded-md border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-indigo-700">
               <Rocket className="h-3.5 w-3.5" />
               Launch path
             </div>
-            <h2 className="mt-3 text-xl font-semibold tracking-tight text-[#162033] md:text-2xl">
+            <h2 className="mt-3 text-[1.9rem] font-semibold leading-tight tracking-tight text-[#162033] md:text-2xl">
               Make your store feel ready in under 3 minutes.
             </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#52627b]">
+            <p className="mt-2 max-w-2xl text-[13px] leading-6 text-[#52627b] md:text-sm">
               Move in order: set your creator story, add products, then share a storefront that looks intentional and
               trustworthy.
             </p>
             <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-              <Button asChild className="h-10 border border-[#3e55df] bg-[#4a63f6] px-4 text-sm text-white shadow-[0_10px_24px_rgba(74,99,246,0.28)] hover:bg-[#3f56de]">
+              <Button asChild className="h-10 border border-[#3e55df] bg-[#4a63f6] px-4 text-sm text-white shadow-none hover:bg-[#3f56de]">
                 <Link href={nextStepHref}>
                   {nextStepLabel}
                   <Rocket className="h-4 w-4" />
@@ -325,7 +325,7 @@ export default function DashboardClientPage({
           </div>
 
           <div className="grid gap-2.5">
-            <div className="rounded-xl border border-white/75 bg-white/80 p-3">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-[#5f6b7e]">Current blocker</p>
               <p className="mt-1 text-sm font-semibold text-[#162033]">{nextStepLabel}</p>
               <p className="mt-1 text-xs leading-5 text-[#60708a]">
@@ -342,7 +342,7 @@ export default function DashboardClientPage({
                           : "Your setup is healthy. Start sharing and watch the 30-day numbers."}
               </p>
             </div>
-            <div className="rounded-xl border border-white/75 bg-white/80 p-3">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
               <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-[#5f6b7e]">
                 <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
                 Trust checklist
@@ -469,7 +469,7 @@ export default function DashboardClientPage({
         ) : recentProducts.length > 0 ? (
           <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
             {recentProducts.map((product: any) => (
-              <div key={product._id.toString()} className="overflow-hidden rounded-lg border border-[#d8e2f3] bg-white">
+              <div key={product._id.toString()} className="overflow-hidden rounded-lg border border-[#d8e2f3] bg-white shadow-none">
                 <div className="relative aspect-video w-full overflow-hidden">
                   <Image
                     src={product.images?.[0] || "/placeholder.svg?height=200&width=300"}

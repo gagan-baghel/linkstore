@@ -7,13 +7,12 @@ import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { Copy, ExternalLink, Facebook, Instagram, Twitter, Upload, X, Youtube } from "lucide-react"
+import { Copy, ExternalLink, Upload, X } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/components/ui/use-toast"
 
@@ -26,11 +25,6 @@ const storeFormSchema = z.object({
   storeBio: z.string().max(500).optional().or(z.literal("")),
   contactInfo: z.string().optional(),
   storeLogo: z.string().optional(),
-  socialFacebook: z.string().url({ message: "Please enter a valid URL" }).optional().or(z.literal("")),
-  socialTwitter: z.string().url({ message: "Please enter a valid URL" }).optional().or(z.literal("")),
-  socialInstagram: z.string().url({ message: "Please enter a valid URL" }).optional().or(z.literal("")),
-  socialYoutube: z.string().url({ message: "Please enter a valid URL" }).optional().or(z.literal("")),
-  socialWebsite: z.string().url({ message: "Please enter a valid URL" }).optional().or(z.literal("")),
 })
 
 type StoreFormValues = z.infer<typeof storeFormSchema>
@@ -42,11 +36,6 @@ interface StoreFormProps {
   username: string
   storeUrl: string
   storeLogo?: string
-  socialFacebook?: string
-  socialTwitter?: string
-  socialInstagram?: string
-  socialYoutube?: string
-  socialWebsite?: string
 }
 
 export function StoreForm({
@@ -56,11 +45,6 @@ export function StoreForm({
   username,
   storeUrl,
   storeLogo = "",
-  socialFacebook = "",
-  socialTwitter = "",
-  socialInstagram = "",
-  socialYoutube = "",
-  socialWebsite = "",
 }: StoreFormProps) {
   const router = useRouter()
   const [isEditing, setIsEditing] = useState(false)
@@ -73,11 +57,6 @@ export function StoreForm({
     storeBio: storeBio || "",
     contactInfo: contactInfo || "",
     storeLogo: storeLogo || "",
-    socialFacebook: socialFacebook || "",
-    socialTwitter: socialTwitter || "",
-    socialInstagram: socialInstagram || "",
-    socialYoutube: socialYoutube || "",
-    socialWebsite: socialWebsite || "",
   }
 
   const form = useForm<StoreFormValues>({
@@ -88,13 +67,6 @@ export function StoreForm({
   const values = form.watch()
   const logoFallback = (username?.trim().charAt(0) || "S").toUpperCase()
   const normalizedStoreUrl = storeUrl.trim()
-
-  const socialLinks = [
-    { name: "Facebook", value: values.socialFacebook?.trim() || "", icon: <Facebook className="h-4 w-4" /> },
-    { name: "Twitter", value: values.socialTwitter?.trim() || "", icon: <Twitter className="h-4 w-4" /> },
-    { name: "Instagram", value: values.socialInstagram?.trim() || "", icon: <Instagram className="h-4 w-4" /> },
-    { name: "YouTube", value: values.socialYoutube?.trim() || "", icon: <Youtube className="h-4 w-4" /> },
-  ].filter((item) => item.value.length > 0)
 
   function handleAddCategory() {
     const normalized = newCategory.trim()
@@ -225,7 +197,7 @@ export function StoreForm({
 
   return (
     <div className="w-full pb-20">
-      <section className="mb-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="mb-4 rounded-lg border border-slate-200 bg-white p-4 sm:rounded-xl sm:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <h3 className="text-sm font-semibold text-slate-900">Storefront URL</h3>
@@ -234,7 +206,7 @@ export function StoreForm({
               <p className="truncate text-sm font-medium text-slate-900">{normalizedStoreUrl || "Store URL unavailable"}</p>
             </div>
           </div>
-          <div className="flex flex-col gap-2 sm:w-auto sm:min-w-[150px]">
+          <div className="flex flex-col gap-2 sm:w-auto sm:min-w-36">
             <Button asChild className="h-10 bg-slate-900 text-sm text-white hover:bg-slate-800" disabled={!normalizedStoreUrl}>
               <a href={normalizedStoreUrl || "#"} target="_blank" rel="noreferrer noopener">
                 Open Store
@@ -257,7 +229,7 @@ export function StoreForm({
 
       {!isEditing ? (
         <div className="grid gap-4 md:grid-cols-12 md:gap-5">
-          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:col-span-8">
+          <section className="rounded-lg border border-slate-200 bg-white p-4 md:col-span-8 md:rounded-xl md:p-5">
             <h3 className="text-sm font-semibold text-slate-900">Store Identity</h3>
             <div className="mt-4 space-y-4">
               <div>
@@ -271,7 +243,7 @@ export function StoreForm({
             </div>
           </section>
 
-          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:col-span-4">
+          <section className="rounded-lg border border-slate-200 bg-white p-4 md:col-span-4 md:rounded-xl md:p-5">
             <h3 className="text-sm font-semibold text-slate-900">Branding</h3>
             <div className="mt-4 flex items-center gap-3">
               <Avatar className="h-12 w-12 border border-slate-200">
@@ -282,38 +254,17 @@ export function StoreForm({
             </div>
           </section>
 
-          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:col-span-12">
-            <h3 className="text-sm font-semibold text-slate-900">Contact & Social</h3>
+          <section className="rounded-lg border border-slate-200 bg-white p-4 md:col-span-12 md:rounded-xl md:p-5">
+            <h3 className="text-sm font-semibold text-slate-900">Contact</h3>
             <div className="mt-4 space-y-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Contact</p>
                 <p className="mt-1 text-sm text-slate-800">{values.contactInfo?.trim() || "No contact info added yet."}</p>
               </div>
-              <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Social Media Links</p>
-                {socialLinks.length > 0 ? (
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {socialLinks.map((item) => (
-                      <a
-                        key={item.name}
-                        href={item.value}
-                        target="_blank"
-                        rel="noreferrer noopener"
-                        className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:border-slate-300 hover:text-slate-900"
-                      >
-                        {item.icon}
-                        <span className="truncate">{item.value}</span>
-                      </a>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-slate-600">No social links added yet.</p>
-                )}
-              </div>
             </div>
           </section>
 
-          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:col-span-12">
+          <section className="rounded-lg border border-slate-200 bg-white p-4 md:col-span-12 md:rounded-xl md:p-5">
             <h3 className="text-sm font-semibold text-slate-900">Product Categories</h3>
             <div className="mt-3 flex flex-col gap-2 sm:flex-row">
               <Input
@@ -357,7 +308,7 @@ export function StoreForm({
                       <FormControl>
                         <Textarea
                           placeholder="Tell visitors about your store and what products you recommend..."
-                          className="min-h-[120px] border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400"
+                          className="min-h-32 border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400"
                           {...field}
                         />
                       </FormControl>
@@ -369,7 +320,7 @@ export function StoreForm({
               </section>
 
               <section className="space-y-4 border-t border-slate-200 pt-5">
-                <h3 className="text-sm font-semibold text-slate-900">Contact & Links</h3>
+                <h3 className="text-sm font-semibold text-slate-900">Contact</h3>
                 <FormField
                   control={form.control}
                   name="contactInfo"
@@ -384,78 +335,6 @@ export function StoreForm({
                     </FormItem>
                   )}
                 />
-
-                <Separator className="bg-slate-200" />
-
-                <div>
-                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-700">Social Media Links</p>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="socialFacebook"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2 text-xs font-semibold text-slate-700">
-                            <Facebook className="h-4 w-4" /> Facebook
-                          </FormLabel>
-                          <FormControl>
-                            <Input className="h-10 border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400" placeholder="https://facebook.com/yourusername" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="socialTwitter"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2 text-xs font-semibold text-slate-700">
-                            <Twitter className="h-4 w-4" /> Twitter
-                          </FormLabel>
-                          <FormControl>
-                            <Input className="h-10 border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400" placeholder="https://twitter.com/yourusername" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="socialInstagram"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2 text-xs font-semibold text-slate-700">
-                            <Instagram className="h-4 w-4" /> Instagram
-                          </FormLabel>
-                          <FormControl>
-                            <Input className="h-10 border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400" placeholder="https://instagram.com/yourusername" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="socialYoutube"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2 text-xs font-semibold text-slate-700">
-                            <Youtube className="h-4 w-4" /> YouTube
-                          </FormLabel>
-                          <FormControl>
-                            <Input className="h-10 border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400" placeholder="https://youtube.com/c/yourchannel" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                  </div>
-                </div>
               </section>
             </div>
 
@@ -534,7 +413,7 @@ export function StoreForm({
         {!isEditing ? (
           <Button
             type="button"
-            className="h-10 border border-[#3e55df] bg-[#4a63f6] px-4 text-sm text-white shadow-[0_10px_24px_rgba(74,99,246,0.35)] hover:bg-[#3f56de]"
+            className="h-10 border border-[#3e55df] bg-[#4a63f6] px-4 text-sm text-white shadow-none hover:bg-[#3f56de]"
             onClick={() => setIsEditing(true)}
           >
             Edit Store
@@ -543,7 +422,7 @@ export function StoreForm({
           <Button
             type="button"
             variant="outline"
-            className="h-10 border-[#cfd8ea] bg-white px-4 text-sm text-[#1f2a44] shadow-[0_10px_24px_rgba(19,34,68,0.14)] hover:bg-[#f3f6fc]"
+            className="h-10 border-[#cfd8ea] bg-white px-4 text-sm text-[#1f2a44] shadow-none hover:bg-[#f3f6fc]"
             onClick={() => {
               form.reset(defaultValues)
               setIsEditing(false)

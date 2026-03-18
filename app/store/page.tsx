@@ -32,7 +32,7 @@ export default async function HostStorePage() {
   } catch (error) {
     console.error("Host store page load error:", error)
     return (
-      <div className="container flex min-h-[70vh] flex-col items-center justify-center gap-4 py-16 text-center">
+      <div className="container flex min-h-96 flex-col items-center justify-center gap-4 py-16 text-center">
         <h1 className="text-3xl font-bold tracking-tight">Store Temporarily Unavailable</h1>
         <p className="max-w-xl text-muted-foreground">
           We could not load this store right now. Please refresh in a few moments.

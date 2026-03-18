@@ -113,13 +113,13 @@ export function AccountForm({ name, email, username }: AccountFormProps) {
       )}
 
       {!isEditing ? (
-        <section className="rounded-xl border border-[#d8e2f3] bg-white p-5 md:p-6">
+        <section className="rounded-lg border border-[#d8e2f3] bg-white p-4 md:rounded-xl md:p-6">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
             <div>
               <h2 className="text-base font-semibold text-[#162033]">Profile Overview</h2>
               <p className="mt-1 text-xs text-[#60708a]">Your account details used across your dashboard.</p>
             </div>
-            <span className="rounded-full border border-[#d8e2f3] bg-[#f7f9ff] px-3 py-1 text-xs font-medium text-[#41506a]">@{username || "username"}</span>
+            <span className="rounded-md border border-[#d8e2f3] bg-[#f7f9ff] px-3 py-1 text-xs font-medium text-[#41506a]">@{username || "username"}</span>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -151,7 +151,7 @@ export function AccountForm({ name, email, username }: AccountFormProps) {
           </div>
         </section>
       ) : (
-        <section className="rounded-xl border border-[#d8e2f3] bg-white p-5 md:p-6">
+        <section className="rounded-lg border border-[#d8e2f3] bg-white p-4 md:rounded-xl md:p-6">
           <h2 className="text-base font-semibold text-[#162033]">Edit Profile</h2>
           <p className="mt-1 text-xs text-[#60708a]">Update your public display name and username. Your sign-in email stays managed by Google.</p>
 
@@ -227,7 +227,7 @@ export function AccountForm({ name, email, username }: AccountFormProps) {
         </section>
       )}
 
-      <div className="rounded-xl border border-[#d8e2f3] bg-white p-5 md:p-6">
+      <div className="rounded-lg border border-[#d8e2f3] bg-white p-4 md:rounded-xl md:p-6">
         <h2 className="text-base font-semibold text-[#162033]">Authentication & Sessions</h2>
         <p className="mb-4 mt-1 text-xs text-[#60708a]">Google handles identity. Linkstore handles session revocation.</p>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -244,11 +244,11 @@ export function AccountForm({ name, email, username }: AccountFormProps) {
         </div>
       </div>
 
-      <div className="fixed bottom-6 right-4 z-40 flex items-center gap-2 sm:right-6">
+      <div className="fixed bottom-20 left-2 right-2 z-40 flex items-center gap-2 sm:bottom-6 sm:left-auto sm:right-6">
         {!isEditing ? (
           <Button
             type="button"
-            className="h-10 border border-[#3e55df] bg-[#4a63f6] px-4 text-sm text-white shadow-[0_10px_24px_rgba(74,99,246,0.35)] hover:bg-[#3f56de]"
+            className="h-11 w-full border border-[#3e55df] bg-[#4a63f6] px-4 text-sm text-white shadow-none hover:bg-[#3f56de] sm:h-10 sm:w-auto"
             onClick={() => setIsEditing(true)}
           >
             <PencilLine className="mr-2 h-4 w-4" />
@@ -259,7 +259,7 @@ export function AccountForm({ name, email, username }: AccountFormProps) {
             <Button
               type="button"
               variant="outline"
-              className="h-10 border-[#cfd8ea] bg-white px-4 text-sm text-[#1f2a44] shadow-[0_10px_24px_rgba(19,34,68,0.14)] hover:bg-[#f3f6fc]"
+              className="h-11 flex-1 border-[#cfd8ea] bg-white px-4 text-sm text-[#1f2a44] shadow-none hover:bg-[#f3f6fc] sm:h-10 sm:flex-none"
               onClick={cancelEdit}
             >
               <X className="mr-2 h-4 w-4" />
@@ -269,7 +269,7 @@ export function AccountForm({ name, email, username }: AccountFormProps) {
               type="submit"
               form="account-edit-form"
               disabled={isLoading}
-              className="h-10 border border-[#3e55df] bg-[#4a63f6] px-4 text-sm text-white shadow-[0_10px_24px_rgba(74,99,246,0.35)] hover:bg-[#3f56de]"
+              className="h-11 flex-1 border border-[#3e55df] bg-[#4a63f6] px-4 text-sm text-white shadow-none hover:bg-[#3f56de] sm:h-10 sm:flex-none"
             >
               {isLoading ? "Saving..." : "Save Changes"}
             </Button>

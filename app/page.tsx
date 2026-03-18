@@ -166,7 +166,7 @@ export default async function Home() {
               <div className="grid gap-3 pt-4 sm:grid-cols-3 sm:gap-6">
                 {outcomes.map((line) => (
                   <div key={line} className="relative pl-4 delay-[200ms]">
-                    <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-gradient-to-b from-indigo-500 to-sky-400 opacity-80" />
+                    <div className="absolute bottom-0 left-0 top-0 w-1 rounded-full bg-gradient-to-b from-indigo-500 to-sky-400 opacity-80" />
                     <p className="text-xs font-semibold leading-relaxed text-slate-700 dark:text-slate-300">{line}</p>
                   </div>
                 ))}
@@ -212,7 +212,7 @@ export default async function Home() {
                       <span className="font-black uppercase tracking-wide text-slate-900 dark:text-emerald-400">Creator Gear</span>
                     </div>
                     <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-800/80">
-                      <div className="absolute left-0 top-0 h-full w-[72%] rounded-full bg-gradient-to-r from-indigo-500 to-sky-400" />
+                    <div className="absolute left-0 top-0 h-full w-[72%] rounded-full bg-gradient-to-r from-indigo-500 to-sky-400" />
                     </div>
                   </div>
 
@@ -301,7 +301,7 @@ export default async function Home() {
                     {step.id}
                   </div>
                   {index !== journeySteps.length - 1 && (
-                    <div className="absolute left-20 right-0 top-8 hidden h-[2px] bg-gradient-to-r from-indigo-100 to-transparent dark:from-indigo-500/20 lg:block" />
+                    <div className="absolute left-20 right-0 top-8 hidden h-0.5 bg-gradient-to-r from-indigo-100 to-transparent dark:from-indigo-500/20 lg:block" />
                   )}
                   <h3 className="mb-3 text-xl font-bold uppercase leading-tight tracking-tight text-slate-900 transition-colors group-hover:text-indigo-600 dark:text-white dark:group-hover:text-indigo-400">{step.title}</h3>
                   <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">{step.description}</p>

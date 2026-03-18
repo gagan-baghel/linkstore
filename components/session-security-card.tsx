@@ -38,7 +38,7 @@ export function SessionSecurityCard({ email }: { email: string }) {
   }
 
   return (
-    <div className="space-y-4 rounded-xl border border-[#d8e2f3] bg-white p-5 md:p-6">
+    <div className="space-y-4 rounded-lg border border-[#d8e2f3] bg-white p-4 md:rounded-xl md:p-6">
       <div className="space-y-1">
         <h2 className="text-base font-semibold text-[#162033]">Google Sign-In</h2>
         <p className="text-sm text-[#4f5f7a]">
@@ -68,7 +68,7 @@ export function SessionSecurityCard({ email }: { email: string }) {
           type="button"
           variant="outline"
           disabled={isRevoking}
-          className="h-10 border-[#cfd8ea] bg-white px-4 text-sm text-[#1f2a44] shadow-[0_10px_24px_rgba(19,34,68,0.14)] hover:bg-[#f3f6fc]"
+          className="h-10 w-full border-[#cfd8ea] bg-white px-4 text-sm text-[#1f2a44] shadow-none hover:bg-[#f3f6fc] sm:w-auto"
           onClick={() => {
             void revokeOtherSessions()
           }}

@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   ShoppingBag,
   Twitter,
+  X,
   Youtube,
 } from "lucide-react"
 
@@ -204,11 +205,13 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<"links" | "shop">("links")
+  const [desktopMediaMenuOpen, setDesktopMediaMenuOpen] = useState(false)
   const [source, setSource] = useState("storefront")
   const [sessionId, setSessionId] = useState("")
   const [currentPath, setCurrentPath] = useState("")
   const [prefersDark, setPrefersDark] = useState(false)
   const trackStoreViewOnce = useRef(false)
+  const desktopMediaMenuRef = useRef<HTMLDivElement | null>(null)
 
   const themePrimaryColor = user.themePrimaryColor || "#2563eb"
   const themeButtonStyle = user.themeButtonStyle || "rounded"
@@ -307,11 +310,29 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
     user.storeBio?.trim() ||
     "Find the product by searching the post number from the video caption. I may earn a small commission."
   const displayName = (user.name || "Store").trim()
+  const normalizedUsername = (user.username || "").trim().replace(/^@+/, "")
+  const storeUsernameLabel = normalizedUsername ? `@${normalizedUsername}` : displayName
   const usesFallbackLogo = !hasCustomStoreLogo(user)
   const mobileSocialIcons = socialItems.filter((item) => item.key === "instagram" || item.key === "youtube").slice(0, 2)
   const hasCreatorLinks = socialItems.length > 0
-  const affiliateDisclosure =
-    "Affiliate links may open external retailer pages in a new tab. The creator may earn a commission from qualifying purchases."
+  const desktopMediaMenuItems = useMemo(() => {
+    if (socialItems.length === 0) return []
+
+    const startAngle = 182
+    const endAngle = 266
+    const radius = socialItems.length > 4 ? 108 : 92
+
+    return socialItems.map((item, index) => {
+      const angle = socialItems.length === 1 ? 225 : startAngle + ((endAngle - startAngle) * index) / (socialItems.length - 1)
+      const radians = (angle * Math.PI) / 180
+
+      return {
+        ...item,
+        offsetX: Number((Math.cos(radians) * radius).toFixed(2)),
+        offsetY: Number((Math.sin(radians) * radius).toFixed(2)),
+      }
+    })
+  }, [socialItems])
   const showcaseProducts = useMemo(() => {
     const pool = ["/placeholder.jpg", "/placeholder.svg", "/placeholder-user.jpg"]
     const items = featuredProducts.map((product) => ({
@@ -363,6 +384,36 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
     mediaQuery.addEventListener("change", sync)
     return () => mediaQuery.removeEventListener("change", sync)
   }, [])
+
+  useEffect(() => {
+    if (!hasCreatorLinks && desktopMediaMenuOpen) {
+      setDesktopMediaMenuOpen(false)
+    }
+  }, [desktopMediaMenuOpen, hasCreatorLinks])
+
+  useEffect(() => {
+    if (!desktopMediaMenuOpen) return
+
+    function handlePointerDown(event: PointerEvent) {
+      if (!desktopMediaMenuRef.current?.contains(event.target as Node)) {
+        setDesktopMediaMenuOpen(false)
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setDesktopMediaMenuOpen(false)
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown)
+    window.addEventListener("keydown", handleKeyDown)
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown)
+      window.removeEventListener("keydown", handleKeyDown)
+    }
+  }, [desktopMediaMenuOpen])
 
   function trackEvent(eventType: "store_view" | "product_card_click", productId?: string) {
     const payload = {
@@ -426,7 +477,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
     const captionClass = !hasCreatorLinks ? "text-white/70" : isDarkMode ? "text-slate-400" : "text-slate-500"
 
     return (
-      <div className={cn("overflow-hidden rounded-2xl p-3 shadow-[0_10px_26px_rgba(0,0,0,0.35)]", cardTone)}>
+      <div className={cn("overflow-hidden rounded-2xl p-3 shadow-none", cardTone)}>
         <div className="grid grid-cols-3 gap-1">
           {showcaseProducts.slice(0, 1).map((product) =>
             product.href ? (
@@ -512,14 +563,11 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
   return (
     <div className="min-h-screen">
       <div className={cn("relative min-h-screen overflow-x-hidden md:hidden", isDarkMode ? "bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-900")}>
-        <div className={cn("pointer-events-none absolute -left-24 top-8 h-56 w-56 rounded-full blur-3xl", isDarkMode ? "bg-sky-500/15" : "bg-sky-300/25")} />
-        <div className={cn("pointer-events-none absolute right-0 top-0 h-60 w-60 rounded-full blur-3xl", isDarkMode ? "bg-violet-500/15" : "bg-violet-300/25")} />
-
-        <main className="relative z-10 mx-auto w-full max-w-[430px] px-3 pb-6 pt-5">
+        <main className="relative z-10 mx-auto w-full max-w-md px-3 pb-6 pt-5">
           <section className="text-center">
             <div
               className={cn(
-                "mx-auto h-20 w-20 overflow-hidden rounded-full border shadow-[0_8px_20px_rgba(0,0,0,0.18)]",
+                "mx-auto h-20 w-20 overflow-hidden rounded-full border shadow-none",
                 isDarkMode ? "border-slate-700 bg-slate-800" : "border-white/65 bg-white",
               )}
             >
@@ -539,7 +587,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
             </div>
 
             <h1 className={cn("mt-2 text-[28px] font-extrabold tracking-tight", isDarkMode ? "text-slate-100" : "text-slate-900")}>{displayName}</h1>
-            <p className={cn("mx-auto mt-1 max-w-[300px] text-[12px] leading-[1.4]", isDarkMode ? "text-slate-300" : "text-slate-600")}>{bannerText}</p>
+            <p className={cn("mx-auto mt-1 max-w-xs text-[12px] leading-[1.4]", isDarkMode ? "text-slate-300" : "text-slate-600")}>{bannerText}</p>
 
             <div className="mt-3 flex items-center justify-center gap-3">
               {mobileSocialIcons.map((item) => {
@@ -564,23 +612,23 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
 
             <div
               className={cn(
-                "mx-auto mt-3 max-w-[340px] rounded-2xl border px-3 py-2 text-left shadow-[0_10px_24px_rgba(0,0,0,0.12)]",
+                "mx-auto mt-3 max-w-sm rounded-2xl border px-3 py-2 text-left shadow-none",
                 isDarkMode ? "border-slate-700 bg-slate-900/90 text-slate-200" : "border-white/70 bg-white/92 text-slate-700",
               )}
             >
               <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em]">
                 <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-                Creator trust note
+                Username
               </p>
               <p className={cn("mt-1 text-[11px] leading-5", isDarkMode ? "text-slate-300" : "text-slate-600")}>
-                {affiliateDisclosure}
+                {storeUsernameLabel}
               </p>
             </div>
           </section>
 
           <div
             className={cn(
-              "mx-auto mt-4 flex w-[210px] rounded-full p-1 text-[13px] font-semibold shadow-[0_8px_20px_rgba(0,0,0,0.16)]",
+              "mx-auto mt-4 flex w-52 rounded-full border p-1 text-[13px] font-semibold shadow-none",
               isDarkMode ? "bg-slate-800 text-slate-200" : "bg-white text-slate-700",
             )}
           >
@@ -623,7 +671,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
               {hasCreatorLinks ? (
                 <div
                   className={cn(
-                    "rounded-2xl border px-3 py-3 text-left shadow-[0_8px_20px_rgba(0,0,0,0.12)]",
+                    "rounded-2xl border px-3 py-3 text-left shadow-none",
                     isDarkMode ? "border-slate-700 bg-slate-900/85 text-slate-100" : "border-white/65 bg-white/90 text-slate-900",
                   )}
                 >
@@ -642,7 +690,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                     target="_blank"
                     rel="noopener noreferrer"
                     className={cn(
-                      "flex items-center gap-3 rounded-2xl border px-3 py-2.5 shadow-[0_8px_20px_rgba(0,0,0,0.16)]",
+                      "flex items-center gap-3 rounded-2xl border px-3 py-2.5 shadow-none",
                       isDarkMode ? "border-slate-700 bg-slate-900/85 text-slate-100" : "border-white/65 bg-white/90 text-slate-900",
                     )}
                   >
@@ -661,7 +709,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
             <section className="mt-4">
               <div
                 className={cn(
-                  "flex items-center gap-2.5 rounded-full border px-3 py-2 shadow-[0_8px_20px_rgba(0,0,0,0.14)]",
+                  "flex items-center gap-2.5 rounded-full border px-3 py-2 shadow-none",
                   isDarkMode ? "border-slate-700 bg-slate-900 text-slate-100" : "border-white/65 bg-white text-slate-900",
                 )}
               >
@@ -689,7 +737,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                       onClick={() => trackEvent("product_card_click", product._id)}
                       aria-label={`Open ${product.title} in a new tab`}
                       className={cn(
-                        "overflow-hidden rounded-xl border shadow-[0_8px_18px_rgba(0,0,0,0.14)]",
+                        "overflow-hidden rounded-xl border shadow-none",
                         isDarkMode ? "border-slate-700 bg-slate-900" : "border-white/65 bg-white",
                       )}
                     >
@@ -729,12 +777,8 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
         </main>
       </div>
 
-      <div className={cn("relative hidden min-h-screen overflow-x-hidden pb-8 md:block", isDarkMode ? "bg-slate-950 text-slate-100" : "")}>
-        <div className={cn("pointer-events-none absolute -left-28 top-16 h-72 w-72 rounded-full blur-3xl", isDarkMode ? "bg-sky-500/20" : "bg-sky-300/30")} />
-        <div className={cn("pointer-events-none absolute right-0 top-0 h-80 w-80 rounded-full blur-3xl", isDarkMode ? "bg-violet-500/20" : "bg-violet-300/30")} />
-        <div className={cn("pointer-events-none absolute bottom-10 left-1/3 h-64 w-64 rounded-full blur-3xl", isDarkMode ? "bg-emerald-500/20" : "bg-emerald-200/30")} />
-
-        <header className={cn("sticky top-0 z-40 backdrop-blur-md", isDarkMode ? "border-b border-slate-700/80 bg-slate-900/80" : "border-b border-white/55 bg-white/60")}>
+      <div className={cn("relative hidden min-h-screen overflow-x-hidden pb-8 md:block", isDarkMode ? "bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-900")}>
+        <header className={cn("sticky top-0 z-40", isDarkMode ? "border-b border-slate-700/80 bg-slate-900" : "border-b border-slate-200 bg-white")}>
           <div className="w-full px-2 sm:px-3 md:px-4 lg:px-5">
             <div className="flex items-center gap-1.5 py-1.5 sm:gap-2 sm:py-2">
               <div className="flex min-w-0 flex-1 items-center gap-2.5">
@@ -756,7 +800,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                     {storeTitle}
                   </p>
                   <p className={cn("mt-0.5 hidden text-[11px] leading-5 md:block", isDarkMode ? "text-slate-400" : "text-slate-500")}>
-                    {affiliateDisclosure}
+                    {storeUsernameLabel}
                   </p>
                 </div>
               </div>
@@ -770,7 +814,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                     placeholder="Search products"
                     aria-label="Search products"
                     className={cn(
-                      "h-8 w-[124px] pl-7 text-[11px] shadow-none focus-visible:ring-2 sm:h-9 sm:w-[220px] sm:pl-8 sm:text-xs md:w-[280px] md:text-sm",
+                      "h-8 w-32 pl-7 text-[11px] shadow-none focus-visible:ring-2 sm:h-9 sm:w-56 sm:pl-8 sm:text-xs md:w-72 md:text-sm",
                       isDarkMode
                         ? "border-slate-600 bg-slate-900/90 text-slate-100 placeholder:text-slate-400 focus-visible:ring-slate-500"
                         : "border-white/70 bg-white/92 text-slate-800 placeholder:text-slate-500 focus-visible:ring-white",
@@ -798,42 +842,6 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
         </header>
 
         <main className="w-full space-y-3 px-2 pt-2 sm:space-y-4 sm:px-3 sm:pt-3 md:px-4 lg:px-5">
-          <section
-            className={cn(
-              "rounded-2xl border px-4 py-4 shadow-[0_18px_44px_rgba(15,23,42,0.08)]",
-              isDarkMode ? "border-slate-700 bg-slate-900/85" : "border-white/70 bg-white/88",
-            )}
-          >
-            <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-600">Creator storefront</p>
-                <h2 className={cn("mt-2 text-xl font-semibold tracking-tight", isDarkMode ? "text-slate-100" : "text-slate-900")}>
-                  Curated recommendations from {displayName}
-                </h2>
-                <p className={cn("mt-2 max-w-3xl text-sm leading-6", isDarkMode ? "text-slate-300" : "text-slate-600")}>
-                  {bannerText}
-                </p>
-              </div>
-              <div className="grid gap-2">
-                <div className={cn("rounded-xl border px-3 py-3", isDarkMode ? "border-slate-700 bg-slate-950/60" : "border-slate-200 bg-slate-50/90")}>
-                  <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                    <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-                    Trust
-                  </p>
-                  <p className={cn("mt-1 text-xs leading-5", isDarkMode ? "text-slate-300" : "text-slate-600")}>{affiliateDisclosure}</p>
-                </div>
-                <div className={cn("rounded-xl border px-3 py-3", isDarkMode ? "border-slate-700 bg-slate-950/60" : "border-slate-200 bg-slate-50/90")}>
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Creator links</p>
-                  <p className={cn("mt-1 text-xs leading-5", isDarkMode ? "text-slate-300" : "text-slate-600")}>
-                    {hasCreatorLinks
-                      ? `${socialItems.length} verified creator link${socialItems.length === 1 ? "" : "s"} available before you open retailer pages.`
-                      : "No creator links added yet. Browse products directly below."}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </section>
-
           <section id="catalog">
             <div className="mb-3 flex items-center justify-between">
               <h2 className={cn("text-base font-bold tracking-tight sm:text-lg md:text-xl", isDarkMode ? "text-slate-100" : "text-slate-800")}>All Products</h2>
@@ -893,9 +901,75 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
           </section>
         </main>
 
+        {hasCreatorLinks ? (
+          <div className="pointer-events-none fixed bottom-6 right-6 z-50 hidden md:block">
+            <div ref={desktopMediaMenuRef} className="pointer-events-auto relative h-16 w-16">
+              {desktopMediaMenuItems.map((item, index) => {
+                const Icon = item.icon
+                return (
+                  <a
+                    key={item.key}
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setDesktopMediaMenuOpen(false)}
+                    aria-label={`Open ${item.label}`}
+                    className="absolute bottom-2 right-2 flex items-center gap-2 transition-all duration-300 ease-out"
+                    style={{
+                      transform: desktopMediaMenuOpen
+                        ? `translate(${item.offsetX}px, ${item.offsetY}px) scale(1)`
+                        : "translate(0px, 0px) scale(0.55)",
+                      opacity: desktopMediaMenuOpen ? 1 : 0,
+                      pointerEvents: desktopMediaMenuOpen ? "auto" : "none",
+                      transitionDelay: desktopMediaMenuOpen ? `${index * 35}ms` : "0ms",
+                    }}
+                  >
+                    <span
+                      className={cn(
+                        "whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-semibold tracking-wide shadow-sm transition-opacity duration-200",
+                        isDarkMode
+                          ? "border-slate-700 bg-slate-950/95 text-slate-100"
+                          : "border-slate-200 bg-white/95 text-slate-700",
+                        desktopMediaMenuOpen ? "opacity-100" : "opacity-0",
+                      )}
+                    >
+                      {item.label}
+                    </span>
+                    <span
+                      className={cn(
+                        "grid h-11 w-11 place-items-center rounded-full border shadow-[0_14px_30px_rgba(15,23,42,0.24)] ring-4",
+                        isDarkMode
+                          ? "border-slate-700 bg-slate-900 text-slate-100 ring-slate-950/70"
+                          : "border-white/80 bg-white text-slate-700 ring-white/75",
+                      )}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </span>
+                  </a>
+                )
+              })}
+
+              <button
+                type="button"
+                onClick={() => setDesktopMediaMenuOpen((open) => !open)}
+                aria-label={desktopMediaMenuOpen ? "Close media links" : "Open media links"}
+                aria-expanded={desktopMediaMenuOpen}
+                className={cn(
+                  "absolute bottom-0 right-0 grid h-16 w-16 place-items-center rounded-full border text-white shadow-[0_18px_44px_rgba(15,23,42,0.3)] transition-transform duration-300 hover:scale-[1.03]",
+                  desktopMediaMenuOpen ? "scale-[0.98]" : "scale-100",
+                )}
+                style={{ backgroundColor: themePrimaryColor, borderColor: themePrimaryColor }}
+              >
+                <span className="sr-only">Media links</span>
+                {desktopMediaMenuOpen ? <X className="h-6 w-6" /> : <Globe className="h-6 w-6" />}
+              </button>
+            </div>
+          </div>
+        ) : null}
+
         <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
-          <SheetContent side="left" className={cn("w-[92vw] max-w-[360px] p-0", isDarkMode ? "border-slate-700 bg-slate-900/95" : "border-white/65 bg-white/95")}>
-            <SheetHeader className={cn("border-b", isDarkMode ? "border-slate-700" : "border-white/65")}>
+          <SheetContent side="left" className={cn("max-w-sm p-0", isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white")}>
+            <SheetHeader className={cn("border-b", isDarkMode ? "border-slate-700" : "border-slate-200")}>
               <SheetTitle>Filters</SheetTitle>
               <SheetDescription>Sort and filter products by category.</SheetDescription>
             </SheetHeader>
@@ -904,7 +978,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
               <div>
                 <p className={cn("mb-2 text-xs font-medium uppercase tracking-wide", isDarkMode ? "text-slate-300" : "text-slate-500")}>Sort</p>
                 <Select value={sortBy} onValueChange={(value: "performance" | "latest" | "name") => setSortBy(value)}>
-                  <SelectTrigger className={cn("w-full", isDarkMode ? "border-slate-700 bg-slate-800 text-slate-100" : "border-white/65 bg-white")}>
+                  <SelectTrigger className={cn("w-full", isDarkMode ? "border-slate-700 bg-slate-800 text-slate-100" : "border-slate-300 bg-white")}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -931,7 +1005,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                             ? "border-transparent text-white"
                             : isDarkMode
                               ? "border-slate-700 bg-slate-800 text-slate-100 hover:bg-slate-700"
-                              : "border-white/65 bg-white hover:bg-slate-50",
+                              : "border-slate-300 bg-white hover:bg-slate-50",
                         )}
                         style={active ? { backgroundColor: themePrimaryColor } : undefined}
                       >
@@ -943,7 +1017,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                 </div>
               </div>
 
-              <Button variant="outline" className={cn("w-full", isDarkMode ? "border-slate-700 bg-slate-800 text-slate-100 hover:bg-slate-700" : "border-white/65 bg-white")} onClick={clearFilters}>
+              <Button variant="outline" className={cn("w-full", isDarkMode ? "border-slate-700 bg-slate-800 text-slate-100 hover:bg-slate-700" : "border-slate-300 bg-white")} onClick={clearFilters}>
                 Clear Filters
               </Button>
             </div>

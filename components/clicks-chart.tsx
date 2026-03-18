@@ -28,7 +28,7 @@ export function ClicksChart({ data }: ClicksChartProps) {
   return (
     <ChartContainer
       config={{ clicks: { label: "Outbound Clicks", color: "#14b8a6" } }}
-      className="h-[260px] w-full [--grid:#e8edf7] sm:h-[320px]"
+      className="h-64 w-full [--grid:#e8edf7] sm:h-80"
     >
       <BarChart data={chartData} margin={{ left: 8, right: 8, top: 8, bottom: 8 }}>
         <CartesianGrid vertical={false} strokeDasharray="4 4" stroke="var(--grid)" />

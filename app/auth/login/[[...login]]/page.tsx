@@ -27,7 +27,7 @@ export default async function LoginPage({
   const showDevLogin = process.env.NODE_ENV !== "production"
 
   return (
-    <div className="grid min-h-[calc(100vh-140px)] w-full items-center gap-12 lg:grid-cols-[1fr_1fr] lg:gap-24 xl:gap-32">
+    <div className="grid w-full items-center gap-12 lg:grid-cols-[1fr_1fr] lg:gap-24 xl:gap-32">
       {/* Left Column (Text & Features) - No Box */}
       <div className="hidden flex-col justify-center space-y-12 lg:flex pl-4 lg:pl-8">
         <div className="space-y-6">

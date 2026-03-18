@@ -36,7 +36,7 @@ function SheetOverlay({
     <SheetPrimitive.Overlay
       data-slot="sheet-overlay"
       className={cn(
-        'data-[state=open]:animate-in data-[state=closed]:animate-out fixed inset-0 z-50 bg-indigo-950/22 backdrop-blur-[2px]',
+        'data-[state=open]:animate-in data-[state=closed]:animate-out fixed inset-0 z-50 bg-slate-950/30',
         className,
       )}
       {...props}
@@ -58,7 +58,7 @@ function SheetContent({
       <SheetPrimitive.Content
         data-slot="sheet-content"
         className={cn(
-          'data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-50 flex flex-col gap-4 rounded-3xl border border-white/55 bg-linear-to-br from-white/88 to-indigo-50/86 p-4 shadow-[14px_14px_30px_rgba(155,171,219,0.34),-11px_-11px_24px_rgba(255,255,255,0.86)] transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500',
+          'data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-50 flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-none transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500',
           side === 'right' &&
             'data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right inset-y-3 right-3 h-[calc(100%-1.5rem)] w-11/12 sm:max-w-sm',
           side === 'left' &&
@@ -72,7 +72,7 @@ function SheetContent({
         {...props}
       >
         {children}
-        <SheetPrimitive.Close className="absolute top-4 right-4 inline-flex size-8 items-center justify-center rounded-full border border-white/55 bg-white/65 transition hover:bg-white/88 focus:outline-hidden">
+        <SheetPrimitive.Close className="absolute right-4 top-4 inline-flex size-8 items-center justify-center rounded-full border border-slate-200 bg-white transition hover:bg-slate-50 focus:outline-hidden">
           <XIcon className="size-4" />
           <span className="sr-only">Close</span>
         </SheetPrimitive.Close>
@@ -85,7 +85,7 @@ function SheetHeader({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot="sheet-header"
-      className={cn('flex flex-col gap-1.5 border-b border-white/65 p-4', className)}
+      className={cn('flex flex-col gap-1.5 border-b border-slate-200 p-4', className)}
       {...props}
     />
   )

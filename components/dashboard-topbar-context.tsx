@@ -23,6 +23,13 @@ const CONTEXT_BY_PREFIX: Array<{ prefix: string; context: TopbarContext }> = [
     },
   },
   {
+    prefix: "/dashboard/social-links",
+    context: {
+      heading: "Social Links",
+      text: "Manage creator profile links shown on your storefront.",
+    },
+  },
+  {
     prefix: "/dashboard/store",
     context: {
       heading: "Store Settings",

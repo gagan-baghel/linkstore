@@ -353,6 +353,39 @@ export const updateStore = mutationGeneric({
   },
 })
 
+export const updateSocialLinks = mutationGeneric({
+  args: {
+    userId: v.id("users"),
+    socialFacebook: v.optional(v.string()),
+    socialTwitter: v.optional(v.string()),
+    socialInstagram: v.optional(v.string()),
+    socialYoutube: v.optional(v.string()),
+    socialWebsite: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId)
+    if (!user) {
+      return { ok: false, message: "User not found" as const }
+    }
+
+    const hasPremiumAccess = await hasActiveSubscription(ctx, args.userId)
+    if (!hasPremiumAccess) {
+      return { ok: false, message: "Active subscription required for social link changes" as const, code: "SUBSCRIPTION_REQUIRED" as const }
+    }
+
+    await ctx.db.patch(args.userId, {
+      socialFacebook: args.socialFacebook || "",
+      socialTwitter: args.socialTwitter || "",
+      socialInstagram: args.socialInstagram || "",
+      socialYoutube: args.socialYoutube || "",
+      socialWebsite: args.socialWebsite || "",
+      updatedAt: Date.now(),
+    })
+
+    return { ok: true }
+  },
+})
+
 export const updateStoreTheme = mutationGeneric({
   args: {
     userId: v.id("users"),

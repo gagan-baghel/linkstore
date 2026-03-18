@@ -84,11 +84,6 @@ export default async function StoreSettingsPage({
             username={user?.username || ""}
             storeUrl={buildStorefrontUrl(user?.username || "")}
             storeLogo={user?.storeLogo || ""}
-            socialFacebook={user?.socialFacebook || ""}
-            socialTwitter={user?.socialTwitter || ""}
-            socialInstagram={user?.socialInstagram || ""}
-            socialYoutube={user?.socialYoutube || ""}
-            socialWebsite={user?.socialWebsite || ""}
           />
         </div>
       </div>

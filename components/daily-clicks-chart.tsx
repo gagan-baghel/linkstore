@@ -32,7 +32,7 @@ export function DailyClicksChart({ data }: DailyClicksChartProps) {
         clicks: { label: "Outbound Clicks", color: "#0ea5e9" },
         avg: { label: "7-day Avg", color: "#f59e0b" },
       }}
-      className="h-[260px] w-full [--grid:#e8edf7] sm:h-[320px]"
+      className="h-64 w-full [--grid:#e8edf7] sm:h-80"
     >
       <AreaChart data={chartData} margin={{ left: 8, right: 8, top: 10, bottom: 4 }}>
         <defs>

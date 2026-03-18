@@ -259,12 +259,12 @@ export function SubscriptionStatusCard({
   }
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="rounded-lg border border-slate-200 bg-white p-4 sm:rounded-xl sm:p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Subscription</p>
-          <h3 className="mt-1 text-lg font-semibold text-slate-900">Starter Monthly Plan</h3>
-          <p className="text-sm text-slate-600">₹149 per month, up to 200 products.</p>
+          <h3 className="mt-1 text-base font-semibold text-slate-900 sm:text-lg">Starter Monthly Plan</h3>
+          <p className="text-sm leading-6 text-slate-600">₹149 per month, up to 200 products.</p>
         </div>
         <Badge variant="outline" className="w-fit border-slate-300 bg-slate-50 text-slate-700">
           {statusLabel}
@@ -272,19 +272,19 @@ export function SubscriptionStatusCard({
       </div>
 
       <div className="mt-4 grid gap-2 text-sm text-slate-700 sm:grid-cols-3">
-        <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+        <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Expires</p>
-          <p className="mt-1 text-slate-900">{formatDate(access?.expiresAt || null)}</p>
+          <p className="mt-1 text-base text-slate-900">{formatDate(access?.expiresAt || null)}</p>
         </div>
-        <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+        <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Products Used</p>
-          <p className="mt-1 text-slate-900">
+          <p className="mt-1 text-base text-slate-900">
             {access?.currentProductCount ?? 0} / {access?.productLimit ?? 200}
           </p>
         </div>
-        <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+        <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Remaining Slots</p>
-          <p className="mt-1 text-slate-900">{access?.remainingProductSlots ?? 0}</p>
+          <p className="mt-1 text-base text-slate-900">{access?.remainingProductSlots ?? 0}</p>
         </div>
       </div>
 
@@ -314,21 +314,21 @@ export function SubscriptionStatusCard({
         <Button
           onClick={handleCheckout}
           disabled={isProcessing || !canRenew}
-          className="h-9 w-full rounded-md border border-slate-900 bg-slate-900 px-4 text-sm text-white hover:bg-slate-800 sm:w-auto"
+          className="h-11 w-full rounded-lg border border-slate-900 bg-slate-900 px-4 text-sm text-white hover:bg-slate-800 sm:h-9 sm:w-auto"
         >
           {isProcessing ? "Processing..." : access?.effectiveStatus === "active" ? "Renew +30 Days" : "Pay ₹149 Now"}
         </Button>
         <Button
           variant="outline"
           onClick={refreshStatus}
-          className="h-9 w-full rounded-md border-slate-300 bg-white text-slate-700 hover:bg-slate-100 hover:text-slate-900 sm:w-auto"
+          className="h-11 w-full rounded-lg border-slate-300 bg-white text-slate-700 hover:bg-slate-100 hover:text-slate-900 sm:h-9 sm:w-auto"
           disabled={isProcessing}
         >
           Refresh Status
         </Button>
       </div>
 
-      <div className="mt-4 rounded-md border border-dashed border-slate-300 bg-slate-50 p-3">
+      <div className="mt-4 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3">
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Coupon Access</p>
         <p className="mt-1 text-sm text-slate-600">Apply a valid coupon to unlock one month of store access for free.</p>
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
@@ -341,14 +341,14 @@ export function SubscriptionStatusCard({
             spellCheck={false}
             maxLength={64}
             disabled={isProcessing}
-            className="h-9 border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400"
+            className="h-11 border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400 sm:h-9"
           />
           <Button
             type="button"
             variant="outline"
             onClick={handleCouponRedeem}
             disabled={isProcessing}
-            className="h-9 w-full border-slate-300 bg-white text-slate-700 hover:bg-slate-100 hover:text-slate-900 sm:w-auto"
+            className="h-11 w-full border-slate-300 bg-white text-slate-700 hover:bg-slate-100 hover:text-slate-900 sm:h-9 sm:w-auto"
           >
             Apply Coupon
           </Button>

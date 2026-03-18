@@ -187,11 +187,11 @@ export function ProductsTable({ products }: ProductsTableProps) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50">
-                <th className="w-[260px] px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:px-4 sm:py-3 sm:text-[11px]">Title</th>
-                <th className="w-[140px] px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:px-4 sm:py-3 sm:text-[11px]">Category</th>
-                <th className="w-[220px] px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:px-4 sm:py-3 sm:text-[11px]">Affiliate URL</th>
-                <th className="w-[140px] px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:px-4 sm:py-3 sm:text-[11px]">Status</th>
-                <th className="w-[130px] px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:px-4 sm:py-3 sm:text-[11px]">Actions</th>
+                <th className="w-64 px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:px-4 sm:py-3 sm:text-[11px]">Title</th>
+                <th className="w-36 px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:px-4 sm:py-3 sm:text-[11px]">Category</th>
+                <th className="w-56 px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:px-4 sm:py-3 sm:text-[11px]">Affiliate URL</th>
+                <th className="w-36 px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:px-4 sm:py-3 sm:text-[11px]">Status</th>
+                <th className="w-32 px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:px-4 sm:py-3 sm:text-[11px]">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -210,7 +210,7 @@ export function ProductsTable({ products }: ProductsTableProps) {
                       {product.category || "General"}
                     </span>
                   </td>
-                  <td className="max-w-[220px] truncate px-3 py-2.5 align-middle text-xs sm:px-4 sm:py-3">
+                  <td className="max-w-56 truncate px-3 py-2.5 align-middle text-xs sm:px-4 sm:py-3">
                     <a
                       href={product.affiliateUrl}
                       target="_blank"

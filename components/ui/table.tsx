@@ -8,7 +8,7 @@ function Table({ className, ...props }: React.ComponentProps<'table'>) {
   return (
     <div
       data-slot="table-container"
-      className="relative w-full overflow-x-auto rounded-3xl border border-white/60 bg-linear-to-br from-white/85 to-indigo-50/85 shadow-[10px_10px_22px_rgba(155,171,219,0.28),-8px_-8px_18px_rgba(255,255,255,0.88)]"
+      className="relative w-full overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-none"
     >
       <table
         data-slot="table"
@@ -23,7 +23,7 @@ function TableHeader({ className, ...props }: React.ComponentProps<'thead'>) {
   return (
     <thead
       data-slot="table-header"
-      className={cn('[&_tr]:border-b [&_tr]:border-white/60', className)}
+      className={cn('[&_tr]:border-b [&_tr]:border-slate-200', className)}
       {...props}
     />
   )
@@ -44,7 +44,7 @@ function TableFooter({ className, ...props }: React.ComponentProps<'tfoot'>) {
     <tfoot
       data-slot="table-footer"
       className={cn(
-        'bg-muted/35 border-t border-white/55 font-medium [&>tr]:last:border-b-0',
+        'bg-muted/35 border-t border-slate-200 font-medium [&>tr]:last:border-b-0',
         className,
       )}
       {...props}
@@ -57,7 +57,7 @@ function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
     <tr
       data-slot="table-row"
       className={cn(
-        'hover:bg-white/55 data-[state=selected]:bg-white/55 border-b border-white/50 transition-colors',
+        'hover:bg-slate-50 data-[state=selected]:bg-slate-50 border-b border-slate-200 transition-colors',
         className,
       )}
       {...props}

@@ -9,12 +9,12 @@ export function EmptyPlaceholder({ className, children, ...props }: EmptyPlaceho
   return (
     <div
       className={cn(
-        "flex min-h-[400px] flex-col items-center justify-center rounded-md border border-dashed border-slate-400/80 bg-white p-8 text-center",
+        "flex min-h-96 flex-col items-center justify-center rounded-md border border-dashed border-slate-400/80 bg-white p-8 text-center",
         className,
       )}
       {...props}
     >
-      <div className="mx-auto flex max-w-[420px] flex-col items-center justify-center text-center">{children}</div>
+      <div className="mx-auto flex max-w-md flex-col items-center justify-center text-center">{children}</div>
     </div>
   )
 }
