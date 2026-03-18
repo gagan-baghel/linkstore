@@ -1,6 +1,15 @@
 import { mutationGeneric, queryGeneric } from "convex/server"
 import { v } from "convex/values"
 
+import { isSubscriptionActiveRecord, resolveStoreEnabled } from "../lib/subscription-billing"
+import {
+  USERNAME_MAX_LENGTH,
+  getUsernameValidationMessage,
+  isValidUsername,
+  normalizeUsernameInput,
+  toUsernameBase,
+} from "../lib/username"
+
 const PLAN_CODE = "starter_monthly_149"
 const PLAN_AMOUNT_PAISE = 14900
 const PLAN_CURRENCY = "INR"
@@ -57,21 +66,6 @@ function buildUserDefaults(input: {
   }
 }
 
-function toUsernameBase(name: string) {
-  const normalized = name
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-
-  if (!normalized) return "store"
-  return normalized.slice(0, 18)
-}
-
-function normalizeUsernameInput(input: string) {
-  return input.trim().replace(/^@+/, "").toLowerCase()
-}
-
 async function generateUniqueUsername(ctx: any, name: string) {
   const base = toUsernameBase(name)
 
@@ -99,8 +93,7 @@ async function hasActiveSubscription(ctx: any, userId: string) {
     .collect()
 
   if (rows.length !== 1) return false
-  const sub = rows[0]
-  return sub.status === "active" && typeof sub.expiresAt === "number" && sub.expiresAt > Date.now()
+  return isSubscriptionActiveRecord(rows[0], Date.now())
 }
 
 export const getByEmail = queryGeneric({
@@ -131,7 +124,20 @@ export const getPublicByUsername = queryGeneric({
       .withIndex("by_username", (q) => q.eq("username", normalized))
       .first()
 
-    if (!user || user.storeEnabled !== true) return null
+    if (!user) return null
+
+    const rows = await ctx.db
+      .query("subscriptions")
+      .withIndex("by_userId", (q: any) => q.eq("userId", user._id))
+      .collect()
+
+    if (rows.length !== 1) return null
+
+    const hasActiveSubscription = isSubscriptionActiveRecord(rows[0], Date.now())
+    if (!resolveStoreEnabled({ userStoreEnabled: user.storeEnabled, hasActiveSubscription })) {
+      return null
+    }
+
     return { _id: user._id, username: user.username }
   },
 })
@@ -269,6 +275,7 @@ export const updateAccount = mutationGeneric({
   args: {
     userId: v.id("users"),
     name: v.string(),
+    username: v.optional(v.string()),
     image: v.optional(v.string()),
     storeLogo: v.optional(v.string()),
   },
@@ -278,8 +285,23 @@ export const updateAccount = mutationGeneric({
       return { ok: false, message: "User not found" as const }
     }
 
+    const normalizedUsername = normalizeUsernameInput(args.username || user.username || "")
+    if (!isValidUsername(normalizedUsername)) {
+      return { ok: false, message: getUsernameValidationMessage(normalizedUsername) || "Invalid username." as const }
+    }
+
+    const existingByUsername = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q: any) => q.eq("username", normalizedUsername))
+      .first()
+
+    if (existingByUsername && existingByUsername._id !== args.userId) {
+      return { ok: false, message: "That username is already taken." as const, code: "USERNAME_TAKEN" as const }
+    }
+
     await ctx.db.patch(args.userId, {
       name: args.name,
+      username: normalizedUsername.slice(0, USERNAME_MAX_LENGTH),
       image: args.image ?? user.image ?? "",
       storeLogo: args.storeLogo ?? user.storeLogo ?? "",
       updatedAt: Date.now(),

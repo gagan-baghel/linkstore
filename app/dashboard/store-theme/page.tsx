@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { getSubscriptionRedirectPath } from "@/lib/subscription-routing"
 
 export const metadata: Metadata = {
-  title: "Store Theme - AffiliateHub",
+  title: "Store Theme - Linkstore",
   description: "Customize your store theme and styles",
 }
 

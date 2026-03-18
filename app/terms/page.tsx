@@ -3,8 +3,8 @@ import { PublicNavbar } from "@/components/public-navbar"
 import { PublicFooter } from "@/components/public-footer"
 
 export const metadata: Metadata = {
-  title: "Terms of Service - AffiliateHub",
-  description: "The terms governing use of AffiliateHub.",
+  title: "Terms of Service - Linkstore",
+  description: "The terms governing use of Linkstore.",
 }
 
 export default function TermsPage() {

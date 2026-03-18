@@ -10,6 +10,7 @@
 
 import type * as analytics from "../analytics.js";
 import type * as auditLogs from "../auditLogs.js";
+import type * as billing from "../billing.js";
 import type * as clicks from "../clicks.js";
 import type * as crons from "../crons.js";
 import type * as events from "../events.js";
@@ -28,6 +29,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   analytics: typeof analytics;
   auditLogs: typeof auditLogs;
+  billing: typeof billing;
   clicks: typeof clicks;
   crons: typeof crons;
   events: typeof events;

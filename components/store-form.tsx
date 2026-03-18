@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { Facebook, Instagram, Twitter, Upload, X, Youtube } from "lucide-react"
+import { Copy, ExternalLink, Facebook, Instagram, Twitter, Upload, X, Youtube } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -17,7 +17,7 @@ import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/components/ui/use-toast"
 
-const CATEGORY_STORAGE_KEY = "affiliatehub_product_categories"
+const CATEGORY_STORAGE_KEY = "linkstore_product_categories"
 
 const storeFormSchema = z.object({
   storeBannerText: z.string().min(2, {
@@ -40,6 +40,7 @@ interface StoreFormProps {
   storeBio: string
   contactInfo: string
   username: string
+  storeUrl: string
   storeLogo?: string
   socialFacebook?: string
   socialTwitter?: string
@@ -53,6 +54,7 @@ export function StoreForm({
   storeBio,
   contactInfo,
   username,
+  storeUrl,
   storeLogo = "",
   socialFacebook = "",
   socialTwitter = "",
@@ -85,6 +87,7 @@ export function StoreForm({
 
   const values = form.watch()
   const logoFallback = (username?.trim().charAt(0) || "S").toUpperCase()
+  const normalizedStoreUrl = storeUrl.trim()
 
   const socialLinks = [
     { name: "Facebook", value: values.socialFacebook?.trim() || "", icon: <Facebook className="h-4 w-4" /> },
@@ -201,8 +204,57 @@ export function StoreForm({
     }
   }
 
+  async function handleCopyStoreUrl() {
+    if (!normalizedStoreUrl) return
+
+    try {
+      await navigator.clipboard.writeText(normalizedStoreUrl)
+      toast({
+        title: "Store link copied",
+        description: "Your storefront URL is ready to share.",
+      })
+    } catch (error) {
+      console.error(error)
+      toast({
+        title: "Copy failed",
+        description: "Could not copy the storefront URL. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
   return (
     <div className="w-full pb-20">
+      <section className="mb-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold text-slate-900">Storefront URL</h3>
+            <p className="mt-1 text-sm text-slate-600">Open your public store directly from settings or copy the link to share it.</p>
+            <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+              <p className="truncate text-sm font-medium text-slate-900">{normalizedStoreUrl || "Store URL unavailable"}</p>
+            </div>
+          </div>
+          <div className="flex flex-col gap-2 sm:w-auto sm:min-w-[150px]">
+            <Button asChild className="h-10 bg-slate-900 text-sm text-white hover:bg-slate-800" disabled={!normalizedStoreUrl}>
+              <a href={normalizedStoreUrl || "#"} target="_blank" rel="noreferrer noopener">
+                Open Store
+                <ExternalLink className="ml-2 h-4 w-4" />
+              </a>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 border-slate-300 bg-white text-sm text-slate-800"
+              onClick={handleCopyStoreUrl}
+              disabled={!normalizedStoreUrl}
+            >
+              Copy Link
+              <Copy className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </section>
+
       {!isEditing ? (
         <div className="grid gap-4 md:grid-cols-12 md:gap-5">
           <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:col-span-8">

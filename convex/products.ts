@@ -1,6 +1,8 @@
 import { mutationGeneric, queryGeneric } from "convex/server"
 import { v } from "convex/values"
 
+import { isSubscriptionActiveRecord } from "../lib/subscription-billing"
+
 const PRODUCT_LIMIT = 200
 
 function normalizeCategory(category?: string) {
@@ -24,8 +26,7 @@ async function hasActiveSubscription(ctx: any, userId: string) {
     return { ok: false as const, message: "Subscription state is ambiguous." }
   }
 
-  const subscription = rows[0]
-  const isActive = subscription.status === "active" && typeof subscription.expiresAt === "number" && subscription.expiresAt > Date.now()
+  const isActive = isSubscriptionActiveRecord(rows[0], Date.now())
   if (!isActive) {
     return { ok: false as const, message: "Active subscription is required." }
   }

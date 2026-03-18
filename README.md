@@ -1,10 +1,10 @@
-# LinkStore 🛍️
+# Linkstore 🛍️
 
 > **Your Personal E-Commerce Storefront for Affiliate Links.**
 
-LinkStore is a dedicated platform designed specifically for influencers, content creators, and affiliate marketers. It solves the common problem of "link-in-bio" limitations by providing users with a beautiful, customizable landing page that functions as their own personal e-commerce store. 
+Linkstore is a dedicated platform designed specifically for influencers, content creators, and affiliate marketers. It solves the common problem of "link-in-bio" limitations by providing users with a beautiful, customizable landing page that functions as their own personal e-commerce store. 
 
-Instead of sharing messy individual affiliate links, creators can share a single LinkStore profile link. 
+Instead of sharing messy individual affiliate links, creators can share a single Linkstore profile link. 
 
 ## ✨ The Problem It Solves
 Social media platforms often limit users to a single "link in bio", making it difficult for influencers to promote multiple affiliate products simultaneously. Current solutions are often just plain lists of links, lacking the visual appeal needed to drive conversions.
@@ -12,7 +12,7 @@ Social media platforms often limit users to a single "link in bio", making it di
 ## 🚀 Key Features
 
 *   **User Accounts & Profiles:** Creators can seamlessly sign up, customize their profiles, and launch their own branded store landing page.
-*   **One-Click Product Import:** Simply paste an affiliate/referral link, and LinkStore automatically fetches the necessary product metadata (images, title, description, price).
+*   **One-Click Product Import:** Simply paste an affiliate/referral link, and Linkstore automatically fetches the necessary product metadata (images, title, description, price).
 *   **E-Commerce Aesthetic:** Products are displayed in a clean, modern grid—just like a real online store, providing a better shopping experience for the creator's audience.
 *   **Easy Sharing:** Creators get a single, clean URL (e.g., `linkstore.io/username`) to put in their social media bios, directing followers to their entire curated product catalog.
 *   **Analytics Dashboard:** Built-in analytics surface store views, product card clicks, outbound affiliate clicks, conversion rate, top referrers, sources, and device breakdown so creators know what actually converts.
@@ -24,15 +24,15 @@ Social media platforms often limit users to a single "link in bio", making it di
 *   **Database:** Convex
 *   **Link Scraping/Metadata Fetching:** Cheerio or Puppeteer (to extract Open Graph tags from affiliate links)
 *   **Authentication:** Google OAuth with signed JWT session cookies
-*   **Hosting:** Vercel (Frontend) & Supabase/Neon (Database)
+*   **Hosting:** Vercel (Frontend) + Convex
 
 ## 🏗️ How It Works (User Flow)
 
-1.  **Sign Up:** An influencer creates an account on LinkStore.
+1.  **Sign Up:** An influencer creates an account on Linkstore.
 2.  **Add a Link:** They paste a product affiliate link (e.g., from Amazon, LTK, or an independent brand) into their dashboard.
 3.  **Auto-Fetch:** The backend scrapes the target URL to grab the product image, title, and description.
-4.  **Publish:** The product is instantly added to their public-facing LinkStore profile.
-5.  **Share:** The influencer shares their LinkStore URL with their followers, driving traffic and earning commissions.
+4.  **Publish:** The product is instantly added to their public-facing Linkstore profile.
+5.  **Share:** The influencer shares their Linkstore URL with their followers, driving traffic and earning commissions.
 
 ## 💻 Getting Started (Development)
 
@@ -51,7 +51,7 @@ cp .env.example .env.local
 
 # Set your Convex deployment URL in .env.local
 # CONVEX_URL=...
-# NEXT_PUBLIC_CONVEX_URL=...
+# CONVEX_URL=...
 # AUTH_JWT_SECRET=...
 # GOOGLE_CLIENT_ID=...
 # GOOGLE_CLIENT_SECRET=...
@@ -59,14 +59,11 @@ cp .env.example .env.local
 # RAZORPAY_KEY_SECRET=...
 # RAZORPAY_WEBHOOK_SECRET=...
 # PAYMENTS_DATA_KEY=...
-# Optional (recommended for production rate limiting):
-# UPSTASH_REDIS_REST_URL=...
-# UPSTASH_REDIS_REST_TOKEN=...
-# Optional (disable third-party metadata fallbacks if desired):
-# METADATA_ENABLE_JINA=false
-# METADATA_ENABLE_DDG=false
-# METADATA_FETCH_RETRIES=1
-
+# Optional one-month free coupon:
+# SUBSCRIPTION_FREE_MONTH_COUPON_CODE=FREEMONTH
+# SUBSCRIPTION_FREE_MONTH_COUPON_LABEL=Launch Free Month
+# SUBSCRIPTION_FREE_MONTH_COUPON_MAX_REDEMPTIONS=100
+# SUBSCRIPTION_FREE_MONTH_COUPON_EXPIRES_AT=2026-12-31T23:59:59+05:30
 # In Google Cloud Console, authorize:
 # http://localhost:3000/api/auth/google/callback
 
@@ -79,11 +76,11 @@ npm run test
 
 ## ✅ MVP/MBP Launch Checklist
 
-- Configure all required env vars in production (`CONVEX_URL`/`NEXT_PUBLIC_CONVEX_URL`, `AUTH_JWT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, Razorpay keys + webhook secret, `PAYMENTS_DATA_KEY`).
+- Configure all required env vars in production (`CONVEX_URL`, `AUTH_JWT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, Razorpay keys + webhook secret, `PAYMENTS_DATA_KEY`).
 - Verify runtime readiness via `GET /api/health` (should return `ok: true`).
 - Test auth flows:
   - Google sign in from `/auth/login`
-  - first-time account creation from `/auth/register`
+  - first-time account creation from `/auth/login`
   - session revocation from `/dashboard/account/security`
   - logout/session refresh
 - Test payments end-to-end in Razorpay:

@@ -4,7 +4,7 @@ export function PublicFooter() {
   return (
     <footer className="mt-10 border-t border-white/60 bg-white/55 py-6 backdrop-blur-sm dark:border-white/10 dark:bg-slate-950/50">
       <div className="container flex flex-col gap-3 text-sm text-slate-600 dark:text-slate-300 sm:flex-row sm:items-center sm:justify-between">
-        <p>© {new Date().getFullYear()} AffiliateHub. All rights reserved.</p>
+        <p>© {new Date().getFullYear()} Linkstore. All rights reserved.</p>
         <div className="flex flex-wrap items-center gap-4">
           <Link href="/" className="hover:text-slate-900 dark:hover:text-white">
             Home

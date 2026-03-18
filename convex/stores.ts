@@ -1,6 +1,8 @@
 import { queryGeneric } from "convex/server"
 import { v } from "convex/values"
 
+import { isSubscriptionActiveRecord, resolveStoreEnabled } from "../lib/subscription-billing"
+
 function withoutPassword(user: any) {
   if (!user) return null
   const { passwordHash, ...rest } = user
@@ -8,7 +10,7 @@ function withoutPassword(user: any) {
 }
 
 function normalizeUsernameInput(input: string) {
-  return input.trim().replace(/^@+/, "")
+  return input.trim().replace(/^@+/, "").toLowerCase()
 }
 
 function toProductView(product: any, performance: any) {
@@ -34,29 +36,29 @@ export const getByUsername = queryGeneric({
     username: v.string(),
   },
   handler: async (ctx, args) => {
-    const requestedUsernameRaw = args.username.trim()
-    const requestedUsername = normalizeUsernameInput(requestedUsernameRaw)
-    if (!requestedUsername) return null
-    const normalizedUsername = requestedUsername.toLowerCase()
+    const normalizedUsername = normalizeUsernameInput(args.username)
+    if (!normalizedUsername) return null
 
-    const directCandidates = Array.from(new Set([requestedUsernameRaw, requestedUsername, normalizedUsername])).filter(
-      Boolean,
-    )
-
-    let user: any | null = null
-    for (const candidate of directCandidates) {
-      user = await ctx.db
-        .query("users")
-        .withIndex("by_username", (q) => q.eq("username", candidate))
-        .first()
-      if (user) break
-    }
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", normalizedUsername))
+      .first()
 
     if (!user) {
       return null
     }
 
-    if (user.storeEnabled !== true) {
+    const subscriptions = await ctx.db
+      .query("subscriptions")
+      .withIndex("by_userId", (q: any) => q.eq("userId", user._id))
+      .collect()
+
+    if (subscriptions.length !== 1) {
+      return null
+    }
+
+    const hasActiveSubscription = isSubscriptionActiveRecord(subscriptions[0], Date.now())
+    if (!resolveStoreEnabled({ userStoreEnabled: user.storeEnabled, hasActiveSubscription })) {
       return null
     }
 

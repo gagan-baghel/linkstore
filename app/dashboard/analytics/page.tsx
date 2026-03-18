@@ -14,7 +14,7 @@ import { convexQuery } from "@/lib/convex"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export const metadata: Metadata = {
-  title: "Analytics - AffiliateHub",
+  title: "Analytics - Linkstore",
   description: "Track your affiliate link performance",
 }
 

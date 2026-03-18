@@ -5,8 +5,8 @@ import { PublicFooter } from "@/components/public-footer"
 import { getSupportEmail } from "@/lib/runtime-config"
 
 export const metadata: Metadata = {
-  title: "Contact Support - AffiliateHub",
-  description: "How to contact AffiliateHub support for account and billing help.",
+  title: "Contact Support - Linkstore",
+  description: "How to contact Linkstore support for account and billing help.",
 }
 
 export default function ContactPage() {

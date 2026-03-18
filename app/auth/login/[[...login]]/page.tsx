@@ -7,8 +7,8 @@ import { getSafeServerSession } from "@/lib/auth"
 import { getGoogleAuthErrorMessage } from "@/lib/google-auth"
 
 export const metadata: Metadata = {
-  title: "Login - AffiliateHub",
-  description: "Login to your AffiliateHub account",
+  title: "Login - Linkstore",
+  description: "Login to your Linkstore account",
 }
 
 export default async function LoginPage({
@@ -87,11 +87,7 @@ export default async function LoginPage({
             </div>
 
             <GoogleAuthPanel
-              description="Google is the only sign-in method. Your verified Google email is used to create or link your AffiliateHub account automatically."
               ctaLabel="Continue with Google"
-              alternateHref="/auth/register"
-              alternateLabel="Create one"
-              alternatePrompt="Need your first account?"
               nextPath={nextPath}
               error={error}
               showDevLogin={showDevLogin}

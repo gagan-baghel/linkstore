@@ -8,6 +8,7 @@ import { ArrowRight, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
 import { toast } from "@/components/ui/use-toast"
 import type { SubscriptionAccessState } from "@/lib/subscription"
 
@@ -37,7 +38,14 @@ interface SubscriptionStatusCardProps {
 function formatDate(timestamp: number | null) {
   if (!timestamp) return "-"
   try {
-    return new Date(timestamp).toLocaleString()
+    const date = new Date(timestamp)
+    const year = date.getUTCFullYear()
+    const month = String(date.getUTCMonth() + 1).padStart(2, "0")
+    const day = String(date.getUTCDate()).padStart(2, "0")
+    const hours = String(date.getUTCHours()).padStart(2, "0")
+    const minutes = String(date.getUTCMinutes()).padStart(2, "0")
+    const seconds = String(date.getUTCSeconds()).padStart(2, "0")
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds} UTC`
   } catch {
     return "-"
   }
@@ -69,6 +77,8 @@ export function SubscriptionStatusCard({
   const router = useRouter()
   const [access, setAccess] = useState<SubscriptionAccessState | null>(initialAccess)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [couponCode, setCouponCode] = useState("")
+  const [couponMessage, setCouponMessage] = useState<string | null>(null)
 
   const statusLabel = useMemo(() => {
     const status = access?.effectiveStatus || "inactive"
@@ -89,6 +99,19 @@ export function SubscriptionStatusCard({
     }
   }
 
+  function completeActivation(nextAccess: SubscriptionAccessState | null, description: string) {
+    setAccess(nextAccess)
+    if (nextPath) {
+      router.push(nextPath)
+    }
+    router.refresh()
+
+    toast({
+      title: "Subscription activated",
+      description,
+    })
+  }
+
   async function verifyPayment(razorpayResponse: {
     razorpay_payment_id: string
     razorpay_order_id: string
@@ -107,22 +130,15 @@ export function SubscriptionStatusCard({
       throw new Error(data.message || "Payment verification failed")
     }
 
-    setAccess(data.access || null)
-    if (nextPath) {
-      router.push(nextPath)
-    }
-    router.refresh()
-
-    toast({
-      title: "Subscription activated",
-      description: nextLabel
-        ? `Your plan is active. Continuing to ${nextLabel.toLowerCase()}.`
-        : "Your plan is active. Premium features are now unlocked.",
-    })
+    completeActivation(
+      data.access || null,
+      nextLabel ? `Your plan is active. Continuing to ${nextLabel.toLowerCase()}.` : "Your plan is active. Premium features are now unlocked.",
+    )
   }
 
   async function handleCheckout() {
     setIsProcessing(true)
+    setCouponMessage(null)
 
     try {
       const scriptLoaded = await loadRazorpayCheckoutScript()
@@ -155,7 +171,7 @@ export function SubscriptionStatusCard({
         amount: checkout.amountPaise,
         currency: checkout.currency,
         order_id: checkout.orderId,
-        name: "AffiliateHub",
+        name: "Linkstore",
         description: `${checkout.planName} (₹149 / month)`,
         prefill: {
           name: userName || "",
@@ -191,6 +207,50 @@ export function SubscriptionStatusCard({
       toast({
         title: "Checkout failed",
         description: error instanceof Error ? error.message : "Unable to start checkout",
+        variant: "destructive",
+      })
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  async function handleCouponRedeem() {
+    const normalized = couponCode.trim()
+    if (!normalized) {
+      setCouponMessage("Enter a coupon code first.")
+      return
+    }
+
+    setIsProcessing(true)
+    setCouponMessage(null)
+
+    try {
+      const response = await fetch("/api/subscription/coupon", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ couponCode: normalized }),
+      })
+
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(data.message || "Coupon could not be applied.")
+      }
+
+      setCouponCode("")
+      setCouponMessage("Coupon applied. Your store access is now active.")
+      completeActivation(
+        data.access || null,
+        nextLabel ? `Your free month is active. Continuing to ${nextLabel.toLowerCase()}.` : "Your free month is active. Premium features are now unlocked.",
+      )
+    } catch (error) {
+      console.error("Coupon redemption error:", error)
+      const message = error instanceof Error ? error.message : "Coupon could not be applied."
+      setCouponMessage(message)
+      toast({
+        title: "Coupon failed",
+        description: message,
         variant: "destructive",
       })
     } finally {
@@ -266,6 +326,34 @@ export function SubscriptionStatusCard({
         >
           Refresh Status
         </Button>
+      </div>
+
+      <div className="mt-4 rounded-md border border-dashed border-slate-300 bg-slate-50 p-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Coupon Access</p>
+        <p className="mt-1 text-sm text-slate-600">Apply a valid coupon to unlock one month of store access for free.</p>
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+          <Input
+            value={couponCode}
+            onChange={(event) => setCouponCode(event.target.value)}
+            placeholder="Enter coupon code"
+            autoCapitalize="characters"
+            autoCorrect="off"
+            spellCheck={false}
+            maxLength={64}
+            disabled={isProcessing}
+            className="h-9 border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleCouponRedeem}
+            disabled={isProcessing}
+            className="h-9 w-full border-slate-300 bg-white text-slate-700 hover:bg-slate-100 hover:text-slate-900 sm:w-auto"
+          >
+            Apply Coupon
+          </Button>
+        </div>
+        {couponMessage ? <p className="mt-2 text-xs text-slate-600">{couponMessage}</p> : null}
       </div>
 
       {nextLabel ? (

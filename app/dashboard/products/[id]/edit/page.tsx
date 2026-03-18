@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { getSubscriptionRedirectPath } from "@/lib/subscription-routing"
 
 export const metadata: Metadata = {
-  title: "Edit Product - AffiliateHub",
+  title: "Edit Product - Linkstore",
   description: "Edit your affiliate product",
 }
 

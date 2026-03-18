@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation"
 
+import { convexQuery } from "@/lib/convex"
 import { getCachedStoreData } from "@/lib/store-cache"
 import { StorefrontClient } from "@/components/storefront-client"
 
-export const revalidate = 300
+export const dynamic = "force-dynamic"
 
 interface StorePageProps {
   params: Promise<{
@@ -13,6 +14,14 @@ interface StorePageProps {
 
 export default async function StorePage({ params }: StorePageProps) {
   const { username } = await params
+
+  const publicUser = await convexQuery<{ username: string }, { _id: string; username: string } | null>("users:getPublicByUsername", {
+    username,
+  }).catch(() => null)
+
+  if (!publicUser?._id) {
+    notFound()
+  }
 
   let storeData: any | null = null
   try {

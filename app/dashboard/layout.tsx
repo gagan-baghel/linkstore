@@ -28,9 +28,9 @@ export default async function DashboardLayout({
         <div className="px-6 py-6">
           <Link href="/dashboard" className="flex items-center gap-2 text-xl font-bold text-slate-900">
             <div className="flex h-10 w-10 items-center justify-center">
-              <Image src="/favicon-32x32.png" alt="AffiliateHub logo" width={32} height={32} />
+              <Image src="/favicon-32x32.png" alt="Linkstore logo" width={32} height={32} />
             </div>
-            <span>AffiliateHub</span>
+            <span>Linkstore</span>
           </Link>
         </div>
         <div className="px-4 pb-6">

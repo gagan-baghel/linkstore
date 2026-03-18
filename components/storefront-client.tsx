@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState, type ComponentType } from "react"
 import Image from "next/image"
 import {
-  ExternalLink,
   Facebook,
   Globe,
   Instagram,
@@ -86,7 +85,7 @@ function getDeviceType() {
 }
 
 function createSessionId() {
-  const key = "affiliatehub_session_id"
+  const key = "linkstore_session_id"
   const existing = sessionStorage.getItem(key)
   if (existing) return existing
   const next = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
@@ -300,11 +299,9 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
 
   const storeTitle = useMemo(() => {
     const banner = (user.storeBannerText || "").trim()
-    const legacyDefault = `${(user.name || "").trim()}'s Affiliate Store`.trim()
     if (!banner) return "Store"
-    if (banner.toLowerCase() === legacyDefault.toLowerCase()) return "Store"
     return banner
-  }, [user.name, user.storeBannerText])
+  }, [user.storeBannerText])
 
   const bannerText =
     user.storeBio?.trim() ||

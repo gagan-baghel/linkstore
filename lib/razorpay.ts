@@ -27,6 +27,13 @@ type RazorpayPayment = {
   captured?: boolean
   created_at: number
   amount_refunded?: number
+  refund_status?: string | null
+}
+
+type RazorpayCollection<T> = {
+  entity: string
+  count: number
+  items: T[]
 }
 
 function safeEqualHex(leftHex: string, rightHex: string) {
@@ -105,6 +112,12 @@ export async function createRazorpayOrder(input: { receipt: string; notes?: Reco
 
 export async function fetchRazorpayPayment(paymentId: string) {
   return razorpayRequest<RazorpayPayment>(`/payments/${encodeURIComponent(paymentId)}`, {
+    method: "GET",
+  })
+}
+
+export async function fetchRazorpayPaymentsForOrder(orderId: string) {
+  return razorpayRequest<RazorpayCollection<RazorpayPayment>>(`/orders/${encodeURIComponent(orderId)}/payments`, {
     method: "GET",
   })
 }

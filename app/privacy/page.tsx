@@ -3,8 +3,8 @@ import { PublicNavbar } from "@/components/public-navbar"
 import { PublicFooter } from "@/components/public-footer"
 
 export const metadata: Metadata = {
-  title: "Privacy Policy - AffiliateHub",
-  description: "How AffiliateHub collects, uses, and safeguards your data.",
+  title: "Privacy Policy - Linkstore",
+  description: "How Linkstore collects, uses, and safeguards your data.",
 }
 
 export default function PrivacyPage() {
@@ -38,7 +38,7 @@ export default function PrivacyPage() {
             <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Data Sharing</h2>
             <p className="text-base leading-relaxed text-slate-600 dark:text-slate-400">
               We share data only with infrastructure providers required to run the service (hosting, database, media storage, and
-              payment processing). Authentication is handled directly by AffiliateHub. We do not sell personal data.
+              payment processing). Authentication is handled directly by Linkstore. We do not sell personal data.
             </p>
           </section>
 

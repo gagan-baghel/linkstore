@@ -5,17 +5,26 @@ import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { AtSign, Mail, PencilLine, ShieldCheck, User, X } from "lucide-react"
+import { AtSign, ExternalLink, Mail, PencilLine, ShieldCheck, User, X } from "lucide-react"
 
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { toast } from "@/components/ui/use-toast"
+import { buildStorefrontUrl } from "@/lib/storefront-url"
+import { USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH, getUsernameValidationMessage, normalizeUsernameInput } from "@/lib/username"
 
 const accountFormSchema = z.object({
   name: z.string().min(2, {
     message: "Name must be at least 2 characters.",
+  }),
+  username: z.string().min(USERNAME_MIN_LENGTH, {
+    message: `Username must be at least ${USERNAME_MIN_LENGTH} characters.`,
+  }).max(USERNAME_MAX_LENGTH, {
+    message: `Username must be at most ${USERNAME_MAX_LENGTH} characters.`,
+  }).refine((value) => getUsernameValidationMessage(value) === "", {
+    message: "Use lowercase letters, numbers, or hyphens. Hyphens cannot start or end the username.",
   }),
 })
 
@@ -35,6 +44,7 @@ export function AccountForm({ name, email, username }: AccountFormProps) {
 
   const defaultValues: AccountFormValues = {
     name: name || "",
+    username: username || "",
   }
 
   const form = useForm<AccountFormValues>({
@@ -43,6 +53,8 @@ export function AccountForm({ name, email, username }: AccountFormProps) {
   })
 
   const values = form.watch()
+  const normalizedUsername = normalizeUsernameInput(values.username || username || "")
+  const storefrontUrl = buildStorefrontUrl(normalizedUsername)
 
   async function onSubmit(data: AccountFormValues) {
     setIsLoading(true)
@@ -51,6 +63,7 @@ export function AccountForm({ name, email, username }: AccountFormProps) {
     try {
       const payload = {
         name: data.name.trim(),
+        username: normalizeUsernameInput(data.username),
       }
 
       const response = await fetch("/api/account", {
@@ -71,6 +84,10 @@ export function AccountForm({ name, email, username }: AccountFormProps) {
         description: "Your account has been updated.",
       })
 
+      form.reset({
+        name: data.name.trim(),
+        username: normalizeUsernameInput(data.username),
+      })
       setIsEditing(false)
       router.refresh()
     } catch (submitError) {
@@ -127,16 +144,16 @@ export function AccountForm({ name, email, username }: AccountFormProps) {
               <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#60708a]">Username</p>
               <p className="flex items-center gap-2 text-sm font-medium text-[#1f2a44]">
                 <AtSign className="h-4 w-4 text-[#6a7a96]" />
-                {username || "Not available"}
+                {normalizedUsername || "Not available"}
               </p>
-              <p className="mt-2 text-xs text-[#60708a]">Username is fixed after signup and cannot be changed.</p>
+              <p className="mt-2 text-xs text-[#60708a]">This username controls your public store URL and must stay unique.</p>
             </div>
           </div>
         </section>
       ) : (
         <section className="rounded-xl border border-[#d8e2f3] bg-white p-5 md:p-6">
           <h2 className="text-base font-semibold text-[#162033]">Edit Profile</h2>
-          <p className="mt-1 text-xs text-[#60708a]">Update your public display name. Your sign-in email stays managed by Google.</p>
+          <p className="mt-1 text-xs text-[#60708a]">Update your public display name and username. Your sign-in email stays managed by Google.</p>
 
           <Form {...form}>
             <form id="account-edit-form" onSubmit={form.handleSubmit(onSubmit)} className="mt-5 grid gap-4 md:grid-cols-2">
@@ -147,7 +164,35 @@ export function AccountForm({ name, email, username }: AccountFormProps) {
                   <FormItem>
                     <FormLabel className="text-xs font-semibold uppercase tracking-wide text-[#41506a]">Name</FormLabel>
                     <FormControl>
-                      <Input className="h-10 border-[#cfd8ea] bg-white text-sm text-[#1f2a44]" placeholder="John Doe" {...field} />
+                      <Input
+                        className="h-10 border-[#cfd8ea] bg-white text-sm text-[#1f2a44]"
+                        placeholder="John Doe"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="username"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-semibold uppercase tracking-wide text-[#41506a]">Username</FormLabel>
+                    <FormControl>
+                      <Input
+                        className="h-10 border-[#cfd8ea] bg-white text-sm text-[#1f2a44]"
+                        placeholder="your-store-name"
+                        autoCapitalize="none"
+                        autoCorrect="off"
+                        spellCheck={false}
+                        {...field}
+                        value={field.value ?? ""}
+                        onChange={(event) => field.onChange(normalizeUsernameInput(event.target.value))}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -161,9 +206,21 @@ export function AccountForm({ name, email, username }: AccountFormProps) {
               </div>
 
               <div className="rounded-lg border border-[#e7eefb] bg-[#fbfcff] p-4 md:col-span-2">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#60708a]">Username</p>
-                <p className="mt-1 text-sm font-medium text-[#1f2a44]">@{username || "Not available"}</p>
-                <p className="mt-2 text-xs text-[#60708a]">Auto-generated at signup. This cannot be changed.</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#60708a]">Store URL Preview</p>
+                <div className="mt-1 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="break-all text-sm font-medium text-[#1f2a44]">{storefrontUrl || "Store URL unavailable"}</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-9 border-[#cfd8ea] bg-white px-3 text-xs text-[#1f2a44] shadow-none hover:bg-[#f3f6fc]"
+                    onClick={() => window.open(storefrontUrl, "_blank", "noopener,noreferrer")}
+                    disabled={!storefrontUrl}
+                  >
+                    Open Preview
+                    <ExternalLink className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="mt-2 text-xs text-[#60708a]">Your username must be unique and becomes your public storefront address.</p>
               </div>
             </form>
           </Form>
@@ -172,7 +229,7 @@ export function AccountForm({ name, email, username }: AccountFormProps) {
 
       <div className="rounded-xl border border-[#d8e2f3] bg-white p-5 md:p-6">
         <h2 className="text-base font-semibold text-[#162033]">Authentication & Sessions</h2>
-        <p className="mb-4 mt-1 text-xs text-[#60708a]">Google handles identity. AffiliateHub handles session revocation.</p>
+        <p className="mb-4 mt-1 text-xs text-[#60708a]">Google handles identity. Linkstore handles session revocation.</p>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-[#4f5f7a]">Open security settings to review your Google sign-in method and sign out older app sessions.</p>
           <Button

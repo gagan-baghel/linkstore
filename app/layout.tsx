@@ -13,7 +13,7 @@ const metadataBase = (() => {
 })()
 
 export const metadata: Metadata = {
-  title: "AffiliateHub - Create Your Affiliate Storefront",
+  title: "Linkstore - Create Your Affiliate Storefront",
   description: "Build your own affiliate marketing storefront and start earning commissions",
   metadataBase,
   icons: {

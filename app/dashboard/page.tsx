@@ -6,7 +6,7 @@ import { convexQuery } from "@/lib/convex"
 import DashboardClientPage from "./DashboardClientPage"
 
 export const metadata: Metadata = {
-  title: "Dashboard - AffiliateHub",
+  title: "Dashboard - Linkstore",
   description: "Manage your affiliate products and store",
 }
 

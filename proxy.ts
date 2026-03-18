@@ -42,6 +42,12 @@ function redirectToLogin(req: NextRequest) {
 }
 
 export default async function proxy(req: NextRequest) {
+  const pathname = req.nextUrl.pathname
+
+  if (!pathname.startsWith("/dashboard")) {
+    return NextResponse.next()
+  }
+
   const token = req.cookies.get(getAuthCookieName())?.value
   if (!token) {
     return redirectToLogin(req)
@@ -63,5 +69,5 @@ export default async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*"],
+  matcher: ["/dashboard/:path*", "/((?!api|_next|.*\\..*).*)"],
 }

@@ -21,6 +21,7 @@ import { DashboardShell } from "@/components/dashboard-shell"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { toast } from "@/components/ui/use-toast"
+import { buildStorefrontUrl } from "@/lib/storefront-url"
 
 interface DashboardInitialData {
   user: any
@@ -149,13 +150,13 @@ export default function DashboardClientPage({
 
   const baseUrl = origin || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
   const hasActiveSubscription = Boolean(session?.user?.hasActiveSubscription)
-  const isStorePublic = Boolean(user?.username && user?.storeEnabled === true)
+  const isStorePublic = Boolean(hasActiveSubscription && user?.username && user?.storeEnabled === true)
   const canUseShopActions = hasActiveSubscription
   const subscriptionRedirectBase = "/dashboard/store?upgrade=1"
-  const storePath = isStorePublic ? `/stores/${encodeURIComponent(user.username)}` : ""
+  const storeUrl = isStorePublic ? buildStorefrontUrl(user.username, baseUrl) : ""
   const hasStoreProfile = Boolean((user?.storeBannerText || "").trim()) && Boolean((user?.storeBio || "").trim())
   const hasBrokenLinks = (linkHealth?.brokenCount || 0) > 0
-  const fullStoreUrl = storePath ? `${baseUrl}${storePath}` : "Store URL will be available shortly"
+  const fullStoreUrl = storeUrl || "Store URL will be available shortly"
   const addProductHref = canUseShopActions
     ? "/dashboard/products/new"
     : `${subscriptionRedirectBase}&from=${encodeURIComponent("/dashboard/products/new")}`
@@ -163,7 +164,7 @@ export default function DashboardClientPage({
     ? "/dashboard/products"
     : `${subscriptionRedirectBase}&from=${encodeURIComponent("/dashboard/products")}`
   const openStoreHref = isStorePublic
-    ? storePath
+    ? storeUrl
     : canUseShopActions
       ? "/dashboard/store"
       : `${subscriptionRedirectBase}&from=${encodeURIComponent("/dashboard/store")}`
@@ -177,7 +178,7 @@ export default function DashboardClientPage({
           ? "/dashboard/store"
           : hasBrokenLinks
             ? "/dashboard/products"
-            : storePath || "/dashboard"
+            : storeUrl || "/dashboard"
   const nextStepLabel = getNextStepLabel({
     hasSubscription: hasActiveSubscription,
     hasStoreProfile,

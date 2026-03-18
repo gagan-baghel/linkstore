@@ -8,7 +8,7 @@ import { ProductForm } from "@/components/product-form"
 import { getSubscriptionRedirectPath } from "@/lib/subscription-routing"
 
 export const metadata: Metadata = {
-  title: "New Product - AffiliateHub",
+  title: "New Product - Linkstore",
   description: "Add a new affiliate product to your store",
 }
 

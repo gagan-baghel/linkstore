@@ -20,22 +20,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
     const primaryUserId = session.user.id
-    const sessionEmail = typeof session.user.email === "string" ? session.user.email.trim().toLowerCase() : ""
-
     let data = await convexQuery<{ userId: string }, any>("analytics:getDashboardData", { userId: primaryUserId })
-
-    // Recover gracefully if a previous local mapping points to an old user id.
-    if (!data?.ok && sessionEmail) {
-      const userByEmail = await convexQuery<{ email: string }, any | null>("users:getByEmail", {
-        email: sessionEmail,
-      })
-
-      if (userByEmail?._id && userByEmail._id !== primaryUserId) {
-        data = await convexQuery<{ userId: string }, any>("analytics:getDashboardData", {
-          userId: userByEmail._id,
-        })
-      }
-    }
 
     if (!data?.ok) {
       return NextResponse.json({

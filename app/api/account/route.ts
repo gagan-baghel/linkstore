@@ -7,9 +7,11 @@ import { tryNormalizeAffiliateUrl } from "@/lib/affiliate-url"
 import { convexMutation, convexQuery } from "@/lib/convex"
 import { checkRateLimitAsync, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
 import { getStoreCacheTag } from "@/lib/store-cache"
+import { getUsernameValidationMessage, isValidUsername, normalizeUsernameInput } from "@/lib/username"
 
 const accountSchema = z.object({
   name: z.string().trim().min(2).max(80),
+  username: z.string().trim().min(3).max(30),
   image: z
     .string()
     .trim()
@@ -44,18 +46,24 @@ export async function PUT(req: Request) {
     }
 
     const body = await req.json()
-    const { name, image, storeLogo } = accountSchema.parse(body)
+    const { name, username, image, storeLogo } = accountSchema.parse(body)
     const existingUser = await convexQuery<{ userId: string }, any | null>("users:getById", { userId: session.user.id }).catch(
       () => null,
     )
     const previousUsername = existingUser?.username?.trim().toLowerCase() || ""
+    const normalizedUsername = normalizeUsernameInput(username)
+
+    if (!isValidUsername(normalizedUsername)) {
+      return NextResponse.json({ message: getUsernameValidationMessage(normalizedUsername) || "Invalid username." }, { status: 400 })
+    }
 
     const result = await convexMutation<
-      { userId: string; name: string; image?: string; storeLogo?: string },
-      { ok: boolean; message?: string }
+      { userId: string; name: string; username: string; image?: string; storeLogo?: string },
+      { ok: boolean; message?: string; user?: any; code?: string }
     >("users:updateAccount", {
       userId: session.user.id,
       name,
+      username: normalizedUsername,
       image: image || "",
       storeLogo: storeLogo || "",
     })
@@ -67,8 +75,21 @@ export async function PUT(req: Request) {
     if (previousUsername) {
       revalidateTag(getStoreCacheTag(previousUsername), "max")
     }
+    const nextUsername = result.user?.username?.trim().toLowerCase() || normalizedUsername
+    if (nextUsername && nextUsername !== previousUsername) {
+      revalidateTag(getStoreCacheTag(nextUsername), "max")
+    }
 
-    return NextResponse.json({ message: "Account updated successfully" })
+    return NextResponse.json({
+      message: "Account updated successfully",
+      user: result.user
+        ? {
+            name: result.user.name || "",
+            email: result.user.email || "",
+            username: result.user.username || "",
+          }
+        : null,
+    })
   } catch (error) {
     console.error("Account update error:", error)
     if (error instanceof z.ZodError) {

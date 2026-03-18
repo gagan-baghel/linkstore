@@ -36,11 +36,11 @@ export function GoogleAuthPanel({
   error,
   showDevLogin = false,
 }: {
-  description: string
+  description?: string
   ctaLabel: string
-  alternateHref: string
-  alternateLabel: string
-  alternatePrompt: string
+  alternateHref?: string
+  alternateLabel?: string
+  alternatePrompt?: string
   nextPath?: string
   error?: string | null
   showDevLogin?: boolean
@@ -63,9 +63,11 @@ export function GoogleAuthPanel({
         </Button>
       </Link>
 
-      <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 px-4 py-3 text-sm text-slate-600">
-        {description}
-      </div>
+      {description ? (
+        <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 px-4 py-3 text-sm text-slate-600">
+          {description}
+        </div>
+      ) : null}
 
       {showDevLogin ? (
         <div className="rounded-2xl border border-dashed border-amber-300 bg-amber-50/90 px-4 py-3">
@@ -84,17 +86,19 @@ export function GoogleAuthPanel({
         </div>
       ) : null}
 
-      <div className="border-t border-slate-200/50 pt-6 text-center dark:border-slate-800/80">
-        <p className="text-sm text-slate-600 dark:text-slate-400">
-          {alternatePrompt}{" "}
-          <Link
-            href={alternateHref}
-            className="font-semibold text-indigo-600 transition-colors hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
-          >
-            {alternateLabel}
-          </Link>
-        </p>
-      </div>
+      {alternateHref && alternateLabel && alternatePrompt ? (
+        <div className="border-t border-slate-200/50 pt-6 text-center dark:border-slate-800/80">
+          <p className="text-sm text-slate-600 dark:text-slate-400">
+            {alternatePrompt}{" "}
+            <Link
+              href={alternateHref}
+              className="font-semibold text-indigo-600 transition-colors hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+            >
+              {alternateLabel}
+            </Link>
+          </p>
+        </div>
+      ) : null}
     </div>
   )
 }

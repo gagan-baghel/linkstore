@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
       { ok: boolean; message?: string; user?: any }
     >("users:upsertGoogleUser", {
       googleSub: "dev-temp-login",
-      email: "dev@affiliatehub.local",
+      email: "dev@linkstore.local",
       emailVerified: true,
       name: "Dev User",
       image: "",

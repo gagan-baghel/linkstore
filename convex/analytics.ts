@@ -20,42 +20,61 @@ function sanitizeProduct(product: any) {
 export const getDashboardData = queryGeneric({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    const user = await ctx.db.get(args.userId)
+    const now = Date.now()
+    const last30Days = now - 30 * 24 * 60 * 60 * 1000
+    const staleCutoff = now - 7 * 24 * 60 * 60 * 1000
+
+    const [user, products, events, clicks] = await Promise.all([
+      ctx.db.get(args.userId),
+      ctx.db
+        .query("products")
+        .withIndex("by_userId_createdAt", (q) => q.eq("userId", args.userId))
+        .order("desc")
+        .collect(),
+      ctx.db
+        .query("events")
+        .withIndex("by_userId_createdAt", (q) => q.eq("userId", args.userId))
+        .filter((q) => q.gte(q.field("createdAt"), last30Days))
+        .order("desc")
+        .collect(),
+      ctx.db
+        .query("clicks")
+        .withIndex("by_userId_createdAt", (q) => q.eq("userId", args.userId))
+        .filter((q) => q.gte(q.field("createdAt"), last30Days))
+        .order("desc")
+        .collect(),
+    ])
+
     if (!user) {
       return { ok: false, message: "User not found" as const }
     }
 
-    const products = await ctx.db
-      .query("products")
-      .withIndex("by_userId_createdAt", (q) => q.eq("userId", args.userId))
-      .order("desc")
-      .collect()
+    let storeViews30 = 0
+    let cardClicks30 = 0
+    for (const event of events) {
+      if (event.eventType === "store_view") storeViews30 += 1
+      if (event.eventType === "product_card_click") cardClicks30 += 1
+    }
 
-    const now = Date.now()
-    const last30Days = now - 30 * 24 * 60 * 60 * 1000
-    const events = await ctx.db
-      .query("events")
-      .withIndex("by_userId_createdAt", (q) => q.eq("userId", args.userId))
-      .filter((q) => q.gte(q.field("createdAt"), last30Days))
-      .order("desc")
-      .collect()
-    const clicks = await ctx.db
-      .query("clicks")
-      .withIndex("by_userId_createdAt", (q) => q.eq("userId", args.userId))
-      .filter((q) => q.gte(q.field("createdAt"), last30Days))
-      .order("desc")
-      .collect()
-    const storeViews30 = events.filter((event) => event.eventType === "store_view").length
-    const cardClicks30 = events.filter((event) => event.eventType === "product_card_click").length
     const outboundClicks30 = clicks.length
     const conversionRate30 = storeViews30 > 0 ? (outboundClicks30 / storeViews30) * 100 : 0
 
-    const activeProducts = products.filter((product) => product.isArchived !== true)
-    const brokenProducts = activeProducts.filter((product) => product.isLinkHealthy === false)
-    const staleCutoff = Date.now() - 7 * 24 * 60 * 60 * 1000
-    const staleProducts = activeProducts.filter(
-      (product) => typeof product.lastLinkCheckAt !== "number" || product.lastLinkCheckAt < staleCutoff,
-    )
+    const activeProducts: any[] = []
+    const brokenProducts: any[] = []
+    let staleCount = 0
+
+    for (const product of products) {
+      if (product.isArchived === true) continue
+      activeProducts.push(product)
+
+      if (product.isLinkHealthy === false) {
+        brokenProducts.push(product)
+      }
+
+      if (typeof product.lastLinkCheckAt !== "number" || product.lastLinkCheckAt < staleCutoff) {
+        staleCount += 1
+      }
+    }
 
     return {
       ok: true,
@@ -70,7 +89,7 @@ export const getDashboardData = queryGeneric({
       },
       linkHealth: {
         brokenCount: brokenProducts.length,
-        staleCount: staleProducts.length,
+        staleCount,
         brokenProducts: brokenProducts.slice(0, 5).map((product) => ({
           id: product._id,
           title: product.title,

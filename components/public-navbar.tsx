@@ -13,9 +13,9 @@ export async function PublicNavbar() {
       <div className="container flex h-16 items-center justify-between">
         <Link href="/" className="flex items-center gap-2 text-lg font-bold tracking-tight text-slate-800 dark:text-slate-100">
           <div className="flex h-10 w-10 items-center justify-center">
-            <Image src="/favicon-32x32.png" alt="AffiliateHub logo" width={32} height={32} />
+            <Image src="/favicon-32x32.png" alt="Linkstore logo" width={32} height={32} />
           </div>
-          <span>AffiliateHub</span>
+          <span>Linkstore</span>
         </Link>
 
         <div className="flex items-center gap-3">

@@ -1,4 +1,5 @@
 import { hasAuthJwtSecretConfigured } from "@/lib/auth-config"
+import { SUBSCRIPTION_COUPON_DURATION_MS, normalizeSubscriptionCouponCode } from "@/lib/subscription-coupons"
 
 type ReadinessCheck = {
   key: string
@@ -15,9 +16,27 @@ function readEnv(...keys: string[]) {
   return ""
 }
 
+function parseOptionalPositiveInteger(raw: string) {
+  if (!raw) return undefined
+  const value = Number.parseInt(raw, 10)
+  return Number.isFinite(value) && value > 0 ? value : undefined
+}
+
+function parseOptionalTimestamp(raw: string) {
+  if (!raw) return undefined
+
+  if (/^\d+$/.test(raw)) {
+    const numeric = Number.parseInt(raw, 10)
+    return Number.isFinite(numeric) && numeric > 0 ? numeric : undefined
+  }
+
+  const parsed = Date.parse(raw)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
+}
+
 export function getRazorpayCredentials() {
-  const keyId = readEnv("RAZORPAY_KEY_ID", "RAZORPAY_KEY")
-  const keySecret = readEnv("RAZORPAY_KEY_SECRET", "RAZORPAY_SECRET")
+  const keyId = readEnv("RAZORPAY_KEY_ID")
+  const keySecret = readEnv("RAZORPAY_KEY_SECRET")
 
   return {
     keyId,
@@ -37,9 +56,23 @@ export function getGoogleOAuthCredentials() {
   }
 }
 
+export function getConfiguredSubscriptionCoupon() {
+  const rawCode = readEnv("SUBSCRIPTION_FREE_MONTH_COUPON_CODE")
+  const code = rawCode ? normalizeSubscriptionCouponCode(rawCode) : ""
+
+  return {
+    configured: Boolean(code),
+    code,
+    label: readEnv("SUBSCRIPTION_FREE_MONTH_COUPON_LABEL") || "Free Month Access",
+    durationMs: SUBSCRIPTION_COUPON_DURATION_MS,
+    maxRedemptions: parseOptionalPositiveInteger(readEnv("SUBSCRIPTION_FREE_MONTH_COUPON_MAX_REDEMPTIONS")),
+    expiresAt: parseOptionalTimestamp(readEnv("SUBSCRIPTION_FREE_MONTH_COUPON_EXPIRES_AT")),
+  }
+}
+
 export function getRuntimeReadinessChecks(): ReadinessCheck[] {
   const isProduction = process.env.NODE_ENV === "production"
-  const convexConfigured = Boolean(readEnv("CONVEX_URL", "NEXT_PUBLIC_CONVEX_URL"))
+  const convexConfigured = Boolean(readEnv("CONVEX_URL"))
   const authConfigured = hasAuthJwtSecretConfigured() || !isProduction
   const paymentsDataKeyConfigured = Boolean(readEnv("PAYMENTS_DATA_KEY"))
   const razorpay = getRazorpayCredentials()
@@ -51,7 +84,7 @@ export function getRuntimeReadinessChecks(): ReadinessCheck[] {
   )
 
   return [
-    { key: "CONVEX_URL | NEXT_PUBLIC_CONVEX_URL", required: true, configured: convexConfigured },
+    { key: "CONVEX_URL", required: true, configured: convexConfigured },
     {
       key: "AUTH_JWT_SECRET",
       required: true,
@@ -74,7 +107,6 @@ export function getRuntimeReadinessChecks(): ReadinessCheck[] {
       key: "RAZORPAY_KEY_ID + RAZORPAY_KEY_SECRET",
       required: true,
       configured: razorpay.configured,
-      note: "Legacy fallback supported: RAZORPAY_KEY + RAZORPAY_SECRET",
     },
     { key: "RAZORPAY_WEBHOOK_SECRET", required: true, configured: Boolean(readEnv("RAZORPAY_WEBHOOK_SECRET")) },
     { key: "PAYMENTS_DATA_KEY", required: true, configured: paymentsDataKeyConfigured },

@@ -97,7 +97,42 @@ export default defineSchema({
     .index("by_userId_createdAt", ["userId", "createdAt"])
     .index("by_razorpayOrderId", ["razorpayOrderId"])
     .index("by_idempotencyKey", ["idempotencyKey"])
-    .index("by_payment_hash", ["razorpayPaymentIdHash"]),
+    .index("by_payment_hash", ["razorpayPaymentIdHash"])
+    .index("by_createdAt", ["createdAt"]),
+  subscriptionCoupons: defineTable({
+    codeHash: v.string(),
+    codeHint: v.string(),
+    label: v.string(),
+    durationMs: v.number(),
+    isActive: v.boolean(),
+    maxRedemptions: v.optional(v.number()),
+    redemptionCount: v.number(),
+    expiresAt: v.optional(v.number()),
+    note: v.optional(v.string()),
+    createdByUserId: v.optional(v.id("users")),
+    deactivatedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_codeHash", ["codeHash"])
+    .index("by_createdAt", ["createdAt"]),
+  subscriptionCouponRedemptions: defineTable({
+    couponId: v.optional(v.id("subscriptionCoupons")),
+    userId: v.id("users"),
+    subscriptionId: v.id("subscriptions"),
+    codeHash: v.string(),
+    codeHint: v.string(),
+    couponLabel: v.string(),
+    source: v.union(v.literal("stored"), v.literal("env")),
+    grantedDurationMs: v.number(),
+    grantedAt: v.number(),
+    resultingExpiresAt: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_codeHash_createdAt", ["codeHash", "createdAt"])
+    .index("by_userId_codeHash", ["userId", "codeHash"])
+    .index("by_userId_createdAt", ["userId", "createdAt"]),
   billingEvents: defineTable({
     provider: v.string(),
     eventKey: v.string(),
@@ -115,6 +150,34 @@ export default defineSchema({
     .index("by_eventKey", ["eventKey"])
     .index("by_userId_createdAt", ["userId", "createdAt"])
     .index("by_paymentHash_createdAt", ["paymentHash", "createdAt"]),
+  billingAlerts: defineTable({
+    dedupeKey: v.string(),
+    category: v.string(),
+    severity: v.union(v.literal("critical"), v.literal("high"), v.literal("medium"), v.literal("low")),
+    status: v.union(v.literal("open"), v.literal("resolved")),
+    userId: v.optional(v.id("users")),
+    orderId: v.optional(v.string()),
+    paymentHash: v.optional(v.string()),
+    message: v.string(),
+    details: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    resolvedAt: v.optional(v.number()),
+  })
+    .index("by_dedupeKey", ["dedupeKey"])
+    .index("by_status_createdAt", ["status", "createdAt"])
+    .index("by_userId_createdAt", ["userId", "createdAt"]),
+  billingReconciliationRuns: defineTable({
+    scope: v.string(),
+    status: v.union(v.literal("ok"), v.literal("warning"), v.literal("failed")),
+    checkedCount: v.number(),
+    reconciledCount: v.number(),
+    flaggedCount: v.number(),
+    details: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    completedAt: v.optional(v.number()),
+  }).index("by_createdAt", ["createdAt"]),
   auditLogs: defineTable({
     actorType: v.union(v.literal("system"), v.literal("user"), v.literal("admin"), v.literal("webhook")),
     actorUserId: v.optional(v.id("users")),

@@ -17,7 +17,7 @@ import { normalizeAffiliateUrl, tryNormalizeAffiliateUrl } from "@/lib/affiliate
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
-const CATEGORY_STORAGE_KEY = "affiliatehub_product_categories"
+const CATEGORY_STORAGE_KEY = "linkstore_product_categories"
 const DEFAULT_CATEGORIES = ["General", "Electronics", "Fashion", "Home", "Beauty", "Books", "Accessories"]
 
 const productFormSchema = z.object({

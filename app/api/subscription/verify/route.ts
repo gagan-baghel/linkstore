@@ -7,6 +7,7 @@ import { writeAuditLog } from "@/lib/audit"
 import { fetchRazorpayPayment, isRazorpayConfigured, verifyRazorpayPaymentSignature } from "@/lib/razorpay"
 import { checkRateLimitAsync, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
 import { encryptSensitive, hashSensitive, hasPaymentsDataKeyConfigured } from "@/lib/secure-data"
+import { resolveBillingTimestamp } from "@/lib/subscription-billing"
 import { SUBSCRIPTION_CURRENCY, SUBSCRIPTION_PRICE_PAISE } from "@/lib/subscription"
 
 const verifySchema = z.object({
@@ -92,7 +93,10 @@ export async function POST(req: Request) {
     const signatureHash = hashSensitive(payload.razorpay_signature)
     const encryptedPaymentId = encryptSensitive(payload.razorpay_payment_id)
 
-    const capturedAtMs = typeof payment.created_at === "number" ? payment.created_at * 1000 : Date.now()
+    const capturedAtMs = resolveBillingTimestamp({
+      primaryMs: Date.now(),
+      secondaryMs: typeof payment.created_at === "number" ? payment.created_at * 1000 : undefined,
+    })
 
     const result = await convexMutation<
       {

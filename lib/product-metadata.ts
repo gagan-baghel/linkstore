@@ -7,8 +7,6 @@ export interface ProductMetadata {
   image?: string
 }
 
-const METADATA_ENABLE_JINA = (process.env.METADATA_ENABLE_JINA ?? "true") !== "false"
-const METADATA_ENABLE_DDG = (process.env.METADATA_ENABLE_DDG ?? "true") !== "false"
 const METADATA_FETCH_RETRIES = Math.max(0, Number.parseInt(process.env.METADATA_FETCH_RETRIES || "1", 10))
 
 async function fetchWithRetries(
@@ -176,7 +174,7 @@ function extractJsonLdImages(html: string): string[] {
   return images
 }
 
-function extractImagesFromHtml(html: string, baseUrl: string): string[] {
+function extractImagesFromHtml(html: string): string[] {
   const candidates = new Set<string>()
   const push = (raw?: string) => { const n = normalizeImageCandidate(raw); if (n) candidates.add(n) }
 
@@ -244,7 +242,7 @@ function extractFlipkartImage(html: string): string | undefined {
     } catch { /* skip */ }
   }
 
-  // Fallback: raw CDN matches (escaped or not)
+  // Raw CDN matches (escaped or not)
   const rawCdn = html.match(/https?:\\?\/\\?\/rukminim\d?\.flixcart\.com\\?\/image[^"'\\s<>()\\\\]+/gi)
   if (rawCdn?.[0]) return normalizeImageCandidate(rawCdn[0])
 
@@ -312,89 +310,6 @@ function gatherImageUrlsFromObject(obj: unknown, maxDepth = 6): string[] {
   }
 
   return results
-}
-
-// ─────────────────────────────────────────────
-// Strategy 4 — Jina.ai reader (correct: parse Markdown image syntax)
-// ─────────────────────────────────────────────
-
-async function fetchViaJina(url: string): Promise<string | undefined> {
-  if (!METADATA_ENABLE_JINA) return undefined
-  try {
-    const jinaUrl = `https://r.jina.ai/${url}`
-    const res = await fetchWithRetries(jinaUrl, {
-      headers: {
-        "Accept": "text/markdown,text/plain",
-        "X-Return-Format": "markdown",
-        "User-Agent": "Mozilla/5.0 (compatible; Linkstore/1.0)",
-      },
-      cache: "no-store",
-    }, 15000)
-    if (!res.ok) return undefined
-    const md = await res.text()
-
-    // Parse markdown image syntax: ![alt](url)
-    const mdImageRe = /!\[[^\]]*\]\((https?:\/\/[^)]+)\)/g
-    const images: string[] = []
-    let m: RegExpExecArray | null
-    while ((m = mdImageRe.exec(md)) !== null) {
-      const n = normalizeImageCandidate(m[1])
-      if (n && !/logo|favicon|icon|banner/i.test(n)) images.push(n)
-    }
-
-    if (images.length > 0) {
-      // Score and pick best
-      return pickBestImage(url, images)
-    }
-  } catch { /* failed */ }
-  return undefined
-}
-
-// ─────────────────────────────────────────────
-// Strategy 5 — DuckDuckGo image search (free, no auth)
-// ─────────────────────────────────────────────
-
-async function fetchViaDuckDuckGoImages(title: string, hostname: string): Promise<string | undefined> {
-  if (!METADATA_ENABLE_DDG) return undefined
-  if (!title) return undefined
-  try {
-    const query = encodeURIComponent(`${title} ${hostname}`)
-    // DuckDuckGo image search API
-    const token = await getDDGToken()
-    if (!token) return undefined
-
-    const searchUrl = `https://duckduckgo.com/i.js?l=us-en&o=json&q=${query}&vqd=${token}&f=,,,,,&p=1`
-    const res = await fetchWithRetries(searchUrl, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36",
-        "Referer": "https://duckduckgo.com/",
-        "Accept": "application/json",
-      },
-    }, 8000)
-    if (!res.ok) return undefined
-    const json = await res.json()
-    const results: { image?: string; thumbnail?: string }[] = json?.results || []
-    for (const r of results.slice(0, 5)) {
-      const imgUrl = r.image || r.thumbnail
-      if (!imgUrl || !IMAGE_URL_RE.test(imgUrl)) continue
-      const safe = tryNormalizeAffiliateUrl(imgUrl)
-      if (safe) return safe
-    }
-  } catch { /* failed */ }
-  return undefined
-}
-
-async function getDDGToken(): Promise<string | undefined> {
-  try {
-    const res = await fetchWithRetries("https://duckduckgo.com/", {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36",
-      },
-    }, 8000)
-    const html = await res.text()
-    const m = html.match(/vqd=["']?([^"'&\s]+)/)
-    return m?.[1]
-  } catch { return undefined }
 }
 
 // ─────────────────────────────────────────────
@@ -475,7 +390,6 @@ function buildCandidateUrls(url: URL): string[] {
 export async function fetchProductMetadata(affiliateUrl: string): Promise<ProductMetadata> {
   const normalizedUrl = normalizeAffiliateUrl(affiliateUrl)
   const parsedUrl = new URL(normalizedUrl)
-  const hostname = parsedUrl.hostname.replace(/^www\./i, "")
   const candidateUrls = buildCandidateUrls(parsedUrl)
 
   let bestTitle: string | undefined
@@ -495,7 +409,7 @@ export async function fetchProductMetadata(affiliateUrl: string): Promise<Produc
       if (description && !bestDescription) bestDescription = description
 
       // Gather image candidates from all HTML extraction methods
-      const htmlImages = extractImagesFromHtml(html, resolvedUrl)
+      const htmlImages = extractImagesFromHtml(html)
 
       // Site-specific strategies
       let siteSpecificImage: string | undefined
@@ -523,22 +437,6 @@ export async function fetchProductMetadata(affiliateUrl: string): Promise<Produc
     } catch (err) {
       lastError = err instanceof Error ? err : new Error("Fetch failed")
     }
-  }
-
-  // ── Strategy 4: Jina.ai reader fallback (parses Markdown images) ──
-  if (!bestImage) {
-    try {
-      const jinaImage = await fetchViaJina(normalizedUrl)
-      if (jinaImage) bestImage = jinaImage
-    } catch { /* ignore */ }
-  }
-
-  // ── Strategy 5: DuckDuckGo image search (last resort) ──
-  if (!bestImage && bestTitle) {
-    try {
-      const ddgImage = await fetchViaDuckDuckGoImages(bestTitle, hostname)
-      if (ddgImage) bestImage = ddgImage
-    } catch { /* ignore */ }
   }
 
   // Return whatever we gathered, even partial

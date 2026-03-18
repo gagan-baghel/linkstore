@@ -5,10 +5,12 @@ import { convexMutation } from "@/lib/convex"
 import { isRazorpayWebhookConfigured, verifyRazorpayWebhookSignature } from "@/lib/razorpay"
 import { checkRateLimitAsync, getClientIp, tooManyRequests } from "@/lib/security"
 import { encryptSensitive, hashSensitive, hasPaymentsDataKeyConfigured } from "@/lib/secure-data"
+import { resolveBillingTimestamp } from "@/lib/subscription-billing"
 import { writeAuditLog } from "@/lib/audit"
 
 const webhookEnvelopeSchema = z.object({
   event: z.string().min(1),
+  created_at: z.number().optional(),
   payload: z.record(z.any()).optional(),
 })
 
@@ -46,6 +48,10 @@ export async function POST(req: Request) {
     }
 
     const rawBody = await req.text()
+    if (rawBody.length > 256 * 1024) {
+      return NextResponse.json({ message: "Webhook payload too large" }, { status: 413 })
+    }
+
     const signature = req.headers.get("x-razorpay-signature") || ""
     const headerEventId = (req.headers.get("x-razorpay-event-id") || "").trim()
 
@@ -75,6 +81,12 @@ export async function POST(req: Request) {
     const encryptedPaymentId = paymentId ? encryptSensitive(paymentId) : ""
     const signatureHash = hashSensitive(signature)
     const payloadHash = hashSensitive(rawBody)
+    const amountRefundedPaise =
+      typeof payment?.amount_refunded === "number"
+        ? payment.amount_refunded
+        : typeof parsed.payload?.refund?.entity?.amount === "number"
+          ? parsed.payload.refund.entity.amount
+          : undefined
 
     const eventKey = headerEventId || `webhook:${parsed.event}:${payloadHash.slice(0, 24)}`
 
@@ -88,8 +100,10 @@ export async function POST(req: Request) {
         paymentIdHash?: string
         signatureHash?: string
         amountPaise?: number
+        amountRefundedPaise?: number
         currency?: string
         paymentStatus?: string
+        refundStatus?: string
         capturedAt?: number
         failureCode?: string
         failureReason?: string
@@ -104,9 +118,14 @@ export async function POST(req: Request) {
       paymentIdHash: paymentHash || undefined,
       signatureHash,
       amountPaise: typeof payment?.amount === "number" ? payment.amount : undefined,
+      amountRefundedPaise,
       currency: typeof payment?.currency === "string" ? payment.currency : undefined,
       paymentStatus: typeof payment?.status === "string" ? payment.status : undefined,
-      capturedAt: typeof payment?.created_at === "number" ? payment.created_at * 1000 : undefined,
+      refundStatus: typeof payment?.refund_status === "string" ? payment.refund_status : undefined,
+      capturedAt: resolveBillingTimestamp({
+        primaryMs: typeof parsed.created_at === "number" ? parsed.created_at * 1000 : undefined,
+        secondaryMs: typeof payment?.created_at === "number" ? payment.created_at * 1000 : undefined,
+      }),
       failureCode: typeof payment?.error_code === "string" ? payment.error_code : undefined,
       failureReason: typeof payment?.error_description === "string" ? payment.error_description : undefined,
     })

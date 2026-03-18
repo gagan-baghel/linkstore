@@ -3,7 +3,7 @@ import { PublicNavbar } from "@/components/public-navbar"
 import { PublicFooter } from "@/components/public-footer"
 
 export const metadata: Metadata = {
-  title: "Refund & Cancellation Policy - AffiliateHub",
+  title: "Refund & Cancellation Policy - Linkstore",
   description: "How subscription cancellations and refunds are handled.",
 }
 

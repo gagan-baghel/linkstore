@@ -8,9 +8,10 @@ import { SubscriptionStatusCard } from "@/components/subscription-status-card"
 import { convexQuery } from "@/lib/convex"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { sanitizeSubscriptionReturnPath } from "@/lib/subscription-routing"
+import { buildStorefrontUrl } from "@/lib/storefront-url"
 
 export const metadata: Metadata = {
-  title: "Store Settings - AffiliateHub",
+  title: "Store Settings - Linkstore",
   description: "Manage your store settings",
 }
 
@@ -81,6 +82,7 @@ export default async function StoreSettingsPage({
             storeBio={user?.storeBio || ""}
             contactInfo={user?.contactInfo || ""}
             username={user?.username || ""}
+            storeUrl={buildStorefrontUrl(user?.username || "")}
             storeLogo={user?.storeLogo || ""}
             socialFacebook={user?.socialFacebook || ""}
             socialTwitter={user?.socialTwitter || ""}

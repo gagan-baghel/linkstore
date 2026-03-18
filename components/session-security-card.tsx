@@ -42,7 +42,7 @@ export function SessionSecurityCard({ email }: { email: string }) {
       <div className="space-y-1">
         <h2 className="text-base font-semibold text-[#162033]">Google Sign-In</h2>
         <p className="text-sm text-[#4f5f7a]">
-          Your verified Google account is the only authentication method for AffiliateHub.
+          Your verified Google account is the only authentication method for Linkstore.
         </p>
       </div>
 
@@ -62,7 +62,7 @@ export function SessionSecurityCard({ email }: { email: string }) {
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-[#4f5f7a]">
-          Revoke other AffiliateHub sessions if you signed in on a shared device.
+          Revoke other Linkstore sessions if you signed in on a shared device.
         </p>
         <Button
           type="button"

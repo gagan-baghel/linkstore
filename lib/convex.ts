@@ -7,14 +7,7 @@ declare global {
 }
 
 function getConvexUrl() {
-  const privateUrl = process.env.CONVEX_URL?.trim()
-  if (privateUrl) return privateUrl
-
-  if (process.env.NODE_ENV === "development") {
-    return process.env.NEXT_PUBLIC_CONVEX_URL?.trim()
-  }
-
-  return undefined
+  return process.env.CONVEX_URL?.trim()
 }
 
 function getConvexClient() {
@@ -46,4 +39,13 @@ export async function convexMutation<TArgs extends Record<string, any>, TResult>
   const client = getConvexClient()
   const ref = makeFunctionReference<"mutation", TArgs, TResult>(name) as any
   return client.mutation(ref, args as any)
+}
+
+export async function convexAction<TArgs extends Record<string, any>, TResult>(
+  name: string,
+  args: TArgs,
+): Promise<TResult> {
+  const client = getConvexClient()
+  const ref = makeFunctionReference<"action", TArgs, TResult>(name) as any
+  return client.action(ref, args as any)
 }

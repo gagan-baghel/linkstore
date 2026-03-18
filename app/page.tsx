@@ -3,7 +3,6 @@ import {
   ArrowRight,
   ChartNoAxesCombined,
   CheckCircle2,
-  Compass,
   Layers3,
   LineChart,
   MousePointerClick,
@@ -72,7 +71,7 @@ const featureRows = [
   {
     icon: ShieldCheck,
     title: "Secure auth & account control",
-    text: "Google-only sign-in paired with signed app sessions and one-click session revocation inside AffiliateHub.",
+    text: "Google-only sign-in paired with signed app sessions and one-click session revocation inside Linkstore.",
   },
 ]
 
@@ -97,11 +96,11 @@ const testimonials = [
 const faqs = [
   {
     q: "Can I sign in with Google?",
-    a: "Yes. AffiliateHub uses Google as the only authentication provider and then creates its own signed app session.",
+    a: "Yes. Linkstore uses Google as the only authentication provider and then creates its own signed app session.",
   },
   {
     q: "How do I manage security now?",
-    a: "Google manages password resets and account recovery. In AffiliateHub, open Account > Security Settings to revoke older app sessions.",
+    a: "Google manages password resets and account recovery. In Linkstore, open Account > Security Settings to revoke older app sessions.",
   },
   {
     q: "Does it work on mobile-first audiences?",
@@ -112,7 +111,7 @@ const faqs = [
 export default async function Home() {
   const session = await getSafeServerSession()
   const isLoggedIn = Boolean(session)
-  const primaryCtaHref = isLoggedIn ? "/dashboard" : "/auth/register"
+  const primaryCtaHref = isLoggedIn ? "/dashboard" : "/auth/login"
   const primaryCtaLabel = isLoggedIn ? "Open Dashboard" : "Start with Google"
 
   return (
@@ -147,7 +146,7 @@ export default async function Home() {
               </h1>
 
               <p className="max-w-2xl text-base font-medium leading-relaxed text-slate-600 dark:text-slate-300/90 sm:text-lg">
-                AffiliateHub transforms your scattered promo links into a premium, conversion-optimized storefront. Curate products, track real buying intent, and scale your revenue with one definitive destination.
+                Linkstore transforms your scattered promo links into a premium, conversion-optimized storefront. Curate products, track real buying intent, and scale your revenue with one definitive destination.
               </p>
 
               <div className="flex flex-col gap-4 pt-2 sm:flex-row sm:items-center">
@@ -253,7 +252,7 @@ export default async function Home() {
         <section className="relative overflow-hidden border-b border-slate-200/80 py-20 dark:border-white/5 lg:py-32">
           <div className="mx-auto grid w-full max-w-7xl gap-12 px-5 sm:px-8 lg:grid-cols-[0.9fr_1.1fr]">
             <div className="flex flex-col justify-center">
-              <p className="text-xs font-bold uppercase tracking-[0.25em] text-indigo-600 dark:text-indigo-400">Why AffiliateHub</p>
+              <p className="text-xs font-bold uppercase tracking-[0.25em] text-indigo-600 dark:text-indigo-400">Why Linkstore</p>
               <h2 className="mt-4 max-w-xl text-4xl font-black uppercase leading-[0.95] tracking-[-0.03em] text-slate-900 dark:text-white sm:text-5xl lg:text-6xl">
                 Stop losing revenue to scattered link chaos.
               </h2>
@@ -345,7 +344,7 @@ export default async function Home() {
           <div className="mx-auto w-full max-w-7xl px-5 sm:px-8">
             <div className="mb-16 text-center">
               <p className="text-xs font-bold uppercase tracking-[0.25em] text-indigo-600 dark:text-indigo-400">Validation</p>
-              <h2 className="mt-3 text-3xl font-black uppercase tracking-[-0.02em] text-slate-900 dark:text-white sm:text-5xl">Creators Trust AffiliateHub</h2>
+              <h2 className="mt-3 text-3xl font-black uppercase tracking-[-0.02em] text-slate-900 dark:text-white sm:text-5xl">Creators Trust Linkstore</h2>
             </div>
             <div className="grid gap-8 lg:grid-cols-3">
               {testimonials.map((item) => (

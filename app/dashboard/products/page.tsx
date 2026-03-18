@@ -13,7 +13,7 @@ import { convexQuery } from "@/lib/convex"
 import { getSubscriptionRedirectPath } from "@/lib/subscription-routing"
 
 export const metadata: Metadata = {
-  title: "Products - AffiliateHub",
+  title: "Products - Linkstore",
   description: "Manage your affiliate products",
 }
 

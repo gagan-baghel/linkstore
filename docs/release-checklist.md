@@ -2,7 +2,7 @@
 
 ## 1. Configuration
 - Set required env vars in production:
-  - `CONVEX_URL` (or `NEXT_PUBLIC_CONVEX_URL` for dev fallback)
+  - `CONVEX_URL`
   - `AUTH_JWT_SECRET`
   - `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`
   - `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET`
