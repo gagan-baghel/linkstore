@@ -1,56 +1,37 @@
-# Linkstore 🛍️
+# Linkstore
 
-> **Your Personal E-Commerce Storefront for Affiliate Links.**
+> Personal storefronts for affiliate creators.
 
-Linkstore is a dedicated platform designed specifically for influencers, content creators, and affiliate marketers. It solves the common problem of "link-in-bio" limitations by providing users with a beautiful, customizable landing page that functions as their own personal e-commerce store. 
+Linkstore is a Next.js + Convex application for creators who want a public product storefront instead of a plain link list. Users authenticate with Google, manage products and store settings from a dashboard, publish a public store at `/stores/[username]`, and track storefront and outbound click analytics.
 
-Instead of sharing messy individual affiliate links, creators can share a single Linkstore profile link. 
+## Features
 
-## ✨ The Problem It Solves
-Social media platforms often limit users to a single "link in bio", making it difficult for influencers to promote multiple affiliate products simultaneously. Current solutions are often just plain lists of links, lacking the visual appeal needed to drive conversions.
+- Google OAuth sign-in with signed JWT session cookies
+- Product import with server-side metadata extraction and affiliate URL normalization
+- Public creator storefronts with customizable store settings and theme controls
+- Analytics for storefront views, product clicks, referrers, sources, and devices
+- Razorpay-backed subscription billing, verification, webhooks, and admin support flows
 
-## 🚀 Key Features
+## Tech Stack
 
-*   **User Accounts & Profiles:** Creators can seamlessly sign up, customize their profiles, and launch their own branded store landing page.
-*   **One-Click Product Import:** Simply paste an affiliate/referral link, and Linkstore automatically fetches the necessary product metadata (images, title, description, price).
-*   **E-Commerce Aesthetic:** Products are displayed in a clean, modern grid—just like a real online store, providing a better shopping experience for the creator's audience.
-*   **Easy Sharing:** Creators get a single, clean URL (e.g., `linkstore.io/username`) to put in their social media bios, directing followers to their entire curated product catalog.
-*   **Analytics Dashboard:** Built-in analytics surface store views, product card clicks, outbound affiliate clicks, conversion rate, top referrers, sources, and device breakdown so creators know what actually converts.
+- Frontend: Next.js 16 App Router, React 19, TypeScript, Tailwind CSS 4
+- UI: Radix UI primitives with shadcn-style components
+- Backend: Next.js route handlers plus Convex functions
+- Data: Convex
+- Authentication: Google OAuth with signed JWT session cookies
+- Billing: Razorpay
+- Metadata ingestion: server-side `fetch` plus HTML/JSON-LD/Open Graph parsing, with optional Amazon Product Advertising API support
 
-## 🛠️ Tech Stack
+## Development
 
-*   **Frontend:** Next.js (React), Tailwind CSS, Framer Motion (for smooth animations)
-*   **Backend:** Next.js API Routes + Convex functions
-*   **Database:** Convex
-*   **Link Scraping/Metadata Fetching:** Cheerio or Puppeteer (to extract Open Graph tags from affiliate links)
-*   **Authentication:** Google OAuth with signed JWT session cookies
-*   **Hosting:** Vercel (Frontend) + Convex
-
-## 🏗️ How It Works (User Flow)
-
-1.  **Sign Up:** An influencer creates an account on Linkstore.
-2.  **Add a Link:** They paste a product affiliate link (e.g., from Amazon, LTK, or an independent brand) into their dashboard.
-3.  **Auto-Fetch:** The backend scrapes the target URL to grab the product image, title, and description.
-4.  **Publish:** The product is instantly added to their public-facing Linkstore profile.
-5.  **Share:** The influencer shares their Linkstore URL with their followers, driving traffic and earning commissions.
-
-## 💻 Getting Started (Development)
+`npm` is the canonical package manager for this repo.
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/linkstore.git
-
-# Navigate to directory
-cd linkstore
-
-# Install dependencies
 npm install
 
-# Copy environment variables
 cp .env.example .env.local
 
-# Set your Convex deployment URL in .env.local
-# CONVEX_URL=...
+# Configure .env.local
 # CONVEX_URL=...
 # AUTH_JWT_SECRET=...
 # GOOGLE_CLIENT_ID=...
@@ -67,14 +48,35 @@ cp .env.example .env.local
 # In Google Cloud Console, authorize:
 # http://localhost:3000/api/auth/google/callback
 
-# Start the development server
 npm run dev
 
-# Run unit tests
+npm run lint
 npm run test
+npm run build
 ```
 
-## ✅ MVP/MBP Launch Checklist
+## Runtime Configuration
+
+Required in production:
+
+- `CONVEX_URL`
+- `AUTH_JWT_SECRET`
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `NEXT_PUBLIC_APP_URL`
+- `RAZORPAY_KEY_ID`
+- `RAZORPAY_KEY_SECRET`
+- `RAZORPAY_WEBHOOK_SECRET`
+- `PAYMENTS_DATA_KEY`
+
+Optional:
+
+- `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` for uploads
+- `SUPPORT_EMAIL` for the contact page
+- `SUBSCRIPTION_FREE_MONTH_COUPON_*` for the built-in one-month coupon
+- `AMAZON_PAAPI_*` for Amazon product metadata enrichment
+
+## Release Checklist
 
 - Configure all required env vars in production (`CONVEX_URL`, `AUTH_JWT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, Razorpay keys + webhook secret, `PAYMENTS_DATA_KEY`).
 - Verify runtime readiness via `GET /api/health` (should return `ok: true`).
@@ -96,8 +98,9 @@ npm run test
 - Run release checks:
 - `npm run lint`
 - `npm run build`
+- `npm run test`
 - manual smoke test on mobile + desktop
-- edge-case QA from `docs/release-checklist.md` section 8.
+- edge-case QA from `docs/release-checklist.md` section 8
 
 Detailed release steps: `docs/release-checklist.md`.
 Incident response notes: `docs/incident-runbook.md`.

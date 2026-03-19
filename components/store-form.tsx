@@ -196,8 +196,8 @@ export function StoreForm({
   }
 
   return (
-    <div className="w-full pb-20">
-      <section className="mb-4 rounded-lg border border-slate-200 bg-white p-4 sm:rounded-xl sm:p-5">
+    <div className="w-full pb-24 sm:pb-20">
+      <section className="mb-4 rounded-[1.2rem] border border-slate-200 bg-white p-3.5 shadow-[0_10px_28px_rgba(87,107,149,0.08)] sm:rounded-xl sm:p-5 sm:shadow-none">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <h3 className="text-sm font-semibold text-slate-900">Storefront URL</h3>
@@ -229,7 +229,7 @@ export function StoreForm({
 
       {!isEditing ? (
         <div className="grid gap-4 md:grid-cols-12 md:gap-5">
-          <section className="rounded-lg border border-slate-200 bg-white p-4 md:col-span-8 md:rounded-xl md:p-5">
+          <section className="rounded-[1.2rem] border border-slate-200 bg-white p-3.5 shadow-[0_10px_28px_rgba(87,107,149,0.08)] md:col-span-8 md:rounded-xl md:p-5 md:shadow-none">
             <h3 className="text-sm font-semibold text-slate-900">Store Identity</h3>
             <div className="mt-4 space-y-4">
               <div>
@@ -243,7 +243,7 @@ export function StoreForm({
             </div>
           </section>
 
-          <section className="rounded-lg border border-slate-200 bg-white p-4 md:col-span-4 md:rounded-xl md:p-5">
+          <section className="rounded-[1.2rem] border border-slate-200 bg-white p-3.5 shadow-[0_10px_28px_rgba(87,107,149,0.08)] md:col-span-4 md:rounded-xl md:p-5 md:shadow-none">
             <h3 className="text-sm font-semibold text-slate-900">Branding</h3>
             <div className="mt-4 flex items-center gap-3">
               <Avatar className="h-12 w-12 border border-slate-200">
@@ -254,7 +254,7 @@ export function StoreForm({
             </div>
           </section>
 
-          <section className="rounded-lg border border-slate-200 bg-white p-4 md:col-span-12 md:rounded-xl md:p-5">
+          <section className="rounded-[1.2rem] border border-slate-200 bg-white p-3.5 shadow-[0_10px_28px_rgba(87,107,149,0.08)] md:col-span-12 md:rounded-xl md:p-5 md:shadow-none">
             <h3 className="text-sm font-semibold text-slate-900">Contact</h3>
             <div className="mt-4 space-y-4">
               <div>
@@ -264,7 +264,7 @@ export function StoreForm({
             </div>
           </section>
 
-          <section className="rounded-lg border border-slate-200 bg-white p-4 md:col-span-12 md:rounded-xl md:p-5">
+          <section className="rounded-[1.2rem] border border-slate-200 bg-white p-3.5 shadow-[0_10px_28px_rgba(87,107,149,0.08)] md:col-span-12 md:rounded-xl md:p-5 md:shadow-none">
             <h3 className="text-sm font-semibold text-slate-900">Product Categories</h3>
             <div className="mt-3 flex flex-col gap-2 sm:flex-row">
               <Input
@@ -409,7 +409,7 @@ export function StoreForm({
         </Form>
       )}
 
-      <div className="fixed bottom-6 right-4 z-40 sm:right-6">
+      <div className="fixed bottom-[5.4rem] right-3 z-40 sm:bottom-6 sm:right-6">
         {!isEditing ? (
           <Button
             type="button"

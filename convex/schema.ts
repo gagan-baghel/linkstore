@@ -24,6 +24,8 @@ export default defineSchema({
     socialInstagram: v.string(),
     socialYoutube: v.string(),
     socialWebsite: v.string(),
+    socialWhatsapp: v.optional(v.string()),
+    socialWhatsappMessage: v.optional(v.string()),
     themePrimaryColor: v.optional(v.string()),
     themeAccentColor: v.optional(v.string()),
     themeBannerStyle: v.optional(v.string()),

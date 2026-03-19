@@ -5,12 +5,14 @@ import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { Facebook, Globe, Instagram, Twitter, Youtube } from "lucide-react"
+import { Facebook, Globe, Instagram, MessageCircle, Twitter, Youtube } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/components/ui/use-toast"
+import { DEFAULT_WHATSAPP_MESSAGE, buildWhatsAppUrl, isValidWhatsAppNumber, resolveWhatsAppMessage } from "@/lib/whatsapp"
 
 const socialLinksFormSchema = z.object({
   socialFacebook: z.string().url({ message: "Please enter a valid URL" }).optional().or(z.literal("")),
@@ -18,6 +20,13 @@ const socialLinksFormSchema = z.object({
   socialInstagram: z.string().url({ message: "Please enter a valid URL" }).optional().or(z.literal("")),
   socialYoutube: z.string().url({ message: "Please enter a valid URL" }).optional().or(z.literal("")),
   socialWebsite: z.string().url({ message: "Please enter a valid URL" }).optional().or(z.literal("")),
+  socialWhatsapp: z
+    .string()
+    .trim()
+    .optional()
+    .or(z.literal(""))
+    .refine((value) => !value || isValidWhatsAppNumber(value), "Please enter a valid WhatsApp number with country code"),
+  socialWhatsappMessage: z.string().max(500, { message: "Message must be 500 characters or less" }).optional().or(z.literal("")),
 })
 
 type SocialLinksFormValues = z.infer<typeof socialLinksFormSchema>
@@ -28,6 +37,8 @@ interface SocialLinksFormProps {
   socialInstagram?: string
   socialYoutube?: string
   socialWebsite?: string
+  socialWhatsapp?: string
+  socialWhatsappMessage?: string
 }
 
 export function SocialLinksForm({
@@ -36,6 +47,8 @@ export function SocialLinksForm({
   socialInstagram = "",
   socialYoutube = "",
   socialWebsite = "",
+  socialWhatsapp = "",
+  socialWhatsappMessage = "",
 }: SocialLinksFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
@@ -48,6 +61,8 @@ export function SocialLinksForm({
       socialInstagram,
       socialYoutube,
       socialWebsite,
+      socialWhatsapp,
+      socialWhatsappMessage: socialWhatsappMessage || DEFAULT_WHATSAPP_MESSAGE,
     },
   })
 
@@ -58,7 +73,20 @@ export function SocialLinksForm({
     { name: "Instagram", value: values.socialInstagram?.trim() || "", icon: Instagram },
     { name: "YouTube", value: values.socialYoutube?.trim() || "", icon: Youtube },
     { name: "Website", value: values.socialWebsite?.trim() || "", icon: Globe },
-  ].filter((item) => item.value)
+    {
+      name: "WhatsApp",
+      value: values.socialWhatsapp?.trim() || "",
+      href: buildWhatsAppUrl(values.socialWhatsapp, values.socialWhatsappMessage),
+      secondary: resolveWhatsAppMessage(values.socialWhatsappMessage),
+      icon: MessageCircle,
+    },
+  ]
+    .map((item) => ({
+      ...item,
+      href: "href" in item ? item.href : item.value,
+      secondary: "secondary" in item ? item.secondary : item.value,
+    }))
+    .filter((item) => item.value && item.href)
 
   async function onSubmit(data: SocialLinksFormValues) {
     setIsLoading(true)
@@ -95,9 +123,9 @@ export function SocialLinksForm({
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+    <div className="grid gap-3.5 lg:grid-cols-[1.1fr_0.9fr] lg:gap-4">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="rounded-lg border border-slate-200 bg-white p-4 sm:rounded-xl sm:p-5">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="rounded-[1.2rem] border border-slate-200 bg-white p-3.5 shadow-[0_10px_28px_rgba(87,107,149,0.08)] sm:rounded-xl sm:p-5 sm:shadow-none">
           <div className="mb-4">
             <h2 className="text-base font-semibold text-slate-900">Social Media Links</h2>
             <p className="mt-1 text-sm leading-6 text-slate-600">Add the channels you want visitors to verify before opening product links.</p>
@@ -184,6 +212,44 @@ export function SocialLinksForm({
                 </FormItem>
               )}
             />
+
+            <FormField
+              control={form.control}
+              name="socialWhatsapp"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                    <MessageCircle className="h-4 w-4" /> WhatsApp
+                  </FormLabel>
+                  <FormControl>
+                    <Input className="h-10 border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400" placeholder="+91 98765 43210" {...field} />
+                  </FormControl>
+                  <FormDescription className="text-xs">Use the full international number with country code. Any country code is supported.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="socialWhatsappMessage"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                    <MessageCircle className="h-4 w-4" /> WhatsApp Prefilled Message
+                  </FormLabel>
+                  <FormControl>
+                    <Textarea
+                      className="min-h-24 border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400"
+                      placeholder={DEFAULT_WHATSAPP_MESSAGE}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription className="text-xs">Visitors will see this message prefilled when WhatsApp opens. Leave your wording or keep the default.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
 
           <Button type="submit" className="mt-4 h-10 w-full border border-slate-900 bg-slate-900 px-4 text-sm text-white shadow-none hover:bg-slate-800 sm:mt-5 sm:w-auto" disabled={isLoading}>
@@ -192,7 +258,7 @@ export function SocialLinksForm({
         </form>
       </Form>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-4 sm:rounded-xl sm:p-5">
+      <section className="rounded-[1.2rem] border border-slate-200 bg-white p-3.5 shadow-[0_10px_28px_rgba(87,107,149,0.08)] sm:rounded-xl sm:p-5 sm:shadow-none">
         <h2 className="text-base font-semibold text-slate-900">Current Links</h2>
         <p className="mt-1 text-sm leading-6 text-slate-600">These links show up on the public storefront as creator verification channels.</p>
 
@@ -203,7 +269,7 @@ export function SocialLinksForm({
               return (
                 <a
                   key={item.name}
-                  href={item.value}
+                  href={item.href}
                   target="_blank"
                   rel="noreferrer noopener"
                   className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700 hover:border-slate-300 hover:text-slate-900"
@@ -213,7 +279,7 @@ export function SocialLinksForm({
                   </div>
                   <div className="min-w-0">
                     <p className="font-medium text-slate-900">{item.name}</p>
-                    <p className="truncate text-xs text-slate-500">{item.value}</p>
+                    <p className="truncate text-xs text-slate-500">{item.secondary}</p>
                   </div>
                 </a>
               )

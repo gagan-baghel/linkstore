@@ -2,6 +2,7 @@
   "name": "affiliate-platform",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "npm@11.8.0",
   "scripts": {
     "dev": "concurrently --restart-tries 5 --restart-after 2000 -n web,convex -c cyan,magenta \"npm run dev:web\" \"npm run dev:convex\"",
     "dev:web": "rm -rf .next/dev && next dev --webpack",
@@ -75,15 +76,12 @@
     "@types/react-dom": "^19",
     "autoprefixer": "10.4.15",
     "concurrently": "^9.2.1",
-    "eslint": "8.57.0",
-    "eslint-config-next": "13.5.1",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.1.6",
     "postcss": "8.4.31",
     "tailwindcss": "^4.1.13",
-    "tw-animate-css": "1.3.3",
     "tsx": "^4.19.2",
+    "tw-animate-css": "1.3.3",
     "typescript": "5.2.2"
-  },
-  "overrides": {
-    "minimatch": "9.0.7"
   }
 }

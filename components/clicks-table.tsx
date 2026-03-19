@@ -17,11 +17,11 @@ export function ClicksTable({ clicks }: ClicksTableProps) {
         <>
           <div className="grid gap-2 md:hidden">
             {clicks.map((click) => (
-              <div key={click._id.toString ? click._id.toString() : click._id} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <p className="text-sm font-medium text-slate-900">
+              <div key={click._id.toString ? click._id.toString() : click._id} className="rounded-[1rem] border border-slate-200 bg-slate-50 p-3">
+                <p className="text-[13px] font-medium text-slate-900">
                   {click.productId && typeof click.productId === "object" ? click.productId.title : "Unknown Product"}
                 </p>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-[11px] text-slate-500">
                   {click.createdAt ? format(new Date(click.createdAt), "MMM d, yyyy HH:mm") : "Unknown Date"}
                 </p>
                 <div className="mt-2">
@@ -30,7 +30,7 @@ export function ClicksTable({ clicks }: ClicksTableProps) {
                       href={click.productId.affiliateUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
+                      className="inline-flex items-center gap-1 text-[12px] text-blue-600 hover:underline"
                     >
                       Open link
                       <ExternalLink className="h-4 w-4" />

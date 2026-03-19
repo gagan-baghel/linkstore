@@ -38,8 +38,8 @@ export function MobileDashboardNav({ canUseShopFeatures }: { canUseShopFeatures:
   }, [pathname, resolvedItems, router])
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white px-1 pb-[max(env(safe-area-inset-bottom),0.25rem)] pt-1 md:hidden">
-      <ul className="grid grid-cols-6 gap-0.5">
+    <nav className="fixed inset-x-0 bottom-3 z-40 mx-auto w-[calc(100%-0.9rem)] max-w-[30rem] rounded-[1.6rem] border border-white/80 bg-white/88 px-1.5 pt-1.5 shadow-[0_20px_60px_rgba(56,76,118,0.16)] backdrop-blur-xl md:hidden">
+      <ul className="grid grid-cols-6 gap-1">
         {resolvedItems.map((item) => {
           const targetHref = item.targetHref
           const isActive =
@@ -57,17 +57,20 @@ export function MobileDashboardNav({ canUseShopFeatures }: { canUseShopFeatures:
                 onMouseEnter={() => router.prefetch(targetHref)}
                 onFocus={() => router.prefetch(targetHref)}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-0.5 rounded-md px-0.5 py-1 text-[11px] font-medium",
-                  isActive ? "bg-slate-100 text-slate-900" : "text-slate-500",
+                  "flex min-h-[3.35rem] flex-col items-center justify-center gap-1 rounded-2xl px-0.5 py-1.5 text-[9px] font-medium tracking-tight transition-all",
+                  isActive
+                    ? "bg-slate-900 text-white shadow-[0_8px_18px_rgba(15,23,42,0.18)]"
+                    : "text-slate-500 hover:bg-slate-100/80 hover:text-slate-900",
                 )}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className="h-[15px] w-[15px]" />
                 <span className="truncate">{item.label}</span>
               </Link>
             </li>
           )
         })}
       </ul>
+      <div className="pb-[max(env(safe-area-inset-bottom),0.2rem)]" />
     </nav>
   )
 }

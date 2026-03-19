@@ -48,6 +48,8 @@ export default async function SocialLinksPage() {
             socialInstagram={user?.socialInstagram || ""}
             socialYoutube={user?.socialYoutube || ""}
             socialWebsite={user?.socialWebsite || ""}
+            socialWhatsapp={user?.socialWhatsapp || ""}
+            socialWhatsappMessage={user?.socialWhatsappMessage || ""}
           />
         </div>
       </div>

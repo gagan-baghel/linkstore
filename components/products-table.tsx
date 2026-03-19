@@ -182,7 +182,101 @@ export function ProductsTable({ products }: ProductsTableProps) {
 
   return (
     <>
-      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+      <div className="grid gap-3 md:hidden">
+        {localProducts.map((product) => {
+          const isArchived = product.isArchived === true
+          const isHealthy = product.isLinkHealthy !== false
+          const showBroken = !isArchived && !isHealthy
+
+          return (
+            <div key={product._id.toString()} className="rounded-[1.2rem] border border-slate-200 bg-white p-3 shadow-[0_10px_24px_rgba(87,107,149,0.08)]">
+              <div className="flex items-start gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="line-clamp-2 text-[13px] font-semibold leading-5 text-slate-900">{product.title}</p>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-700">
+                          {product.category || "General"}
+                        </span>
+                        {isArchived ? (
+                          <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600">
+                            Archived
+                          </span>
+                        ) : showBroken ? (
+                          <span className="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-medium text-rose-700">
+                            {product.lastLinkStatus ? `Broken ${product.lastLinkStatus}` : "Broken"}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
+                            Active
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          className="h-8 w-8 shrink-0 rounded-full border border-slate-200 bg-white p-0 text-slate-700 shadow-none hover:bg-slate-100 hover:text-slate-900"
+                          disabled={isUpdating}
+                        >
+                          <span className="sr-only">Open menu</span>
+                          <MoreVertical className="h-4 w-4 text-slate-700" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                          <Link href={`/dashboard/products/${product._id.toString()}/edit`} className="flex items-center">
+                            <Edit className="mr-2 h-4 w-4" /> Full Edit
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openQuickEdit(product)} className="flex items-center">
+                          <Edit className="mr-2 h-4 w-4" /> Quick Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDuplicate(product._id)} className="flex items-center">
+                          <Copy className="mr-2 h-4 w-4" /> Duplicate
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleArchiveToggle(product)} className="flex items-center">
+                          {isArchived ? (
+                            <>
+                              <Undo2 className="mr-2 h-4 w-4" /> Unarchive
+                            </>
+                          ) : (
+                            <>
+                              <Archive className="mr-2 h-4 w-4" /> Archive
+                            </>
+                          )}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setProductToDelete(product._id.toString())
+                            setIsDeleteDialogOpen(true)
+                          }}
+                          className="flex items-center text-destructive focus:text-destructive"
+                        >
+                          <Trash className="mr-2 h-4 w-4" /> Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <a
+                    href={product.affiliateUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 flex items-center gap-1 text-[11px] text-slate-600 hover:text-slate-900 hover:underline"
+                  >
+                    <span className="truncate">{product.affiliateUrl}</span>
+                    <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                  </a>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      <div className="hidden overflow-hidden rounded-lg border border-slate-200 bg-white md:block">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>

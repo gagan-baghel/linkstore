@@ -127,7 +127,7 @@ export function StoreThemeForm({
   const isSoftBanner = values.themeBannerStyle === "soft"
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
             {error && (
@@ -136,7 +136,7 @@ export function StoreThemeForm({
               </Alert>
             )}
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-3 md:grid-cols-2 md:gap-4">
               <FormField
                 control={form.control}
                 name="themePrimaryColor"
@@ -173,7 +173,7 @@ export function StoreThemeForm({
               />
             </div>
 
-            <div className="grid gap-4 md:grid-cols-4">
+            <div className="grid gap-3 md:grid-cols-4 md:gap-4">
               <FormField
                 control={form.control}
                 name="themeMode"
@@ -288,7 +288,7 @@ export function StoreThemeForm({
         </form>
       </Form>
 
-      <div className={cn("rounded-lg border p-4 md:p-5", previewIsDark ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white")}>
+      <div className={cn("rounded-[1.2rem] border p-3.5 shadow-[0_10px_28px_rgba(87,107,149,0.08)] md:rounded-lg md:p-5 md:shadow-none", previewIsDark ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white")}>
         <h2 className={cn("text-sm font-semibold", previewIsDark ? "text-slate-100" : "text-slate-900")}>Live Preview</h2>
         <p className={cn("mb-4 mt-1 text-xs", previewIsDark ? "text-slate-400" : "text-slate-600")}>Quick preview of how your theme will look on your store.</p>
         <div className={cn("overflow-hidden rounded-lg border", previewIsDark ? "border-slate-700" : "border-slate-200")}>

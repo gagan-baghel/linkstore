@@ -7,6 +7,7 @@ import {
   Globe,
   Instagram,
   Mail,
+  MessageCircle,
   MoreVertical,
   Phone,
   Search,
@@ -21,6 +22,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { buildWhatsAppUrl } from "@/lib/whatsapp"
 import { cn } from "@/lib/utils"
 
 type ThemeButtonStyle = "rounded" | "pill" | "square"
@@ -40,6 +42,8 @@ interface StorefrontUser {
   socialInstagram?: string
   socialYoutube?: string
   socialWebsite?: string
+  socialWhatsapp?: string
+  socialWhatsappMessage?: string
   themePrimaryColor?: string
   themeButtonStyle?: ThemeButtonStyle
   themeMode?: ThemeMode
@@ -150,6 +154,12 @@ function hasCustomStoreLogo(user: StorefrontUser) {
 
 function buildSocialItems(user: StorefrontUser): SocialItem[] {
   const raw: Array<Omit<SocialItem, "href"> & { value?: string }> = [
+    {
+      key: "whatsapp",
+      label: "WhatsApp",
+      value: buildWhatsAppUrl(user.socialWhatsapp, user.socialWhatsappMessage),
+      icon: MessageCircle,
+    },
     {
       key: "twitter",
       label: "Twitter",

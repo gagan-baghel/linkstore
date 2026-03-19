@@ -8,6 +8,7 @@ import { convexMutation, convexQuery } from "@/lib/convex"
 import { checkRateLimitAsync, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
 import { getStoreCacheTag } from "@/lib/store-cache"
 import { requireActiveSubscription } from "@/lib/subscription-access"
+import { isValidWhatsAppNumber } from "@/lib/whatsapp"
 
 const storeSchema = z.object({
   storeBannerText: z.string().trim().min(2).max(120),
@@ -60,6 +61,14 @@ const storeSchema = z.object({
     .optional()
     .or(z.literal(""))
     .refine((value) => !value || Boolean(tryNormalizeAffiliateUrl(value)), "Invalid website URL"),
+  socialWhatsapp: z
+    .string()
+    .trim()
+    .max(40)
+    .optional()
+    .or(z.literal(""))
+    .refine((value) => !value || isValidWhatsAppNumber(value), "Invalid WhatsApp number"),
+  socialWhatsappMessage: z.string().trim().max(500).optional().or(z.literal("")),
 })
 
 export async function PUT(req: Request) {
@@ -93,6 +102,8 @@ export async function PUT(req: Request) {
       socialInstagram,
       socialYoutube,
       socialWebsite,
+      socialWhatsapp,
+      socialWhatsappMessage,
     } = storeSchema.parse(body)
     const user = await convexQuery<{ userId: string }, any | null>("users:getById", { userId: session.user.id }).catch(
       () => null,
@@ -111,6 +122,8 @@ export async function PUT(req: Request) {
         socialInstagram?: string
         socialYoutube?: string
         socialWebsite?: string
+        socialWhatsapp?: string
+        socialWhatsappMessage?: string
       },
       { ok: boolean; message?: string; code?: string }
     >("users:updateStore", {
@@ -124,6 +137,8 @@ export async function PUT(req: Request) {
       socialInstagram: socialInstagram || "",
       socialYoutube: socialYoutube || "",
       socialWebsite: socialWebsite || "",
+      socialWhatsapp: socialWhatsapp || "",
+      socialWhatsappMessage: socialWhatsappMessage || "",
     })
 
     if (!result.ok) {

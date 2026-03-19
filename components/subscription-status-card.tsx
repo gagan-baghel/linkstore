@@ -259,12 +259,12 @@ export function SubscriptionStatusCard({
   }
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-4 sm:rounded-xl sm:p-5">
+    <section className="rounded-[1.2rem] border border-slate-200 bg-white p-3.5 shadow-[0_10px_28px_rgba(87,107,149,0.08)] sm:rounded-xl sm:p-5 sm:shadow-none">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Subscription</p>
-          <h3 className="mt-1 text-base font-semibold text-slate-900 sm:text-lg">Starter Monthly Plan</h3>
-          <p className="text-sm leading-6 text-slate-600">₹149 per month, up to 200 products.</p>
+          <h3 className="mt-1 text-sm font-semibold text-slate-900 sm:text-lg">Starter Monthly Plan</h3>
+          <p className="text-[13px] leading-5 text-slate-600 sm:text-sm sm:leading-6">₹149 per month, up to 200 products.</p>
         </div>
         <Badge variant="outline" className="w-fit border-slate-300 bg-slate-50 text-slate-700">
           {statusLabel}
@@ -272,17 +272,17 @@ export function SubscriptionStatusCard({
       </div>
 
       <div className="mt-4 grid gap-2 text-sm text-slate-700 sm:grid-cols-3">
-        <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3">
+        <div className="rounded-[1rem] border border-slate-200 bg-slate-50 px-3 py-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Expires</p>
           <p className="mt-1 text-base text-slate-900">{formatDate(access?.expiresAt || null)}</p>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3">
+        <div className="rounded-[1rem] border border-slate-200 bg-slate-50 px-3 py-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Products Used</p>
           <p className="mt-1 text-base text-slate-900">
             {access?.currentProductCount ?? 0} / {access?.productLimit ?? 200}
           </p>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3">
+        <div className="rounded-[1rem] border border-slate-200 bg-slate-50 px-3 py-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Remaining Slots</p>
           <p className="mt-1 text-base text-slate-900">{access?.remainingProductSlots ?? 0}</p>
         </div>

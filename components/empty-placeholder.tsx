@@ -9,7 +9,7 @@ export function EmptyPlaceholder({ className, children, ...props }: EmptyPlaceho
   return (
     <div
       className={cn(
-        "flex min-h-96 flex-col items-center justify-center rounded-md border border-dashed border-slate-400/80 bg-white p-8 text-center",
+        "flex min-h-[17rem] flex-col items-center justify-center rounded-[1.25rem] border border-dashed border-slate-300 bg-white p-5 text-center sm:min-h-96 sm:rounded-md sm:p-8",
         className,
       )}
       {...props}
@@ -25,8 +25,8 @@ interface EmptyPlaceholderIconProps extends Partial<React.SVGProps<SVGSVGElement
 
 EmptyPlaceholder.Icon = function EmptyPlaceholderIcon({ name, className, ...props }: EmptyPlaceholderIconProps) {
   return (
-    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-slate-800">
-      <Package className={cn("h-10 w-10 text-white", className)} {...props} />
+    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-800 sm:h-20 sm:w-20">
+      <Package className={cn("h-7 w-7 text-white sm:h-10 sm:w-10", className)} {...props} />
     </div>
   )
 }
@@ -35,7 +35,7 @@ EmptyPlaceholder.Title = function EmptyPlaceholderTitle({
   className,
   ...props
 }: React.HTMLAttributes<HTMLHeadingElement>) {
-  return <h3 className={cn("mt-6 text-xl font-semibold text-slate-900", className)} {...props} />
+  return <h3 className={cn("mt-4 text-lg font-semibold text-slate-900 sm:mt-6 sm:text-xl", className)} {...props} />
 }
 
 EmptyPlaceholder.Description = function EmptyPlaceholderDescription({
@@ -44,7 +44,7 @@ EmptyPlaceholder.Description = function EmptyPlaceholderDescription({
 }: React.HTMLAttributes<HTMLParagraphElement>) {
   return (
     <p
-      className={cn("mt-3 mb-8 text-center text-sm font-normal leading-6 text-slate-600", className)}
+      className={cn("mb-6 mt-2 text-center text-[13px] font-normal leading-5 text-slate-600 sm:mb-8 sm:mt-3 sm:text-sm sm:leading-6", className)}
       {...props}
     />
   )

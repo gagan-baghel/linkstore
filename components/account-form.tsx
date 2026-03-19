@@ -105,7 +105,7 @@ export function AccountForm({ name, email, username }: AccountFormProps) {
   }
 
   return (
-    <div className="space-y-6 pb-24">
+    <div className="space-y-4 pb-28 sm:space-y-6 sm:pb-24">
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
@@ -113,17 +113,17 @@ export function AccountForm({ name, email, username }: AccountFormProps) {
       )}
 
       {!isEditing ? (
-        <section className="rounded-lg border border-[#d8e2f3] bg-white p-4 md:rounded-xl md:p-6">
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
+        <section className="rounded-[1.2rem] border border-[#d8e2f3] bg-white p-3.5 shadow-[0_10px_28px_rgba(87,107,149,0.08)] md:rounded-xl md:p-6 md:shadow-none">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2 sm:mb-5">
             <div>
-              <h2 className="text-base font-semibold text-[#162033]">Profile Overview</h2>
-              <p className="mt-1 text-xs text-[#60708a]">Your account details used across your dashboard.</p>
+              <h2 className="text-sm font-semibold text-[#162033] sm:text-base">Profile Overview</h2>
+              <p className="mt-1 text-[11px] text-[#60708a] sm:text-xs">Your account details used across your dashboard.</p>
             </div>
-            <span className="rounded-md border border-[#d8e2f3] bg-[#f7f9ff] px-3 py-1 text-xs font-medium text-[#41506a]">@{username || "username"}</span>
+            <span className="rounded-full border border-[#d8e2f3] bg-[#f7f9ff] px-2.5 py-1 text-[11px] font-medium text-[#41506a]">@{username || "username"}</span>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="rounded-lg border border-[#e7eefb] bg-[#fbfcff] p-4">
+            <div className="rounded-[1rem] border border-[#e7eefb] bg-[#fbfcff] p-3 sm:p-4">
               <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#60708a]">Name</p>
               <p className="flex items-center gap-2 text-sm font-medium text-[#1f2a44]">
                 <User className="h-4 w-4 text-[#6a7a96]" />
@@ -131,7 +131,7 @@ export function AccountForm({ name, email, username }: AccountFormProps) {
               </p>
             </div>
 
-            <div className="rounded-lg border border-[#e7eefb] bg-[#fbfcff] p-4">
+            <div className="rounded-[1rem] border border-[#e7eefb] bg-[#fbfcff] p-3 sm:p-4">
               <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#60708a]">Email</p>
               <p className="flex items-center gap-2 break-all text-sm font-medium text-[#1f2a44]">
                 <Mail className="h-4 w-4 shrink-0 text-[#6a7a96]" />
@@ -140,7 +140,7 @@ export function AccountForm({ name, email, username }: AccountFormProps) {
               <p className="mt-2 text-xs text-[#60708a]">Managed by Google sign-in.</p>
             </div>
 
-            <div className="rounded-lg border border-[#e7eefb] bg-[#fbfcff] p-4 sm:col-span-2 lg:col-span-1">
+            <div className="rounded-[1rem] border border-[#e7eefb] bg-[#fbfcff] p-3 sm:col-span-2 sm:p-4 lg:col-span-1">
               <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#60708a]">Username</p>
               <p className="flex items-center gap-2 text-sm font-medium text-[#1f2a44]">
                 <AtSign className="h-4 w-4 text-[#6a7a96]" />
@@ -151,12 +151,12 @@ export function AccountForm({ name, email, username }: AccountFormProps) {
           </div>
         </section>
       ) : (
-        <section className="rounded-lg border border-[#d8e2f3] bg-white p-4 md:rounded-xl md:p-6">
-          <h2 className="text-base font-semibold text-[#162033]">Edit Profile</h2>
-          <p className="mt-1 text-xs text-[#60708a]">Update your public display name and username. Your sign-in email stays managed by Google.</p>
+        <section className="rounded-[1.2rem] border border-[#d8e2f3] bg-white p-3.5 shadow-[0_10px_28px_rgba(87,107,149,0.08)] md:rounded-xl md:p-6 md:shadow-none">
+          <h2 className="text-sm font-semibold text-[#162033] sm:text-base">Edit Profile</h2>
+          <p className="mt-1 text-[11px] text-[#60708a] sm:text-xs">Update your public display name and username. Your sign-in email stays managed by Google.</p>
 
           <Form {...form}>
-            <form id="account-edit-form" onSubmit={form.handleSubmit(onSubmit)} className="mt-5 grid gap-4 md:grid-cols-2">
+            <form id="account-edit-form" onSubmit={form.handleSubmit(onSubmit)} className="mt-4 grid gap-3.5 md:mt-5 md:grid-cols-2 md:gap-4">
               <FormField
                 control={form.control}
                 name="name"
@@ -199,13 +199,13 @@ export function AccountForm({ name, email, username }: AccountFormProps) {
                 )}
               />
 
-              <div className="rounded-lg border border-[#e7eefb] bg-[#fbfcff] p-4">
+              <div className="rounded-[1rem] border border-[#e7eefb] bg-[#fbfcff] p-3 sm:p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-[#60708a]">Email</p>
                 <p className="mt-1 break-all text-sm font-medium text-[#1f2a44]">{email || "Not available"}</p>
                 <p className="mt-2 text-xs text-[#60708a]">Google controls this email address.</p>
               </div>
 
-              <div className="rounded-lg border border-[#e7eefb] bg-[#fbfcff] p-4 md:col-span-2">
+              <div className="rounded-[1rem] border border-[#e7eefb] bg-[#fbfcff] p-3 sm:p-4 md:col-span-2">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-[#60708a]">Store URL Preview</p>
                 <div className="mt-1 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <p className="break-all text-sm font-medium text-[#1f2a44]">{storefrontUrl || "Store URL unavailable"}</p>
@@ -227,9 +227,9 @@ export function AccountForm({ name, email, username }: AccountFormProps) {
         </section>
       )}
 
-      <div className="rounded-lg border border-[#d8e2f3] bg-white p-4 md:rounded-xl md:p-6">
-        <h2 className="text-base font-semibold text-[#162033]">Authentication & Sessions</h2>
-        <p className="mb-4 mt-1 text-xs text-[#60708a]">Google handles identity. Linkstore handles session revocation.</p>
+      <div className="rounded-[1.2rem] border border-[#d8e2f3] bg-white p-3.5 shadow-[0_10px_28px_rgba(87,107,149,0.08)] md:rounded-xl md:p-6 md:shadow-none">
+        <h2 className="text-sm font-semibold text-[#162033] sm:text-base">Authentication & Sessions</h2>
+        <p className="mb-4 mt-1 text-[11px] text-[#60708a] sm:text-xs">Google handles identity. Linkstore handles session revocation.</p>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-[#4f5f7a]">Open security settings to review your Google sign-in method and sign out older app sessions.</p>
           <Button
@@ -244,7 +244,7 @@ export function AccountForm({ name, email, username }: AccountFormProps) {
         </div>
       </div>
 
-      <div className="fixed bottom-20 left-2 right-2 z-40 flex items-center gap-2 sm:bottom-6 sm:left-auto sm:right-6">
+      <div className="fixed bottom-[5.4rem] left-2 right-2 z-40 flex items-center gap-2 sm:bottom-6 sm:left-auto sm:right-6">
         {!isEditing ? (
           <Button
             type="button"

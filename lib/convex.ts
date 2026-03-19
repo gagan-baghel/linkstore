@@ -2,7 +2,6 @@ import { ConvexHttpClient } from "convex/browser"
 import { makeFunctionReference } from "convex/server"
 
 declare global {
-  // eslint-disable-next-line no-var
   var __convexClient: ConvexHttpClient | undefined
 }
 

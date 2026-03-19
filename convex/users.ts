@@ -55,6 +55,8 @@ function buildUserDefaults(input: {
     socialInstagram: "",
     socialYoutube: "",
     socialWebsite: "",
+    socialWhatsapp: "",
+    socialWhatsappMessage: "",
     themePrimaryColor: "#4f46e5",
     themeAccentColor: "#eef2ff",
     themeBannerStyle: "gradient",
@@ -324,6 +326,8 @@ export const updateStore = mutationGeneric({
     socialInstagram: v.optional(v.string()),
     socialYoutube: v.optional(v.string()),
     socialWebsite: v.optional(v.string()),
+    socialWhatsapp: v.optional(v.string()),
+    socialWhatsappMessage: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId)
@@ -346,6 +350,8 @@ export const updateStore = mutationGeneric({
       socialInstagram: args.socialInstagram || "",
       socialYoutube: args.socialYoutube || "",
       socialWebsite: args.socialWebsite || "",
+      socialWhatsapp: args.socialWhatsapp || "",
+      socialWhatsappMessage: args.socialWhatsappMessage || "",
       updatedAt: Date.now(),
     })
 
@@ -361,6 +367,8 @@ export const updateSocialLinks = mutationGeneric({
     socialInstagram: v.optional(v.string()),
     socialYoutube: v.optional(v.string()),
     socialWebsite: v.optional(v.string()),
+    socialWhatsapp: v.optional(v.string()),
+    socialWhatsappMessage: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId)
@@ -379,6 +387,8 @@ export const updateSocialLinks = mutationGeneric({
       socialInstagram: args.socialInstagram || "",
       socialYoutube: args.socialYoutube || "",
       socialWebsite: args.socialWebsite || "",
+      socialWhatsapp: args.socialWhatsapp || "",
+      socialWhatsappMessage: args.socialWhatsappMessage || "",
       updatedAt: Date.now(),
     })
 

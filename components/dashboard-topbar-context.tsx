@@ -50,6 +50,13 @@ const CONTEXT_BY_PREFIX: Array<{ prefix: string; context: TopbarContext }> = [
       text: "Manage your account settings.",
     },
   },
+  {
+    prefix: "/dashboard",
+    context: {
+      heading: "Dashboard",
+      text: "Store pulse and quick actions.",
+    },
+  },
 ]
 
 export function DashboardTopbarContext() {
@@ -60,8 +67,8 @@ export function DashboardTopbarContext() {
 
   return (
     <div className="min-w-0">
-      <p className="truncate text-xs font-semibold text-[#1c2433] sm:text-sm">{matched.context.heading}</p>
-      <p className="hidden truncate text-xs text-[#5f6b7e] sm:block">{matched.context.text}</p>
+      <p className="truncate text-[13px] font-semibold tracking-tight text-[#162033] sm:text-sm">{matched.context.heading}</p>
+      <p className="truncate text-[10px] text-[#5f6b7e] sm:text-xs">{matched.context.text}</p>
     </div>
   )
 }

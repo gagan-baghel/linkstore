@@ -41,9 +41,9 @@ export default async function DashboardLayout({
         </div>
       </aside>
 
-      <main className="flex min-h-screen flex-col bg-slate-50">
+      <main className="flex min-h-screen flex-col bg-transparent">
         <header className="dashboard-topbar sticky top-0 z-40 border-b border-slate-200 bg-white">
-          <div className="flex min-h-14 items-center gap-2 px-3 py-2 sm:px-4 md:min-h-16 md:px-6">
+          <div className="flex min-h-12 items-center gap-2 px-2.5 py-2 sm:px-4 md:min-h-16 md:px-6">
             <div className="min-w-0 flex-1">
               <DashboardTopbarContext />
             </div>
@@ -59,7 +59,7 @@ export default async function DashboardLayout({
           </div>
         </header>
 
-        <div className="flex-1 bg-slate-50">{children}</div>
+        <div className="flex-1 bg-transparent">{children}</div>
         <MobileDashboardNav canUseShopFeatures={canUseShopFeatures} />
       </main>
     </div>

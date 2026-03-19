@@ -52,13 +52,13 @@ function MetricCard({
   icon: ReactNode
 }) {
   return (
-    <div className="rounded-lg border border-[#d8e2f3] bg-white p-3 shadow-none sm:p-4">
+    <div className="rounded-[1.15rem] border border-[#d8e2f3] bg-white/92 p-3 shadow-[0_10px_30px_rgba(87,107,149,0.08)] sm:rounded-xl sm:p-4">
       <div className="mb-2 flex items-center justify-between sm:mb-3">
-        <p className="text-[11px] font-medium uppercase tracking-wide text-[#5f6b7e] sm:text-xs">{title}</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#5f6b7e] sm:text-xs">{title}</p>
         <span className="text-[#8a94a8]">{icon}</span>
       </div>
-      <div className="text-xl font-semibold text-[#1c1917] sm:text-2xl">{value}</div>
-      <p className="mt-1 text-[11px] text-[#8a94a8] sm:text-xs">{hint}</p>
+      <div className="text-[1.15rem] font-semibold tracking-tight text-[#1c1917] sm:text-2xl">{value}</div>
+      <p className="mt-1 text-[10px] leading-4 text-[#8a94a8] sm:text-xs">{hint}</p>
     </div>
   )
 }
@@ -276,7 +276,7 @@ export default function DashboardClientPage({
 
       {error && <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 sm:mb-6 sm:px-4 sm:py-3 sm:text-sm">{error}</div>}
 
-      <div className="mb-4 grid gap-2.5 md:mb-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="mb-4 grid grid-cols-2 gap-2.5 md:mb-6 md:grid-cols-2 lg:grid-cols-3">
         <MetricCard
           title="Products"
           value={isLoading ? "..." : totalProducts}
@@ -297,38 +297,38 @@ export default function DashboardClientPage({
         />
       </div>
 
-      <section className="mb-5 overflow-hidden rounded-lg border border-[#d8e2f3] bg-white p-4 md:mb-6 md:rounded-2xl md:p-5">
-        <div className="grid gap-4 lg:grid-cols-[1.3fr_0.9fr] lg:items-start">
+      <section className="mb-5 overflow-hidden rounded-[1.5rem] border border-[#d8e2f3] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(245,248,255,0.96))] p-3.5 shadow-[0_16px_40px_rgba(81,106,156,0.08)] md:mb-6 md:rounded-2xl md:p-5">
+        <div className="grid gap-3 lg:grid-cols-[1.3fr_0.9fr] lg:items-start">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-md border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-indigo-700">
+            <div className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-indigo-700">
               <Rocket className="h-3.5 w-3.5" />
               Launch path
             </div>
-            <h2 className="mt-3 text-[1.9rem] font-semibold leading-tight tracking-tight text-[#162033] md:text-2xl">
+            <h2 className="mt-3 text-[1.28rem] font-semibold leading-[1.05] tracking-tight text-[#162033] md:text-2xl">
               Make your store feel ready in under 3 minutes.
             </h2>
-            <p className="mt-2 max-w-2xl text-[13px] leading-6 text-[#52627b] md:text-sm">
+            <p className="mt-2 max-w-2xl text-[11px] leading-5 text-[#52627b] md:text-sm">
               Move in order: set your creator story, add products, then share a storefront that looks intentional and
               trustworthy.
             </p>
             <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-              <Button asChild className="h-10 border border-[#3e55df] bg-[#4a63f6] px-4 text-sm text-white shadow-none hover:bg-[#3f56de]">
+              <Button asChild className="h-9 rounded-full border border-[#3e55df] bg-[#4a63f6] px-4 text-xs text-white shadow-none hover:bg-[#3f56de] sm:h-10 sm:text-sm">
                 <Link href={nextStepHref}>
                   {nextStepLabel}
                   <Rocket className="h-4 w-4" />
                 </Link>
               </Button>
-              <Button asChild variant="outline" className="h-10 border-[#cfd8ea] bg-white/90 px-4 text-sm text-[#1f2a44] shadow-none hover:bg-[#f3f6fc]">
+              <Button asChild variant="outline" className="h-9 rounded-full border-[#cfd8ea] bg-white/90 px-4 text-xs text-[#1f2a44] shadow-none hover:bg-[#f3f6fc] sm:h-10 sm:text-sm">
                 <Link href="/dashboard/store">Review store setup</Link>
               </Button>
             </div>
           </div>
 
           <div className="grid gap-2.5">
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#5f6b7e]">Current blocker</p>
-              <p className="mt-1 text-sm font-semibold text-[#162033]">{nextStepLabel}</p>
-              <p className="mt-1 text-xs leading-5 text-[#60708a]">
+            <div className="rounded-[1.15rem] border border-slate-200 bg-white/88 p-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#5f6b7e]">Current blocker</p>
+              <p className="mt-1 text-[13px] font-semibold leading-5 text-[#162033]">{nextStepLabel}</p>
+              <p className="mt-1 text-[11px] leading-5 text-[#60708a]">
                 {!hasActiveSubscription
                   ? "You can explore the dashboard now, but premium actions unlock only after subscription activation."
                   : !hasStoreProfile
@@ -342,12 +342,12 @@ export default function DashboardClientPage({
                           : "Your setup is healthy. Start sharing and watch the 30-day numbers."}
               </p>
             </div>
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-[#5f6b7e]">
+            <div className="rounded-[1.15rem] border border-slate-200 bg-white/88 p-3">
+              <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#5f6b7e]">
                 <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
                 Trust checklist
               </p>
-              <ul className="mt-2 space-y-2 text-xs text-[#4f5f7a]">
+              <ul className="mt-2 space-y-2 text-[11px] leading-5 text-[#4f5f7a]">
                 <li>Write a short bio that explains what kind of products you recommend.</li>
                 <li>Add at least 3 products so your storefront feels curated, not empty.</li>
                 <li>Review your links before sharing to avoid broken buyer journeys.</li>
@@ -357,19 +357,19 @@ export default function DashboardClientPage({
         </div>
       </section>
 
-      <div className="mb-5 grid gap-5 border-t border-[#e7eefb] pt-5 md:mb-7 md:gap-6 md:pt-6 lg:grid-cols-[1.55fr_1fr] lg:items-start lg:divide-x lg:divide-[#e7eefb]">
-        <section className="space-y-4 lg:pr-6">
-          <div className="space-y-1 pb-2">
+      <div className="mb-5 grid gap-4 border-t border-[#e7eefb] pt-4 md:mb-7 md:gap-6 md:pt-6 lg:grid-cols-[1.55fr_1fr] lg:items-start lg:divide-x lg:divide-[#e7eefb]">
+        <section className="space-y-3 lg:pr-6">
+          <div className="space-y-1 pb-1">
             <h2 className="flex items-center gap-2 text-sm font-semibold text-[#162033]">
               <Share2 className="h-4 w-4 text-indigo-500" />
               Affiliate Store Link
             </h2>
             <p className="text-xs text-[#60708a]">Share this link in socials, bios, newsletters, and videos.</p>
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 rounded-[1.15rem] border border-[#d8e2f3] bg-white/86 p-3">
             <p className="text-xs font-semibold text-[#41506a]">Your public URL</p>
             <Input
-              className="h-10 border-[#cfd8ea] bg-white font-mono text-xs text-[#1f2a44] sm:text-sm"
+              className="h-9 rounded-2xl border-[#cfd8ea] bg-white font-mono text-[11px] text-[#1f2a44] sm:h-10 sm:text-sm"
               value={fullStoreUrl}
               readOnly
               disabled={isLoading || !isStorePublic}
@@ -384,11 +384,11 @@ export default function DashboardClientPage({
             </p>
           </div>
           <div className="space-y-2 pt-1">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#60708a]">Quick Actions</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#60708a]">Quick Actions</p>
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
               <Button
                 variant="outline"
-                className="h-9 w-full border-[#4a63f6] bg-[#4a63f6] text-xs text-white shadow-none hover:bg-[#3f56de] disabled:opacity-60 sm:w-auto sm:text-sm"
+                className="h-9 w-full rounded-full border-[#4a63f6] bg-[#4a63f6] text-[11px] text-white shadow-none hover:bg-[#3f56de] disabled:opacity-60 sm:w-auto sm:text-sm"
                 onClick={copyToClipboard}
                 disabled={isLoading}
               >
@@ -397,7 +397,7 @@ export default function DashboardClientPage({
               </Button>
               <Button
                 variant="outline"
-                className="h-9 w-full border-[#c9d8ff] bg-[#edf2ff] text-xs text-[#2c3f7f] shadow-none hover:bg-[#dfe8ff] disabled:opacity-60 sm:w-auto sm:text-sm"
+                className="h-9 w-full rounded-full border-[#c9d8ff] bg-[#edf2ff] text-[11px] text-[#2c3f7f] shadow-none hover:bg-[#dfe8ff] disabled:opacity-60 sm:w-auto sm:text-sm"
                 onClick={shareStoreLink}
                 disabled={isLoading}
               >
@@ -406,7 +406,7 @@ export default function DashboardClientPage({
               </Button>
               <Button
                 variant="outline"
-                className="h-9 w-full border-[#cfd8ea] bg-white text-xs text-[#1f2a44] shadow-none hover:bg-[#f3f6fc] disabled:opacity-60 sm:w-auto sm:text-sm"
+                className="h-9 w-full rounded-full border-[#cfd8ea] bg-white text-[11px] text-[#1f2a44] shadow-none hover:bg-[#f3f6fc] disabled:opacity-60 sm:w-auto sm:text-sm"
                 asChild
                 disabled={isLoading}
               >
@@ -436,9 +436,9 @@ export default function DashboardClientPage({
             <Link
               key={item.id}
               href={item.href}
-              className="flex items-center justify-between rounded-md border-b border-[#e7eefb] py-2 transition-colors hover:bg-[#f8fbff] last:border-0 sm:py-2.5"
+              className="flex items-center justify-between rounded-2xl border border-[#e7eefb] bg-white/78 px-3 py-2.5 transition-colors hover:bg-[#f8fbff]"
             >
-              <span className="flex items-center gap-2 text-xs text-[#4f5f7a] sm:text-sm">
+              <span className="flex items-center gap-2 text-[11px] text-[#4f5f7a] sm:text-sm">
                 {item.done ? (
                   <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                 ) : (
@@ -469,7 +469,7 @@ export default function DashboardClientPage({
         ) : recentProducts.length > 0 ? (
           <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
             {recentProducts.map((product: any) => (
-              <div key={product._id.toString()} className="overflow-hidden rounded-lg border border-[#d8e2f3] bg-white shadow-none">
+              <div key={product._id.toString()} className="overflow-hidden rounded-[1.2rem] border border-[#d8e2f3] bg-white shadow-[0_10px_28px_rgba(87,107,149,0.08)]">
                 <div className="relative aspect-video w-full overflow-hidden">
                   <Image
                     src={product.images?.[0] || "/placeholder.svg?height=200&width=300"}
@@ -481,7 +481,7 @@ export default function DashboardClientPage({
                   />
                 </div>
                   <div className="p-3">
-                    <h3 className="mb-1 line-clamp-1 text-xs font-semibold text-[#1c1917] sm:text-sm">{product.title}</h3>
+                    <h3 className="mb-1 line-clamp-1 text-[11px] font-semibold text-[#1c1917] sm:text-sm">{product.title}</h3>
                     <div className="mt-3 flex items-center justify-between gap-2">
                       <Link
                         href={
@@ -493,13 +493,13 @@ export default function DashboardClientPage({
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-8 border-[#cfd8ea] bg-white px-3 text-xs text-[#1f2a44] shadow-none hover:bg-[#f3f6fc] hover:text-[#12213c]"
+                          className="h-8 rounded-full border-[#cfd8ea] bg-white px-3 text-[11px] text-[#1f2a44] shadow-none hover:bg-[#f3f6fc] hover:text-[#12213c]"
                         >
                           Edit
                         </Button>
                       </Link>
                       <a href={`/api/track/${product._id.toString()}`} target="_blank" rel="noopener noreferrer">
-                        <Button size="sm" className="h-8 border border-[#3e55df] bg-[#4a63f6] px-3 text-xs text-white shadow-none hover:bg-[#3f56de]">
+                        <Button size="sm" className="h-8 rounded-full border border-[#3e55df] bg-[#4a63f6] px-3 text-[11px] text-white shadow-none hover:bg-[#3f56de]">
                           View
                         </Button>
                       </a>
