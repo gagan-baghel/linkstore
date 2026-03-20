@@ -88,16 +88,23 @@ export async function GET(req: Request) {
       }
     }
 
-    return NextResponse.json({
-      plan: {
-        code: plan?.code || SUBSCRIPTION_PLAN_CODE,
-        name: SUBSCRIPTION_PLAN_NAME,
-        amountPaise: plan?.amountPaise || SUBSCRIPTION_PRICE_PAISE,
-        currency: plan?.currency || SUBSCRIPTION_CURRENCY,
-        productLimit: plan?.productLimit || SUBSCRIPTION_PRODUCT_LIMIT,
+    return NextResponse.json(
+      {
+        plan: {
+          code: plan?.code || SUBSCRIPTION_PLAN_CODE,
+          name: SUBSCRIPTION_PLAN_NAME,
+          amountPaise: plan?.amountPaise || SUBSCRIPTION_PRICE_PAISE,
+          currency: plan?.currency || SUBSCRIPTION_CURRENCY,
+          productLimit: plan?.productLimit || SUBSCRIPTION_PRODUCT_LIMIT,
+        },
+        access: state,
       },
-      access: state,
-    })
+      {
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      },
+    )
   } catch (error) {
     console.error("Subscription status error:", error)
     return NextResponse.json({ message: "Internal server error" }, { status: 500 })

@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ArrowRight, Sparkles } from "lucide-react"
@@ -75,6 +75,8 @@ export function SubscriptionStatusCard({
   const router = useRouter()
   const [access, setAccess] = useState<SubscriptionAccessState | null>(initialAccess)
   const [isProcessing, setIsProcessing] = useState(false)
+  const statusPollTimeoutRef = useRef<number | null>(null)
+  const activationHandledRef = useRef(false)
 
   const statusLabel = useMemo(() => {
     const status = access?.effectiveStatus || "inactive"
@@ -83,20 +85,32 @@ export function SubscriptionStatusCard({
 
   const canRenew = true
 
-  async function refreshStatus() {
-    try {
-      const response = await fetch("/api/subscription/status", { method: "GET" })
-      const data = await response.json()
-      if (response.ok) {
-        setAccess(data.access || null)
+  useEffect(() => {
+    return () => {
+      if (statusPollTimeoutRef.current !== null) {
+        window.clearTimeout(statusPollTimeoutRef.current)
       }
-    } catch (error) {
-      console.error("Subscription refresh error:", error)
+    }
+  }, [])
+
+  function stopStatusPolling() {
+    if (statusPollTimeoutRef.current !== null) {
+      window.clearTimeout(statusPollTimeoutRef.current)
+      statusPollTimeoutRef.current = null
     }
   }
 
+  function activationDescription() {
+    return nextLabel ? `Your plan is active. Continuing to ${nextLabel.toLowerCase()}.` : "Your plan is active. Premium features are now unlocked."
+  }
+
   function completeActivation(nextAccess: SubscriptionAccessState | null, description: string) {
+    stopStatusPolling()
     setAccess(nextAccess)
+    if (activationHandledRef.current) {
+      return
+    }
+    activationHandledRef.current = true
     if (nextPath) {
       window.location.assign(nextPath)
       return
@@ -107,6 +121,39 @@ export function SubscriptionStatusCard({
       title: "Subscription activated",
       description,
     })
+  }
+
+  async function refreshStatus(input?: { continueOnActivate?: boolean }) {
+    try {
+      const response = await fetch("/api/subscription/status", { method: "GET", cache: "no-store" })
+      const data = await response.json()
+      if (response.ok) {
+        const nextAccess = data.access || null
+        setAccess(nextAccess)
+        if (input?.continueOnActivate && nextAccess?.hasActiveSubscription) {
+          completeActivation(nextAccess, activationDescription())
+        }
+        return nextAccess
+      }
+    } catch (error) {
+      console.error("Subscription refresh error:", error)
+    }
+    return null
+  }
+
+  function scheduleStatusPolling(remainingAttempts = 20) {
+    stopStatusPolling()
+    if (remainingAttempts <= 0 || activationHandledRef.current) {
+      return
+    }
+
+    statusPollTimeoutRef.current = window.setTimeout(async () => {
+      const nextAccess = await refreshStatus({ continueOnActivate: true })
+      if (activationHandledRef.current || nextAccess?.hasActiveSubscription) {
+        return
+      }
+      scheduleStatusPolling(remainingAttempts - 1)
+    }, 3000)
   }
 
   async function verifyPayment(razorpayResponse: {
@@ -129,12 +176,14 @@ export function SubscriptionStatusCard({
 
     completeActivation(
       data.access || null,
-      nextLabel ? `Your plan is active. Continuing to ${nextLabel.toLowerCase()}.` : "Your plan is active. Premium features are now unlocked.",
+      activationDescription(),
     )
   }
 
   async function handleCheckout() {
     setIsProcessing(true)
+    activationHandledRef.current = false
+    stopStatusPolling()
 
     try {
       const scriptLoaded = await loadRazorpayCheckoutScript()
@@ -187,19 +236,29 @@ export function SubscriptionStatusCard({
               description: error instanceof Error ? error.message : "Unable to verify payment",
               variant: "destructive",
             })
-            await refreshStatus()
+            const nextAccess = await refreshStatus({ continueOnActivate: true })
+            if (!nextAccess?.hasActiveSubscription && !access?.hasActiveSubscription) {
+              scheduleStatusPolling(10)
+            }
           }
         },
         modal: {
           ondismiss: async () => {
-            await refreshStatus()
+            const nextAccess = await refreshStatus({ continueOnActivate: true })
+            if (!nextAccess?.hasActiveSubscription && !access?.hasActiveSubscription) {
+              scheduleStatusPolling(10)
+            }
           },
         },
       })
 
       rzp.open()
+      if (!access?.hasActiveSubscription) {
+        scheduleStatusPolling(25)
+      }
     } catch (error) {
       console.error("Checkout error:", error)
+      stopStatusPolling()
       toast({
         title: "Checkout failed",
         description: error instanceof Error ? error.message : "Unable to start checkout",
@@ -272,7 +331,9 @@ export function SubscriptionStatusCard({
         </Button>
         <Button
           variant="outline"
-          onClick={refreshStatus}
+          onClick={() => {
+            void refreshStatus()
+          }}
           className="h-11 w-full rounded-lg border-slate-300 bg-white text-slate-700 hover:bg-slate-100 hover:text-slate-900 sm:h-9 sm:w-auto"
           disabled={isProcessing}
         >

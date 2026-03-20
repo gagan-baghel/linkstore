@@ -69,6 +69,7 @@ export default function DashboardClientPage({
   session: any
   initialData?: DashboardInitialData | null
 }) {
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(Boolean(session?.user?.hasActiveSubscription))
   const [totalProducts, setTotalProducts] = useState(initialData?.totalProducts ?? 0)
   const [user, setUser] = useState<any>(initialData?.user ?? null)
   const [recentProducts, setRecentProducts] = useState<any[]>(initialData?.recentProducts ?? [])
@@ -80,6 +81,35 @@ export default function DashboardClientPage({
 
   useEffect(() => {
     setOrigin(window.location.origin)
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function syncSubscriptionState() {
+      try {
+        const response = await fetch("/api/subscription/status", { method: "GET", cache: "no-store" })
+        const data = await response.json().catch(() => null)
+        if (!cancelled && response.ok) {
+          setHasActiveSubscription(Boolean(data?.access?.hasActiveSubscription))
+        }
+      } catch (error) {
+        console.error("Dashboard subscription sync failed:", error)
+      }
+    }
+
+    void syncSubscriptionState()
+
+    const handleFocus = () => {
+      void syncSubscriptionState()
+    }
+
+    window.addEventListener("focus", handleFocus)
+
+    return () => {
+      cancelled = true
+      window.removeEventListener("focus", handleFocus)
+    }
   }, [])
 
   useEffect(() => {
@@ -133,7 +163,6 @@ export default function DashboardClientPage({
   }, [initialData, session.user.id])
 
   const baseUrl = origin || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-  const hasActiveSubscription = Boolean(session?.user?.hasActiveSubscription)
   const isStorePublic = Boolean(hasActiveSubscription && user?.username && user?.storeEnabled === true)
   const canUseShopActions = hasActiveSubscription
   const subscriptionRedirectBase = SUBSCRIPTION_UPGRADE_BASE_PATH
