@@ -19,6 +19,12 @@ export default defineSchema({
     storeBannerText: v.string(),
     contactInfo: v.string(),
     storeLogo: v.string(),
+    themePrimaryColor: v.optional(v.string()),
+    themeAccentColor: v.optional(v.string()),
+    themeBannerStyle: v.optional(v.string()),
+    themeButtonStyle: v.optional(v.string()),
+    themeCardStyle: v.optional(v.string()),
+    themeMode: v.optional(v.string()),
     socialFacebook: v.string(),
     socialTwitter: v.string(),
     socialInstagram: v.string(),
@@ -95,40 +101,6 @@ export default defineSchema({
     .index("by_idempotencyKey", ["idempotencyKey"])
     .index("by_payment_hash", ["razorpayPaymentIdHash"])
     .index("by_createdAt", ["createdAt"]),
-  subscriptionCoupons: defineTable({
-    codeHash: v.string(),
-    codeHint: v.string(),
-    label: v.string(),
-    durationMs: v.number(),
-    isActive: v.boolean(),
-    maxRedemptions: v.optional(v.number()),
-    redemptionCount: v.number(),
-    expiresAt: v.optional(v.number()),
-    note: v.optional(v.string()),
-    createdByUserId: v.optional(v.id("users")),
-    deactivatedAt: v.optional(v.number()),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index("by_codeHash", ["codeHash"])
-    .index("by_createdAt", ["createdAt"]),
-  subscriptionCouponRedemptions: defineTable({
-    couponId: v.optional(v.id("subscriptionCoupons")),
-    userId: v.id("users"),
-    subscriptionId: v.id("subscriptions"),
-    codeHash: v.string(),
-    codeHint: v.string(),
-    couponLabel: v.string(),
-    source: v.union(v.literal("stored"), v.literal("env")),
-    grantedDurationMs: v.number(),
-    grantedAt: v.number(),
-    resultingExpiresAt: v.number(),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index("by_codeHash_createdAt", ["codeHash", "createdAt"])
-    .index("by_userId_codeHash", ["userId", "codeHash"])
-    .index("by_userId_createdAt", ["userId", "createdAt"]),
   billingEvents: defineTable({
     provider: v.string(),
     eventKey: v.string(),

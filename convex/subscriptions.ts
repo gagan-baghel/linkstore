@@ -8,7 +8,6 @@ import {
   shouldRevokeAccessForBillingEvent,
   type SubscriptionLifecycleStatus,
 } from "../lib/subscription-billing"
-import { canRedeemCouponForStatus, computeSubscriptionExtensionExpiry } from "../lib/subscription-coupons"
 
 const PLAN_CODE = "starter_monthly_149"
 const PLAN_AMOUNT_PAISE = 14900
@@ -48,6 +47,23 @@ function getEffectiveStatus(subscription: SubscriptionDoc | null, now: number): 
 
 function canTransitionStatus(fromStatus: PersistedStatus, toStatus: PersistedStatus) {
   return canTransitionSubscriptionStatus(fromStatus, toStatus)
+}
+
+function computeSubscriptionPeriod(input: {
+  currentExpiresAt?: number | null
+  grantedAt: number
+  durationMs?: number
+}) {
+  const durationMs = input.durationMs ?? SUBSCRIPTION_DURATION_MS
+  const baseStart =
+    typeof input.currentExpiresAt === "number" && input.currentExpiresAt > input.grantedAt
+      ? input.currentExpiresAt
+      : input.grantedAt
+
+  return {
+    baseStart,
+    expiresAt: baseStart + durationMs,
+  }
 }
 
 async function patchSubscriptionStatus(
@@ -365,7 +381,7 @@ async function applyCapturedPayment(
   }
 
   const effectiveBefore = getEffectiveStatus(resolved.subscription, now)
-  const { baseStart, expiresAt } = computeSubscriptionExtensionExpiry({
+  const { baseStart, expiresAt } = computeSubscriptionPeriod({
     currentExpiresAt: effectiveBefore === "active" ? resolved.subscription.expiresAt : null,
     grantedAt: input.capturedAt,
     durationMs: SUBSCRIPTION_DURATION_MS,
@@ -448,209 +464,6 @@ async function applyCapturedPayment(
     expiresAt: updatedSub?.expiresAt || null,
   }
 }
-
-async function applyCouponRedemption(
-  ctx: any,
-  input: {
-    userId: string
-    codeHash: string
-    codeHint: string
-  },
-) {
-  const now = Date.now()
-
-  const user = await ctx.db.get(input.userId)
-  if (!user) {
-    return { ok: false, message: "User not found", code: "USER_NOT_FOUND" as const }
-  }
-
-  const coupon = await ctx.db
-    .query("subscriptionCoupons")
-    .withIndex("by_codeHash", (q: any) => q.eq("codeHash", input.codeHash))
-    .first()
-
-  if (!coupon) {
-    return { ok: false, message: "Coupon code is invalid.", code: "COUPON_INVALID" as const }
-  }
-
-  if (!coupon.isActive) {
-    return { ok: false, message: "Coupon is no longer active.", code: "COUPON_INACTIVE" as const }
-  }
-
-  if (typeof coupon.expiresAt === "number" && coupon.expiresAt <= now) {
-    return { ok: false, message: "Coupon has expired.", code: "COUPON_EXPIRED" as const }
-  }
-
-  if (typeof coupon.maxRedemptions === "number" && coupon.redemptionCount >= coupon.maxRedemptions) {
-    return { ok: false, message: "Coupon redemption limit has been reached.", code: "COUPON_EXHAUSTED" as const }
-  }
-
-  return grantCouponAccess(ctx, {
-    userId: input.userId,
-    codeHash: input.codeHash,
-    codeHint: coupon.codeHint || input.codeHint,
-    couponLabel: coupon.label,
-    durationMs: coupon.durationMs || SUBSCRIPTION_DURATION_MS,
-    maxRedemptions: typeof coupon.maxRedemptions === "number" ? coupon.maxRedemptions : undefined,
-    expiresAt: typeof coupon.expiresAt === "number" ? coupon.expiresAt : undefined,
-    source: "stored",
-    couponId: coupon._id,
-    incrementStoredCouponCount: true,
-  })
-}
-
-async function grantCouponAccess(
-  ctx: any,
-  input: {
-    userId: string
-    codeHash: string
-    codeHint: string
-    couponLabel: string
-    durationMs: number
-    maxRedemptions?: number
-    expiresAt?: number
-    source: "stored" | "env"
-    couponId?: string
-    incrementStoredCouponCount?: boolean
-  },
-) {
-  const now = Date.now()
-
-  const user = await ctx.db.get(input.userId)
-  if (!user) {
-    return { ok: false, message: "User not found", code: "USER_NOT_FOUND" as const }
-  }
-
-  if (typeof input.expiresAt === "number" && input.expiresAt <= now) {
-    return { ok: false, message: "Coupon has expired.", code: "COUPON_EXPIRED" as const }
-  }
-
-  const resolved = await ensureSubscriptionRow(ctx, input.userId, now)
-  if (resolved.ambiguous || !resolved.subscription) {
-    return { ok: false, message: "Ambiguous subscription state", code: "AMBIGUOUS_SUBSCRIPTION" as const }
-  }
-
-  const priorRedemption = await ctx.db
-    .query("subscriptionCouponRedemptions")
-    .withIndex("by_userId_codeHash", (q: any) => q.eq("userId", input.userId).eq("codeHash", input.codeHash))
-    .first()
-
-  if (priorRedemption) {
-    return {
-      ok: false,
-      message: "You have already used this coupon.",
-      code: "COUPON_ALREADY_REDEEMED" as const,
-      resultingExpiresAt: priorRedemption.resultingExpiresAt,
-    }
-  }
-
-  if (typeof input.maxRedemptions === "number") {
-    const existingRedemptions = await ctx.db
-      .query("subscriptionCouponRedemptions")
-      .withIndex("by_codeHash_createdAt", (q: any) => q.eq("codeHash", input.codeHash))
-      .collect()
-
-    if (existingRedemptions.length >= input.maxRedemptions) {
-      return { ok: false, message: "Coupon redemption limit has been reached.", code: "COUPON_EXHAUSTED" as const }
-    }
-  }
-
-  const effectiveBefore = getEffectiveStatus(resolved.subscription, now)
-  if (!canRedeemCouponForStatus(effectiveBefore)) {
-    return {
-      ok: false,
-      message: "You already have an active subscription.",
-      code: "ACTIVE_SUBSCRIPTION_EXISTS" as const,
-    }
-  }
-  const { baseStart, expiresAt } = computeSubscriptionExtensionExpiry({
-    currentExpiresAt: effectiveBefore === "active" ? resolved.subscription.expiresAt : null,
-    grantedAt: now,
-    durationMs: input.durationMs,
-  })
-
-  const couponPatch = await patchSubscriptionStatus(ctx, resolved.subscription, {
-    nextStatus: "active",
-    patch: {
-      planCode: PLAN_CODE,
-      planAmountPaise: PLAN_AMOUNT_PAISE,
-      currency: PLAN_CURRENCY,
-      currentPeriodStart: baseStart,
-      currentPeriodEnd: expiresAt,
-      activatedAt: now,
-      expiresAt,
-      cancelledAt: undefined,
-      pendingOrderId: undefined,
-      deactivationReason: undefined,
-      updatedAt: now,
-    },
-  })
-  if (!couponPatch.ok) {
-    return { ok: false, message: couponPatch.message, code: couponPatch.code }
-  }
-
-  await ctx.db.patch(user._id, {
-    storeEnabled: true,
-    storeCreatedAt: user.storeCreatedAt || now,
-    updatedAt: now,
-  })
-
-  if (input.incrementStoredCouponCount && input.couponId) {
-    const storedCoupon = await ctx.db.get(input.couponId)
-    if (storedCoupon) {
-      await ctx.db.patch(storedCoupon._id, {
-        redemptionCount: (storedCoupon.redemptionCount || 0) + 1,
-        updatedAt: now,
-      })
-    }
-  }
-
-  await ctx.db.insert("subscriptionCouponRedemptions", {
-    couponId: input.couponId,
-    userId: input.userId,
-    subscriptionId: resolved.subscription._id,
-    codeHash: input.codeHash,
-    codeHint: input.codeHint,
-    couponLabel: input.couponLabel,
-    source: input.source,
-    grantedDurationMs: input.durationMs,
-    grantedAt: now,
-    resultingExpiresAt: expiresAt,
-    createdAt: now,
-    updatedAt: now,
-  })
-
-  await writeAudit(ctx, {
-    actorType: "user",
-    actorUserId: input.userId,
-    action: "subscription.coupon_redeemed",
-    resourceType: "subscription_coupon",
-    resourceId: input.couponId,
-    status: "ok",
-    details: JSON.stringify({
-      codeHint: input.codeHint,
-      couponLabel: input.couponLabel,
-      source: input.source,
-      expiresAt,
-    }),
-  })
-
-  const access = await computeAccessState(ctx, input.userId)
-
-  return {
-    ok: true as const,
-    coupon: {
-      id: input.couponId || "",
-      codeHint: input.codeHint,
-      label: input.couponLabel,
-      durationMs: input.durationMs,
-      maxRedemptions: typeof input.maxRedemptions === "number" ? input.maxRedemptions : null,
-    },
-    expiresAt,
-    access,
-  }
-}
-
 export const getPlan = queryGeneric({
   args: {},
   handler: async () => {
@@ -1194,41 +1007,6 @@ export const confirmPayment = mutationGeneric({
   },
 })
 
-export const redeemCoupon = mutationGeneric({
-  args: {
-    userId: v.id("users"),
-    codeHash: v.string(),
-    codeHint: v.string(),
-  },
-  handler: async (ctx, args) => {
-    return applyCouponRedemption(ctx, args)
-  },
-})
-
-export const redeemConfiguredCoupon = mutationGeneric({
-  args: {
-    userId: v.id("users"),
-    codeHash: v.string(),
-    codeHint: v.string(),
-    couponLabel: v.string(),
-    durationMs: v.number(),
-    maxRedemptions: v.optional(v.number()),
-    expiresAt: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    return grantCouponAccess(ctx, {
-      userId: args.userId,
-      codeHash: args.codeHash,
-      codeHint: args.codeHint,
-      couponLabel: args.couponLabel,
-      durationMs: args.durationMs,
-      maxRedemptions: args.maxRedemptions,
-      expiresAt: args.expiresAt,
-      source: "env",
-    })
-  },
-})
-
 export const processWebhookEvent = mutationGeneric({
   args: {
     eventKey: v.string(),
@@ -1562,176 +1340,6 @@ export const expireDueSubscriptions = mutationGeneric({
     }
 
     return { ok: true, expired: due.length }
-  },
-})
-
-export const createCoupon = mutationGeneric({
-  args: {
-    adminUserId: v.id("users"),
-    codeHash: v.string(),
-    codeHint: v.string(),
-    label: v.string(),
-    durationMs: v.number(),
-    maxRedemptions: v.optional(v.number()),
-    expiresAt: v.optional(v.number()),
-    note: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    const now = Date.now()
-    const adminUser = await ctx.db.get(args.adminUserId)
-    if (!adminUser || adminUser.role !== "admin") {
-      return { ok: false, message: "Forbidden" as const, code: "FORBIDDEN" as const }
-    }
-
-    const existing = await ctx.db
-      .query("subscriptionCoupons")
-      .withIndex("by_codeHash", (q: any) => q.eq("codeHash", args.codeHash))
-      .first()
-
-    if (existing) {
-      return { ok: false, message: "Coupon already exists" as const, code: "COUPON_EXISTS" as const }
-    }
-
-    const couponId = await ctx.db.insert("subscriptionCoupons", {
-      codeHash: args.codeHash,
-      codeHint: args.codeHint,
-      label: args.label.trim(),
-      durationMs: args.durationMs,
-      isActive: true,
-      maxRedemptions: args.maxRedemptions,
-      redemptionCount: 0,
-      expiresAt: args.expiresAt,
-      note: args.note?.trim() || "",
-      createdByUserId: args.adminUserId,
-      deactivatedAt: undefined,
-      createdAt: now,
-      updatedAt: now,
-    })
-
-    await writeAudit(ctx, {
-      actorType: "admin",
-      actorUserId: args.adminUserId,
-      action: "subscription.coupon_created",
-      resourceType: "subscription_coupon",
-      resourceId: couponId,
-      status: "ok",
-      details: JSON.stringify({
-        codeHint: args.codeHint,
-        maxRedemptions: typeof args.maxRedemptions === "number" ? args.maxRedemptions : null,
-        expiresAt: args.expiresAt || null,
-      }),
-    })
-
-    const created = await ctx.db.get(couponId)
-    return {
-      ok: true,
-      coupon: created
-        ? {
-            id: created._id,
-            codeHint: created.codeHint,
-            label: created.label,
-            durationMs: created.durationMs,
-            isActive: created.isActive,
-            maxRedemptions: created.maxRedemptions ?? null,
-            redemptionCount: created.redemptionCount ?? 0,
-            expiresAt: created.expiresAt ?? null,
-            note: created.note || "",
-            createdAt: created.createdAt,
-            updatedAt: created.updatedAt,
-          }
-        : null,
-    }
-  },
-})
-
-export const listCoupons = queryGeneric({
-  args: {
-    adminUserId: v.id("users"),
-  },
-  handler: async (ctx, args) => {
-    const adminUser = await ctx.db.get(args.adminUserId)
-    if (!adminUser || adminUser.role !== "admin") {
-      return { ok: false, message: "Forbidden" as const, coupons: [] as any[] }
-    }
-
-    const rows = await ctx.db.query("subscriptionCoupons").withIndex("by_createdAt").order("desc").collect()
-
-    return {
-      ok: true,
-      coupons: rows.map((coupon: any) => ({
-        id: coupon._id,
-        codeHint: coupon.codeHint,
-        label: coupon.label,
-        durationMs: coupon.durationMs,
-        isActive: coupon.isActive === true,
-        maxRedemptions: typeof coupon.maxRedemptions === "number" ? coupon.maxRedemptions : null,
-        redemptionCount: coupon.redemptionCount || 0,
-        expiresAt: typeof coupon.expiresAt === "number" ? coupon.expiresAt : null,
-        note: coupon.note || "",
-        createdAt: coupon.createdAt,
-        updatedAt: coupon.updatedAt,
-      })),
-    }
-  },
-})
-
-export const updateCouponStatus = mutationGeneric({
-  args: {
-    adminUserId: v.id("users"),
-    couponId: v.id("subscriptionCoupons"),
-    isActive: v.boolean(),
-    reason: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    const now = Date.now()
-    const adminUser = await ctx.db.get(args.adminUserId)
-    if (!adminUser || adminUser.role !== "admin") {
-      return { ok: false, message: "Forbidden" as const, code: "FORBIDDEN" as const }
-    }
-
-    const coupon = await ctx.db.get(args.couponId)
-    if (!coupon) {
-      return { ok: false, message: "Coupon not found" as const, code: "COUPON_NOT_FOUND" as const }
-    }
-
-    await ctx.db.patch(coupon._id, {
-      isActive: args.isActive,
-      deactivatedAt: args.isActive ? undefined : now,
-      updatedAt: now,
-    })
-
-    await writeAudit(ctx, {
-      actorType: "admin",
-      actorUserId: args.adminUserId,
-      action: args.isActive ? "subscription.coupon_activated" : "subscription.coupon_deactivated",
-      resourceType: "subscription_coupon",
-      resourceId: coupon._id,
-      status: "ok",
-      details: JSON.stringify({
-        codeHint: coupon.codeHint,
-        reason: args.reason || "",
-      }),
-    })
-
-    const updated = await ctx.db.get(coupon._id)
-    return {
-      ok: true,
-      coupon: updated
-        ? {
-            id: updated._id,
-            codeHint: updated.codeHint,
-            label: updated.label,
-            durationMs: updated.durationMs,
-            isActive: updated.isActive === true,
-            maxRedemptions: typeof updated.maxRedemptions === "number" ? updated.maxRedemptions : null,
-            redemptionCount: updated.redemptionCount || 0,
-            expiresAt: typeof updated.expiresAt === "number" ? updated.expiresAt : null,
-            note: updated.note || "",
-            createdAt: updated.createdAt,
-            updatedAt: updated.updatedAt,
-          }
-        : null,
-    }
   },
 })
 

@@ -40,13 +40,6 @@ cp .env.example .env.local
 # RAZORPAY_KEY_SECRET=...
 # RAZORPAY_WEBHOOK_SECRET=...
 # PAYMENTS_DATA_KEY=...
-# Optional one-month free coupon:
-# COUPON_HASH_SECRET is preferred, but coupon hashing falls back to AUTH_JWT_SECRET if omitted.
-# COUPON_HASH_SECRET=...
-# SUBSCRIPTION_FREE_MONTH_COUPON_CODE=FREEMONTH
-# SUBSCRIPTION_FREE_MONTH_COUPON_LABEL=Launch Free Month
-# SUBSCRIPTION_FREE_MONTH_COUPON_MAX_REDEMPTIONS=100
-# SUBSCRIPTION_FREE_MONTH_COUPON_EXPIRES_AT=2026-12-31T23:59:59+05:30
 # In Google Cloud Console, authorize:
 # http://localhost:3000/api/auth/google/callback
 
@@ -75,7 +68,6 @@ Optional:
 
 - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` for uploads
 - `SUPPORT_EMAIL` for the contact page
-- `SUBSCRIPTION_FREE_MONTH_COUPON_*` for the built-in one-month coupon, with optional `COUPON_HASH_SECRET` if you want a dedicated hashing secret instead of reusing `AUTH_JWT_SECRET`
 - `AMAZON_PAAPI_*` for Amazon product metadata enrichment
 
 ## Release Checklist

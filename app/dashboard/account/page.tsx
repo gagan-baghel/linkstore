@@ -7,7 +7,6 @@ import { AccountForm } from "@/components/account-form"
 import { SubscriptionStatusCard } from "@/components/subscription-status-card"
 import { convexQuery } from "@/lib/convex"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { getSubscriptionCouponEntryState } from "@/lib/subscription-coupon-runtime"
 import { sanitizeSubscriptionReturnPath } from "@/lib/subscription-routing"
 
 export const metadata: Metadata = {
@@ -48,7 +47,6 @@ export default async function AccountPage({
   let user: any | null = null
   let subscriptionAccess: any | null = null
   let hasDataError = false
-  const couponEntryState = getSubscriptionCouponEntryState()
 
   try {
     const [resolvedUser, resolvedAccess] = await Promise.all([
@@ -79,7 +77,6 @@ export default async function AccountPage({
             userEmail={user?.email || ""}
             nextPath={nextLabel ? nextPath : undefined}
             nextLabel={nextLabel || undefined}
-            couponEntryState={couponEntryState}
           />
           <AccountForm
             name={user?.name || ""}

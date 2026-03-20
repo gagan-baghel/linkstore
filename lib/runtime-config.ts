@@ -1,8 +1,4 @@
 import { hasAuthJwtSecretConfigured } from "@/lib/auth-config"
-import { isCouponHashingAvailable } from "@/lib/subscription-coupon-hash"
-import { getConfiguredSubscriptionCoupon } from "@/lib/subscription-coupon-runtime"
-
-export { getConfiguredSubscriptionCoupon } from "@/lib/subscription-coupon-runtime"
 
 type ReadinessCheck = {
   key: string
@@ -50,8 +46,6 @@ export function getRuntimeReadinessChecks(): ReadinessCheck[] {
   const googleOAuth = getGoogleOAuthCredentials()
   const appUrlConfigured = Boolean(readEnv("NEXT_PUBLIC_APP_URL"))
   const supportEmailConfigured = Boolean(readEnv("SUPPORT_EMAIL", "NEXT_PUBLIC_SUPPORT_EMAIL"))
-  const couponHashSecretConfigured = isCouponHashingAvailable()
-  const configuredCoupon = getConfiguredSubscriptionCoupon()
   const cloudinaryConfigured = Boolean(
     readEnv("CLOUDINARY_CLOUD_NAME") && readEnv("CLOUDINARY_API_KEY") && readEnv("CLOUDINARY_API_SECRET"),
   )
@@ -94,24 +88,6 @@ export function getRuntimeReadinessChecks(): ReadinessCheck[] {
       required: false,
       configured: supportEmailConfigured,
       note: "Used in support contact page and customer communications.",
-    },
-    {
-      key: "COUPON_HASH_SECRET | AUTH_JWT_SECRET",
-      required: configuredCoupon.configured,
-      configured: couponHashSecretConfigured,
-      note: "A dedicated coupon secret is preferred. If omitted, coupon hashing falls back to AUTH_JWT_SECRET.",
-    },
-    {
-      key: "SUBSCRIPTION_FREE_MONTH_COUPON_MAX_REDEMPTIONS",
-      required: configuredCoupon.configured,
-      configured: configuredCoupon.hasRedemptionLimit,
-      note: "Required for the env-managed coupon to avoid unlimited redemptions.",
-    },
-    {
-      key: "SUBSCRIPTION_FREE_MONTH_COUPON_EXPIRES_AT",
-      required: configuredCoupon.configured,
-      configured: configuredCoupon.hasExpiry,
-      note: "Required for the env-managed coupon to avoid indefinite validity.",
     },
   ]
 }

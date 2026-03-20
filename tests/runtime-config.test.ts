@@ -7,7 +7,7 @@ import {
   getAuthSessionTtlSeconds,
   hasAuthJwtSecretConfigured,
 } from "@/lib/auth-config"
-import { getConfiguredSubscriptionCoupon, getMissingRequiredRuntimeConfig, getSupportEmail } from "@/lib/runtime-config"
+import { getMissingRequiredRuntimeConfig, getSupportEmail } from "@/lib/runtime-config"
 
 function withEnv(overrides: Record<string, string | undefined>, callback: () => void) {
   const keys = Object.keys(overrides)
@@ -48,10 +48,6 @@ test("development readiness allows the auth secret fallback", () => {
       RAZORPAY_KEY_SECRET: "rzp_test_secret",
       RAZORPAY_WEBHOOK_SECRET: "webhook-secret",
       PAYMENTS_DATA_KEY: "payments-data-key",
-      SUBSCRIPTION_FREE_MONTH_COUPON_CODE: undefined,
-      SUBSCRIPTION_FREE_MONTH_COUPON_MAX_REDEMPTIONS: undefined,
-      SUBSCRIPTION_FREE_MONTH_COUPON_EXPIRES_AT: undefined,
-      COUPON_HASH_SECRET: undefined,
     },
     () => {
       assert.deepEqual(getMissingRequiredRuntimeConfig(), [])
@@ -74,107 +70,11 @@ test("production readiness reports missing auth and app url configuration", () =
       RAZORPAY_KEY_SECRET: "rzp_test_secret",
       RAZORPAY_WEBHOOK_SECRET: "webhook-secret",
       PAYMENTS_DATA_KEY: "payments-data-key",
-      SUBSCRIPTION_FREE_MONTH_COUPON_CODE: undefined,
-      SUBSCRIPTION_FREE_MONTH_COUPON_MAX_REDEMPTIONS: undefined,
-      SUBSCRIPTION_FREE_MONTH_COUPON_EXPIRES_AT: undefined,
-      COUPON_HASH_SECRET: undefined,
     },
     () => {
       const missing = getMissingRequiredRuntimeConfig().sort()
       assert.deepEqual(missing, ["AUTH_JWT_SECRET", "NEXT_PUBLIC_APP_URL"])
       assert.throws(() => getAuthJwtSecret(), /AUTH_JWT_SECRET is required/)
-    },
-  )
-})
-
-test("subscription coupon config normalizes and parses optional values", () => {
-  withEnv(
-    {
-      SUBSCRIPTION_FREE_MONTH_COUPON_CODE: " free_month ",
-      SUBSCRIPTION_FREE_MONTH_COUPON_LABEL: "Launch Free Month",
-      SUBSCRIPTION_FREE_MONTH_COUPON_MAX_REDEMPTIONS: "100",
-      SUBSCRIPTION_FREE_MONTH_COUPON_EXPIRES_AT: "2026-12-31T23:59:59+05:30",
-    },
-    () => {
-      const coupon = getConfiguredSubscriptionCoupon()
-
-      assert.equal(coupon.configured, true)
-      assert.equal(coupon.usable, true)
-      assert.equal(coupon.code, "FREE_MONTH")
-      assert.equal(coupon.label, "Launch Free Month")
-      assert.equal(coupon.maxRedemptions, 100)
-      assert.equal(coupon.expiresAt, Date.parse("2026-12-31T23:59:59+05:30"))
-    },
-  )
-})
-
-test("env coupon is not usable without both redemption limit and expiry", () => {
-  withEnv(
-    {
-      SUBSCRIPTION_FREE_MONTH_COUPON_CODE: " free_month ",
-      SUBSCRIPTION_FREE_MONTH_COUPON_LABEL: "Launch Free Month",
-      SUBSCRIPTION_FREE_MONTH_COUPON_MAX_REDEMPTIONS: undefined,
-      SUBSCRIPTION_FREE_MONTH_COUPON_EXPIRES_AT: undefined,
-    },
-    () => {
-      const coupon = getConfiguredSubscriptionCoupon()
-
-      assert.equal(coupon.configured, true)
-      assert.equal(coupon.usable, false)
-      assert.equal(coupon.hasRedemptionLimit, false)
-      assert.equal(coupon.hasExpiry, false)
-    },
-  )
-})
-
-test("configured env coupon adds security requirements to readiness checks", () => {
-  withEnv(
-    {
-      NODE_ENV: "production",
-      CONVEX_URL: "https://example.convex.cloud",
-      AUTH_JWT_SECRET: "auth-secret",
-      GOOGLE_CLIENT_ID: "google-client",
-      GOOGLE_CLIENT_SECRET: "google-secret",
-      NEXT_PUBLIC_APP_URL: "https://example.com",
-      RAZORPAY_KEY_ID: "rzp_test_key",
-      RAZORPAY_KEY_SECRET: "rzp_test_secret",
-      RAZORPAY_WEBHOOK_SECRET: "webhook-secret",
-      PAYMENTS_DATA_KEY: "payments-data-key",
-      SUBSCRIPTION_FREE_MONTH_COUPON_CODE: "FREE_MONTH",
-      SUBSCRIPTION_FREE_MONTH_COUPON_MAX_REDEMPTIONS: undefined,
-      SUBSCRIPTION_FREE_MONTH_COUPON_EXPIRES_AT: undefined,
-      COUPON_HASH_SECRET: undefined,
-    },
-    () => {
-      const missing = getMissingRequiredRuntimeConfig().sort()
-      assert.deepEqual(missing, [
-        "SUBSCRIPTION_FREE_MONTH_COUPON_EXPIRES_AT",
-        "SUBSCRIPTION_FREE_MONTH_COUPON_MAX_REDEMPTIONS",
-      ])
-    },
-  )
-})
-
-test("configured env coupon can rely on the auth secret for hashing", () => {
-  withEnv(
-    {
-      NODE_ENV: "production",
-      CONVEX_URL: "https://example.convex.cloud",
-      AUTH_JWT_SECRET: "auth-secret",
-      GOOGLE_CLIENT_ID: "google-client",
-      GOOGLE_CLIENT_SECRET: "google-secret",
-      NEXT_PUBLIC_APP_URL: "https://example.com",
-      RAZORPAY_KEY_ID: "rzp_test_key",
-      RAZORPAY_KEY_SECRET: "rzp_test_secret",
-      RAZORPAY_WEBHOOK_SECRET: "webhook-secret",
-      PAYMENTS_DATA_KEY: "payments-data-key",
-      SUBSCRIPTION_FREE_MONTH_COUPON_CODE: "FREE_MONTH",
-      SUBSCRIPTION_FREE_MONTH_COUPON_MAX_REDEMPTIONS: "10",
-      SUBSCRIPTION_FREE_MONTH_COUPON_EXPIRES_AT: "2026-12-31T23:59:59+05:30",
-      COUPON_HASH_SECRET: undefined,
-    },
-    () => {
-      assert.deepEqual(getMissingRequiredRuntimeConfig(), [])
     },
   )
 })

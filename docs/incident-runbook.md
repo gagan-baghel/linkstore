@@ -21,17 +21,6 @@
   - Pause new purchases in UI if checkout fails persistently.
   - Reprocess missed payment confirmations from Razorpay events.
 
-## P1 - Coupon Redemption Failure
-- Symptoms: valid coupon returns `503` or `500`, coupon apply UI fails, users cannot unlock free access.
-- Checks:
-  - `GET /api/health` for coupon readiness, especially `SUBSCRIPTION_FREE_MONTH_COUPON_MAX_REDEMPTIONS` and `SUBSCRIPTION_FREE_MONTH_COUPON_EXPIRES_AT`.
-  - If `COUPON_HASH_SECRET` is absent, confirm `AUTH_JWT_SECRET` is configured so coupon hashing can fall back safely.
-  - API logs for `/api/subscription/coupon`.
-  - Confirm the configured coupon has not expired and has not exhausted its redemption cap.
-- Mitigation:
-  - Restore the missing coupon env vars and redeploy.
-  - Temporarily disable the env coupon if the limits are unknown.
-
 ## P1 - Storefront/API Degradation
 - Symptoms: slow loads, intermittent 5xx, product/store edits failing.
 - Checks:

@@ -8,10 +8,8 @@ import { ArrowRight, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
 import { toast } from "@/components/ui/use-toast"
 import type { SubscriptionAccessState } from "@/lib/subscription"
-import type { SubscriptionCouponEntryState } from "@/lib/subscription-coupon-runtime"
 
 declare global {
   interface Window {
@@ -34,7 +32,6 @@ interface SubscriptionStatusCardProps {
   userEmail: string
   nextPath?: string
   nextLabel?: string
-  couponEntryState: SubscriptionCouponEntryState
 }
 
 function formatDate(timestamp: number | null) {
@@ -74,20 +71,15 @@ export function SubscriptionStatusCard({
   userEmail,
   nextPath,
   nextLabel,
-  couponEntryState,
 }: SubscriptionStatusCardProps) {
   const router = useRouter()
   const [access, setAccess] = useState<SubscriptionAccessState | null>(initialAccess)
   const [isProcessing, setIsProcessing] = useState(false)
-  const [couponCode, setCouponCode] = useState("")
-  const [couponMessage, setCouponMessage] = useState<string | null>(couponEntryState.message)
 
   const statusLabel = useMemo(() => {
     const status = access?.effectiveStatus || "inactive"
     return status.charAt(0).toUpperCase() + status.slice(1)
   }, [access?.effectiveStatus])
-
-  const isActiveAccess = access?.effectiveStatus === "active" && access?.hasActiveSubscription
 
   const canRenew = true
 
@@ -143,7 +135,6 @@ export function SubscriptionStatusCard({
 
   async function handleCheckout() {
     setIsProcessing(true)
-    setCouponMessage(null)
 
     try {
       const scriptLoaded = await loadRazorpayCheckoutScript()
@@ -212,55 +203,6 @@ export function SubscriptionStatusCard({
       toast({
         title: "Checkout failed",
         description: error instanceof Error ? error.message : "Unable to start checkout",
-        variant: "destructive",
-      })
-    } finally {
-      setIsProcessing(false)
-    }
-  }
-
-  async function handleCouponRedeem() {
-    const normalized = couponCode.trim()
-    if (!normalized) {
-      setCouponMessage("Enter a coupon code first.")
-      return
-    }
-
-    if (!couponEntryState.enabled) {
-      setCouponMessage(couponEntryState.message || "Coupon redemption is temporarily unavailable.")
-      return
-    }
-
-    setIsProcessing(true)
-    setCouponMessage(null)
-
-    try {
-      const response = await fetch("/api/subscription/coupon", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ couponCode: normalized }),
-      })
-
-      const data = await response.json().catch(() => ({}))
-      if (!response.ok) {
-        throw new Error(data.message || "Coupon could not be applied.")
-      }
-
-      setCouponCode("")
-      setCouponMessage(null)
-      completeActivation(
-        data.access || null,
-        nextLabel ? `Your plan is active. Continuing to ${nextLabel.toLowerCase()}.` : "Your plan is active. Premium features are now unlocked.",
-      )
-    } catch (error) {
-      console.error("Coupon redemption error:", error)
-      const message = error instanceof Error ? error.message : "Coupon could not be applied."
-      setCouponMessage(message)
-      toast({
-        title: "Coupon failed",
-        description: message,
         variant: "destructive",
       })
     } finally {
@@ -337,36 +279,6 @@ export function SubscriptionStatusCard({
           Refresh Status
         </Button>
       </div>
-
-      {!isActiveAccess ? (
-        <div className="mt-4 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Coupon Access</p>
-          <p className="mt-1 text-sm text-slate-600">Apply a valid coupon to unlock one month of store access for free.</p>
-          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-            <Input
-              value={couponCode}
-              onChange={(event) => setCouponCode(event.target.value)}
-              placeholder="Enter coupon code"
-              autoCapitalize="characters"
-              autoCorrect="off"
-              spellCheck={false}
-              maxLength={64}
-              disabled={isProcessing || !couponEntryState.enabled}
-              className="h-11 border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400 sm:h-9"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleCouponRedeem}
-              disabled={isProcessing || !couponEntryState.enabled}
-              className="h-11 w-full border-slate-300 bg-white text-slate-700 hover:bg-slate-100 hover:text-slate-900 sm:h-9 sm:w-auto"
-            >
-              Apply Coupon
-            </Button>
-          </div>
-          {couponMessage ? <p className="mt-2 text-xs text-slate-600">{couponMessage}</p> : null}
-        </div>
-      ) : null}
 
       {nextLabel ? (
         <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
