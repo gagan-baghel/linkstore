@@ -1,7 +1,8 @@
 import { mutationGeneric, queryGeneric } from "convex/server"
 import { v } from "convex/values"
 
-import { isSubscriptionActiveRecord, resolveStoreEnabled } from "../lib/subscription-billing"
+import { getEffectiveSubscriptionStatus, pickCanonicalSubscription, resolveStoreEnabled } from "../lib/subscription-billing"
+import { SUBSCRIPTION_CURRENCY, SUBSCRIPTION_PLAN_CODE, SUBSCRIPTION_PRICE_PAISE } from "../lib/subscription"
 import {
   USERNAME_MAX_LENGTH,
   getUsernameValidationMessage,
@@ -9,10 +10,6 @@ import {
   normalizeUsernameInput,
   toUsernameBase,
 } from "../lib/username"
-
-const PLAN_CODE = "starter_monthly_149"
-const PLAN_AMOUNT_PAISE = 14900
-const PLAN_CURRENCY = "INR"
 
 function withoutPassword(user: any) {
   if (!user) return null
@@ -88,8 +85,8 @@ async function hasActiveSubscription(ctx: any, userId: string) {
     .withIndex("by_userId", (q: any) => q.eq("userId", userId))
     .collect()
 
-  if (rows.length !== 1) return false
-  return isSubscriptionActiveRecord(rows[0], Date.now())
+  const subscription = pickCanonicalSubscription(rows, Date.now())
+  return getEffectiveSubscriptionStatus(subscription, Date.now()) === "active"
 }
 
 export const getByEmail = queryGeneric({
@@ -127,9 +124,8 @@ export const getPublicByUsername = queryGeneric({
       .withIndex("by_userId", (q: any) => q.eq("userId", user._id))
       .collect()
 
-    if (rows.length !== 1) return null
-
-    const hasActiveSubscription = isSubscriptionActiveRecord(rows[0], Date.now())
+    const subscription = pickCanonicalSubscription(rows, Date.now())
+    const hasActiveSubscription = getEffectiveSubscriptionStatus(subscription, Date.now()) === "active"
     if (!resolveStoreEnabled({ userStoreEnabled: user.storeEnabled, hasActiveSubscription })) {
       return null
     }
@@ -220,9 +216,9 @@ export const upsertGoogleUser = mutationGeneric({
 
     await ctx.db.insert("subscriptions", {
       userId,
-      planCode: PLAN_CODE,
-      planAmountPaise: PLAN_AMOUNT_PAISE,
-      currency: PLAN_CURRENCY,
+      planCode: SUBSCRIPTION_PLAN_CODE,
+      planAmountPaise: SUBSCRIPTION_PRICE_PAISE,
+      currency: SUBSCRIPTION_CURRENCY,
       status: "inactive",
       currentPeriodStart: undefined,
       currentPeriodEnd: undefined,

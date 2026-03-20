@@ -4,7 +4,7 @@ import { getSafeServerSession } from "@/lib/auth"
 import { convexMutation, convexQuery } from "@/lib/convex"
 import { fetchRazorpayPaymentsForOrder, isRazorpayConfigured } from "@/lib/razorpay"
 import { checkRateLimitAsync, getClientIp, tooManyRequests } from "@/lib/security"
-import { encryptSensitive, hashSensitive, hasPaymentsDataKeyConfigured } from "@/lib/secure-data"
+import { encryptSensitive, hashSensitive } from "@/lib/secure-data"
 import { resolveBillingTimestamp } from "@/lib/subscription-billing"
 import { SUBSCRIPTION_PLAN_CODE, SUBSCRIPTION_PLAN_NAME, SUBSCRIPTION_PRICE_PAISE, SUBSCRIPTION_CURRENCY, SUBSCRIPTION_PRODUCT_LIMIT } from "@/lib/subscription"
 
@@ -28,8 +28,7 @@ export async function GET(req: Request) {
 
     if (
       state?.effectiveStatus !== "active" &&
-      isRazorpayConfigured() &&
-      hasPaymentsDataKeyConfigured()
+      isRazorpayConfigured()
     ) {
       const pendingOrder = await convexQuery<{ userId: string; maxAgeMs?: number }, any | null>(
         "subscriptions:getLatestPendingOrderForUser",

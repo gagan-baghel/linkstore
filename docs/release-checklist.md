@@ -7,7 +7,6 @@
   - `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`
   - `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET`
   - `RAZORPAY_WEBHOOK_SECRET`
-  - `PAYMENTS_DATA_KEY`
 - In Google Cloud Console, register the callback URL:
   - `https://your-domain.com/api/auth/google/callback`
 - Optional:

@@ -39,7 +39,6 @@ cp .env.example .env.local
 # RAZORPAY_KEY_ID=...
 # RAZORPAY_KEY_SECRET=...
 # RAZORPAY_WEBHOOK_SECRET=...
-# PAYMENTS_DATA_KEY=...
 # In Google Cloud Console, authorize:
 # http://localhost:3000/api/auth/google/callback
 
@@ -62,7 +61,8 @@ Required in production:
 - `RAZORPAY_KEY_ID`
 - `RAZORPAY_KEY_SECRET`
 - `RAZORPAY_WEBHOOK_SECRET`
-- `PAYMENTS_DATA_KEY`
+
+`AUTH_JWT_SECRET` is also used to derive billing encryption and hashing keys. In local development it can fall back to an in-repo dev default. Production still requires an explicit value.
 
 Optional:
 
@@ -72,7 +72,7 @@ Optional:
 
 ## Release Checklist
 
-- Configure all required env vars in production (`CONVEX_URL`, `AUTH_JWT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, Razorpay keys + webhook secret, `PAYMENTS_DATA_KEY`).
+- Configure all required env vars in production (`CONVEX_URL`, `AUTH_JWT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, Razorpay keys + webhook secret).
 - Verify runtime readiness via `GET /api/health` (should return `ok: true`).
 - Test auth flows:
   - Google sign in from `/auth/login`

@@ -3,46 +3,29 @@ import { v } from "convex/values"
 
 import {
   canTransitionSubscriptionStatus,
+  getEffectiveSubscriptionStatus,
   isCurrentSubscriptionEntitlement,
+  pickCanonicalSubscription,
   resolveStoreEnabled,
   shouldRevokeAccessForBillingEvent,
+  type SubscriptionEffectiveStatus,
   type SubscriptionLifecycleStatus,
 } from "../lib/subscription-billing"
+import {
+  SUBSCRIPTION_CURRENCY,
+  SUBSCRIPTION_DURATION_MS,
+  SUBSCRIPTION_PLAN_CODE,
+  SUBSCRIPTION_PRICE_PAISE,
+  SUBSCRIPTION_PRODUCT_LIMIT,
+} from "../lib/subscription"
 
-const PLAN_CODE = "starter_monthly_149"
-const PLAN_AMOUNT_PAISE = 14900
-const PLAN_CURRENCY = "INR"
-const SUBSCRIPTION_DURATION_MS = 30 * 24 * 60 * 60 * 1000
-const PRODUCT_LIMIT = 200
-
-type EffectiveStatus = "inactive" | "pending" | "active" | "expired" | "cancelled"
+type EffectiveStatus = SubscriptionEffectiveStatus
 type PersistedStatus = SubscriptionLifecycleStatus
 
 type SubscriptionDoc = any
 type SubscriptionResolution = {
   subscription: SubscriptionDoc | null
   ambiguous: boolean
-}
-
-function getEffectiveStatus(subscription: SubscriptionDoc | null, now: number): EffectiveStatus {
-  if (!subscription) return "inactive"
-
-  if (subscription.status === "active") {
-    const expiresAt = typeof subscription.expiresAt === "number" ? subscription.expiresAt : 0
-    if (expiresAt > now) return "active"
-    return "expired"
-  }
-
-  if (subscription.status === "pending") {
-    const expiresAt = typeof subscription.expiresAt === "number" ? subscription.expiresAt : 0
-    if (expiresAt > now) return "pending"
-    return "inactive"
-  }
-
-  if (subscription.status === "cancelled") return "cancelled"
-  if (subscription.status === "expired") return "expired"
-
-  return "inactive"
 }
 
 function canTransitionStatus(fromStatus: PersistedStatus, toStatus: PersistedStatus) {
@@ -189,16 +172,10 @@ async function resolveSingleSubscription(ctx: any, userId: string): Promise<Subs
     .withIndex("by_userId", (q: any) => q.eq("userId", userId))
     .collect()
 
-  if (rows.length === 0) {
-    return { subscription: null, ambiguous: false }
+  return {
+    subscription: pickCanonicalSubscription(rows, Date.now()),
+    ambiguous: rows.length > 1,
   }
-
-  if (rows.length === 1) {
-    return { subscription: rows[0], ambiguous: false }
-  }
-
-  const sorted = [...rows].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
-  return { subscription: sorted[0] || null, ambiguous: true }
 }
 
 async function ensureSubscriptionRow(ctx: any, userId: string, now: number): Promise<SubscriptionResolution> {
@@ -207,9 +184,9 @@ async function ensureSubscriptionRow(ctx: any, userId: string, now: number): Pro
 
   const insertedId = await ctx.db.insert("subscriptions", {
     userId,
-    planCode: PLAN_CODE,
-    planAmountPaise: PLAN_AMOUNT_PAISE,
-    currency: PLAN_CURRENCY,
+    planCode: SUBSCRIPTION_PLAN_CODE,
+    planAmountPaise: SUBSCRIPTION_PRICE_PAISE,
+    currency: SUBSCRIPTION_CURRENCY,
     status: "inactive",
     currentPeriodStart: undefined,
     currentPeriodEnd: undefined,
@@ -240,23 +217,27 @@ function makeAccessState(input: {
   storeEnabled: boolean
   now: number
 }) {
-  const expiresAt = typeof input.subscription?.expiresAt === "number" ? input.subscription.expiresAt : null
-  const hasActiveSubscription = input.userExists && !input.ambiguous && input.effectiveStatus === "active"
-  const remainingProductSlots = Math.max(PRODUCT_LIMIT - input.productCount, 0)
+  const expiresAt =
+    typeof input.subscription?.expiresAt === "number"
+      ? input.subscription.expiresAt
+      : typeof input.subscription?.currentPeriodEnd === "number"
+        ? input.subscription.currentPeriodEnd
+        : null
+  const hasActiveSubscription = input.userExists && input.effectiveStatus === "active"
+  const remainingProductSlots = Math.max(SUBSCRIPTION_PRODUCT_LIMIT - input.productCount, 0)
 
-  const reason = !input.userExists
+  const baseReason = !input.userExists
     ? "User not found"
-    : input.ambiguous
-      ? "Subscription state is ambiguous"
-      : input.effectiveStatus === "active"
-        ? "Active"
-        : input.effectiveStatus === "pending"
-          ? "Payment confirmation pending"
-          : input.effectiveStatus === "expired"
-            ? "Subscription expired"
-            : input.effectiveStatus === "cancelled"
-              ? "Subscription cancelled"
-              : "No active subscription"
+    : input.effectiveStatus === "active"
+      ? "Active"
+      : input.effectiveStatus === "pending"
+        ? "Payment confirmation pending"
+        : input.effectiveStatus === "expired"
+          ? "Subscription expired"
+          : input.effectiveStatus === "cancelled"
+            ? "Subscription cancelled"
+            : "No active subscription"
+  const reason = input.ambiguous ? `${baseReason}. Duplicate subscription records detected.` : baseReason
 
   return {
     status: (input.subscription?.status || "inactive") as EffectiveStatus,
@@ -268,7 +249,7 @@ function makeAccessState(input: {
       userStoreEnabled: input.storeEnabled,
       hasActiveSubscription,
     }),
-    productLimit: PRODUCT_LIMIT,
+    productLimit: SUBSCRIPTION_PRODUCT_LIMIT,
     currentProductCount: input.productCount,
     remainingProductSlots,
     expiresAt,
@@ -300,8 +281,7 @@ async function computeAccessState(ctx: any, userId: string) {
       .withIndex("by_userId", (q: any) => q.eq("userId", userId))
       .collect()
   ).length
-  const effective = getEffectiveStatus(resolved.subscription, now)
-
+  const effective = getEffectiveSubscriptionStatus(resolved.subscription, now)
   return makeAccessState({
     userExists: true,
     ambiguous: resolved.ambiguous,
@@ -359,30 +339,57 @@ async function applyCapturedPayment(
     return { ok: false, message: "Payment is already linked to a different order", code: "PAYMENT_CONFLICT" as const }
   }
 
+  const resolved = await ensureSubscriptionRow(ctx, input.userId, now)
+  if (!resolved.subscription) {
+    return { ok: false, message: "Subscription record could not be resolved", code: "SUBSCRIPTION_NOT_FOUND" as const }
+  }
+
   if (order.status === "paid") {
     if (order.razorpayPaymentIdHash === input.paymentIdHash) {
-      const resolvedExisting = await resolveSingleSubscription(ctx, input.userId)
-      const existingEffective = getEffectiveStatus(resolvedExisting.subscription, now)
-      return {
-        ok: true,
-        idempotent: true,
-        subscription: resolvedExisting.subscription,
-        effectiveStatus: existingEffective,
-        expiresAt: resolvedExisting.subscription?.expiresAt || null,
+      const alreadyEntitled = isCurrentSubscriptionEntitlement({
+        subscription: resolved.subscription,
+        orderId: input.razorpayOrderId,
+        paymentHash: input.paymentIdHash,
+        now,
+      })
+      const existingEffective = getEffectiveSubscriptionStatus(resolved.subscription, now)
+
+      if (alreadyEntitled) {
+        return {
+          ok: true,
+          idempotent: true,
+          subscription: resolved.subscription,
+          effectiveStatus: existingEffective,
+          expiresAt:
+            typeof resolved.subscription.expiresAt === "number"
+              ? resolved.subscription.expiresAt
+              : resolved.subscription.currentPeriodEnd || null,
+        }
       }
+
+      await upsertBillingAlert(ctx, {
+        dedupeKey: `paid-order-repair:${input.userId}:${input.razorpayOrderId}`,
+        category: "payment_entitlement_gap",
+        severity: "high",
+        userId: input.userId,
+        orderId: input.razorpayOrderId,
+        paymentHash: input.paymentIdHash,
+        message: "Repairing a paid order whose subscription entitlement is missing locally.",
+        details: JSON.stringify({ source: input.source }),
+      })
+    } else {
+      return { ok: false, message: "Order is already settled with a different payment", code: "ORDER_ALREADY_PAID" as const }
     }
-
-    return { ok: false, message: "Order is already settled with a different payment", code: "ORDER_ALREADY_PAID" as const }
   }
 
-  const resolved = await ensureSubscriptionRow(ctx, input.userId, now)
-  if (resolved.ambiguous || !resolved.subscription) {
-    return { ok: false, message: "Ambiguous subscription state", code: "AMBIGUOUS_SUBSCRIPTION" as const }
-  }
-
-  const effectiveBefore = getEffectiveStatus(resolved.subscription, now)
+  const effectiveBefore = getEffectiveSubscriptionStatus(resolved.subscription, now)
   const { baseStart, expiresAt } = computeSubscriptionPeriod({
-    currentExpiresAt: effectiveBefore === "active" ? resolved.subscription.expiresAt : null,
+    currentExpiresAt:
+      effectiveBefore === "active"
+        ? typeof resolved.subscription.expiresAt === "number"
+          ? resolved.subscription.expiresAt
+          : resolved.subscription.currentPeriodEnd
+        : null,
     grantedAt: input.capturedAt,
     durationMs: SUBSCRIPTION_DURATION_MS,
   })
@@ -391,28 +398,30 @@ async function applyCapturedPayment(
     status: "paid",
     razorpayPaymentIdEncrypted: input.paymentIdEncrypted,
     razorpayPaymentIdHash: input.paymentIdHash,
-    signatureHash: input.signatureHash,
+    signatureHash: input.signatureHash || order.signatureHash || "",
     providerPaymentStatus: "captured",
-    paidAt: input.capturedAt,
+    paidAt: typeof order.paidAt === "number" ? order.paidAt : input.capturedAt,
+    failureCode: undefined,
+    failureReason: undefined,
     updatedAt: now,
   })
 
   const activationPatch = await patchSubscriptionStatus(ctx, resolved.subscription, {
     nextStatus: "active",
     patch: {
-      planCode: PLAN_CODE,
-      planAmountPaise: PLAN_AMOUNT_PAISE,
-      currency: PLAN_CURRENCY,
+      planCode: SUBSCRIPTION_PLAN_CODE,
+      planAmountPaise: SUBSCRIPTION_PRICE_PAISE,
+      currency: SUBSCRIPTION_CURRENCY,
       currentPeriodStart: baseStart,
       currentPeriodEnd: expiresAt,
-      activatedAt: now,
+      activatedAt: resolved.subscription.activatedAt || now,
       expiresAt,
       cancelledAt: undefined,
       pendingOrderId: undefined,
       lastOrderId: input.razorpayOrderId,
       lastPaymentIdEncrypted: input.paymentIdEncrypted,
       lastPaymentIdHash: input.paymentIdHash,
-      lastSignatureHash: input.signatureHash,
+      lastSignatureHash: input.signatureHash || resolved.subscription.lastSignatureHash || "",
       webhookConfirmedAt: input.source === "webhook" ? now : resolved.subscription.webhookConfirmedAt,
       deactivationReason: undefined,
       updatedAt: now,
@@ -448,31 +457,38 @@ async function applyCapturedPayment(
     details: JSON.stringify({
       source: input.source,
       orderId: input.razorpayOrderId,
+      repairedPaidOrder: order.status === "paid",
       expiresAt,
     }),
   })
 
   const updatedSub = await ctx.db.get(resolved.subscription._id)
   await resolveBillingAlertByKey(ctx, `captured-no-entitlement:${input.userId}:${input.razorpayOrderId}`)
-  const effective = getEffectiveStatus(updatedSub, now)
+  await resolveBillingAlertByKey(ctx, `paid-order-repair:${input.userId}:${input.razorpayOrderId}`)
+  const effective = getEffectiveSubscriptionStatus(updatedSub, now)
 
   return {
     ok: true,
     idempotent: false,
     subscription: updatedSub,
     effectiveStatus: effective,
-    expiresAt: updatedSub?.expiresAt || null,
+    expiresAt:
+      typeof updatedSub?.expiresAt === "number"
+        ? updatedSub.expiresAt
+        : typeof updatedSub?.currentPeriodEnd === "number"
+          ? updatedSub.currentPeriodEnd
+          : null,
   }
 }
 export const getPlan = queryGeneric({
   args: {},
   handler: async () => {
     return {
-      code: PLAN_CODE,
-      amountPaise: PLAN_AMOUNT_PAISE,
-      currency: PLAN_CURRENCY,
+      code: SUBSCRIPTION_PLAN_CODE,
+      amountPaise: SUBSCRIPTION_PRICE_PAISE,
+      currency: SUBSCRIPTION_CURRENCY,
       durationMs: SUBSCRIPTION_DURATION_MS,
-      productLimit: PRODUCT_LIMIT,
+      productLimit: SUBSCRIPTION_PRODUCT_LIMIT,
     }
   },
 })
@@ -503,8 +519,8 @@ export const getReusablePendingOrder = queryGeneric({
         row.status === "pending" &&
         typeof row.expiresAt === "number" &&
         row.expiresAt > now &&
-        row.amountPaise === PLAN_AMOUNT_PAISE &&
-        row.currency === PLAN_CURRENCY,
+        row.amountPaise === SUBSCRIPTION_PRICE_PAISE &&
+        row.currency === SUBSCRIPTION_CURRENCY,
     )
 
     if (!reusable) return null
@@ -627,7 +643,7 @@ export const expirePendingOrder = mutationGeneric({
     })
 
     const resolved = await resolveSingleSubscription(ctx, order.userId)
-    if (!resolved.ambiguous && resolved.subscription?.pendingOrderId === order.razorpayOrderId) {
+    if (resolved.subscription?.pendingOrderId === order.razorpayOrderId) {
       if (resolved.subscription.status === "pending") {
         const patchResult = await patchSubscriptionStatus(ctx, resolved.subscription, {
           nextStatus: "inactive",
@@ -775,12 +791,9 @@ export const createCheckoutOrderRecord = mutationGeneric({
       return { ok: false, message: "User not found" as const, code: "USER_NOT_FOUND" as const }
     }
 
-    const existingSubState = await resolveSingleSubscription(ctx, args.userId)
-    if (existingSubState.ambiguous) {
-      return { ok: false, message: "Ambiguous subscription state" as const, code: "AMBIGUOUS_SUBSCRIPTION" as const }
-    }
+    const existingSubState = await ensureSubscriptionRow(ctx, args.userId, now)
 
-    if (args.amountPaise !== PLAN_AMOUNT_PAISE || args.currency !== PLAN_CURRENCY) {
+    if (args.amountPaise !== SUBSCRIPTION_PRICE_PAISE || args.currency !== SUBSCRIPTION_CURRENCY) {
       return { ok: false, message: "Invalid plan amount/currency" as const, code: "PLAN_MISMATCH" as const }
     }
 
@@ -832,7 +845,7 @@ export const createCheckoutOrderRecord = mutationGeneric({
 
     await ctx.db.insert("subscriptionOrders", {
       userId: args.userId,
-      planCode: PLAN_CODE,
+      planCode: SUBSCRIPTION_PLAN_CODE,
       amountPaise: args.amountPaise,
       currency: args.currency,
       status: "pending",
@@ -853,13 +866,33 @@ export const createCheckoutOrderRecord = mutationGeneric({
     })
 
     const resolved = await ensureSubscriptionRow(ctx, args.userId, now)
-    if (resolved.subscription && !resolved.ambiguous) {
-      const effective = getEffectiveStatus(resolved.subscription, now)
+    if (resolved.subscription) {
+      const effective = getEffectiveSubscriptionStatus(resolved.subscription, now)
       if (effective !== "active") {
-        await ctx.db.patch(resolved.subscription._id, {
-          pendingOrderId: args.razorpayOrderId,
-          updatedAt: now,
-        })
+        if (resolved.subscription.status === "inactive" || resolved.subscription.status === "pending") {
+          const patchResult = await patchSubscriptionStatus(ctx, resolved.subscription, {
+            nextStatus: "pending",
+            patch: {
+              pendingOrderId: args.razorpayOrderId,
+              updatedAt: now,
+            },
+          })
+          if (!patchResult.ok) {
+            await upsertBillingAlert(ctx, {
+              dedupeKey: `invalid-transition:${args.userId}:${args.razorpayOrderId}:checkout-pending`,
+              category: "subscription_state",
+              severity: "high",
+              userId: args.userId,
+              orderId: args.razorpayOrderId,
+              message: patchResult.message,
+            })
+          }
+        } else {
+          await ctx.db.patch(resolved.subscription._id, {
+            pendingOrderId: args.razorpayOrderId,
+            updatedAt: now,
+          })
+        }
       }
     }
 
@@ -908,12 +941,32 @@ export const confirmPayment = mutationGeneric({
       .first()
 
     if (existingEvent && existingEvent.status !== "failed") {
-      const state = await computeAccessState(ctx, args.userId)
-      return {
-        ok: true,
-        idempotent: true,
-        message: "Event already processed",
-        access: state,
+      const resolved = await resolveSingleSubscription(ctx, args.userId)
+      const alreadyEntitled = isCurrentSubscriptionEntitlement({
+        subscription: resolved.subscription,
+        orderId: args.razorpayOrderId,
+        paymentHash: args.paymentIdHash,
+        now,
+      })
+
+      if (!alreadyEntitled) {
+        await upsertBillingAlert(ctx, {
+          dedupeKey: `processed-event-repair:${args.userId}:${args.razorpayOrderId}:${args.eventKey}`,
+          category: "payment_entitlement_gap",
+          severity: "high",
+          userId: args.userId,
+          orderId: args.razorpayOrderId,
+          paymentHash: args.paymentIdHash,
+          message: "Retrying entitlement repair for a previously processed payment event.",
+        })
+      } else {
+        const state = await computeAccessState(ctx, args.userId)
+        return {
+          ok: true,
+          idempotent: true,
+          message: "Event already processed",
+          access: state,
+        }
       }
     }
 
@@ -965,6 +1018,8 @@ export const confirmPayment = mutationGeneric({
         code: confirmed.code,
       }
     }
+
+    await resolveBillingAlertByKey(ctx, `processed-event-repair:${args.userId}:${args.razorpayOrderId}:${args.eventKey}`)
 
     if (existingEvent) {
       await ctx.db.patch(existingEvent._id, {
@@ -1147,7 +1202,7 @@ export const processWebhookEvent = mutationGeneric({
       })
 
       const resolved = await resolveSingleSubscription(ctx, order.userId)
-      if (!resolved.ambiguous && resolved.subscription?.pendingOrderId === order.razorpayOrderId) {
+      if (resolved.subscription?.pendingOrderId === order.razorpayOrderId) {
         const currentPeriodEnd =
           typeof resolved.subscription.currentPeriodEnd === "number" ? resolved.subscription.currentPeriodEnd : undefined
         const nextStatus =
@@ -1219,7 +1274,6 @@ export const processWebhookEvent = mutationGeneric({
       const resolved = await resolveSingleSubscription(ctx, order.userId)
       const affectsCurrentEntitlement =
         shouldRevokeAccess &&
-        !resolved.ambiguous &&
         isCurrentSubscriptionEntitlement({
           subscription: resolved.subscription,
           orderId: order.razorpayOrderId,
@@ -1364,8 +1418,8 @@ export const adminOverride = mutationGeneric({
     }
 
     const resolved = await ensureSubscriptionRow(ctx, args.targetUserId, now)
-    if (resolved.ambiguous || !resolved.subscription) {
-      return { ok: false, message: "Ambiguous subscription state" as const }
+    if (!resolved.subscription) {
+      return { ok: false, message: "Subscription record not found" as const }
     }
 
     const currentExpiry = typeof resolved.subscription.expiresAt === "number" ? resolved.subscription.expiresAt : now

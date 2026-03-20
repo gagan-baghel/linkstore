@@ -1,9 +1,8 @@
 import { mutationGeneric, queryGeneric } from "convex/server"
 import { v } from "convex/values"
 
-import { isSubscriptionActiveRecord } from "../lib/subscription-billing"
-
-const PRODUCT_LIMIT = 200
+import { getEffectiveSubscriptionStatus, pickCanonicalSubscription } from "../lib/subscription-billing"
+import { SUBSCRIPTION_PRODUCT_LIMIT } from "../lib/subscription"
 
 function normalizeCategory(category?: string) {
   const normalized = (category || "").trim()
@@ -22,11 +21,8 @@ async function hasActiveSubscription(ctx: any, userId: string) {
     .withIndex("by_userId", (q: any) => q.eq("userId", userId))
     .collect()
 
-  if (rows.length !== 1) {
-    return { ok: false as const, message: "Subscription state is ambiguous." }
-  }
-
-  const isActive = isSubscriptionActiveRecord(rows[0], Date.now())
+  const subscription = pickCanonicalSubscription(rows, Date.now())
+  const isActive = getEffectiveSubscriptionStatus(subscription, Date.now()) === "active"
   if (!isActive) {
     return { ok: false as const, message: "Active subscription is required." }
   }
@@ -148,10 +144,10 @@ export const createProduct = mutationGeneric({
     }
 
     const currentProductCount = await countProductsForUser(ctx, args.userId)
-    if (currentProductCount >= PRODUCT_LIMIT) {
+    if (currentProductCount >= SUBSCRIPTION_PRODUCT_LIMIT) {
       return {
         ok: false,
-        message: `Product limit reached (${PRODUCT_LIMIT}).`,
+        message: `Product limit reached (${SUBSCRIPTION_PRODUCT_LIMIT}).`,
         code: "PRODUCT_LIMIT_REACHED" as const,
       }
     }
@@ -286,10 +282,10 @@ export const duplicateByIdForUser = mutationGeneric({
     }
 
     const currentProductCount = await countProductsForUser(ctx, args.userId)
-    if (currentProductCount >= PRODUCT_LIMIT) {
+    if (currentProductCount >= SUBSCRIPTION_PRODUCT_LIMIT) {
       return {
         ok: false,
-        message: `Product limit reached (${PRODUCT_LIMIT}).`,
+        message: `Product limit reached (${SUBSCRIPTION_PRODUCT_LIMIT}).`,
         code: "PRODUCT_LIMIT_REACHED" as const,
       }
     }

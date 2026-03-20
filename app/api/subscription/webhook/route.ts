@@ -4,7 +4,7 @@ import { z } from "zod"
 import { convexMutation } from "@/lib/convex"
 import { isRazorpayWebhookConfigured, verifyRazorpayWebhookSignature } from "@/lib/razorpay"
 import { checkRateLimitAsync, getClientIp, tooManyRequests } from "@/lib/security"
-import { encryptSensitive, hashSensitive, hasPaymentsDataKeyConfigured } from "@/lib/secure-data"
+import { encryptSensitive, hashSensitive } from "@/lib/secure-data"
 import { resolveBillingTimestamp } from "@/lib/subscription-billing"
 import { writeAuditLog } from "@/lib/audit"
 
@@ -41,10 +41,6 @@ export async function POST(req: Request) {
     const rate = await checkRateLimitAsync({ key: `api:subscription:webhook:${ip}`, windowMs: 60 * 1000, max: 240 })
     if (!rate.allowed) {
       return tooManyRequests(rate.retryAfterSec)
-    }
-
-    if (!hasPaymentsDataKeyConfigured()) {
-      return NextResponse.json({ message: "Payment encryption key is not configured." }, { status: 503 })
     }
 
     const rawBody = await req.text()

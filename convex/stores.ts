@@ -1,7 +1,7 @@
 import { queryGeneric } from "convex/server"
 import { v } from "convex/values"
 
-import { isSubscriptionActiveRecord, resolveStoreEnabled } from "../lib/subscription-billing"
+import { getEffectiveSubscriptionStatus, pickCanonicalSubscription, resolveStoreEnabled } from "../lib/subscription-billing"
 
 function withoutPassword(user: any) {
   if (!user) return null
@@ -53,11 +53,8 @@ export const getByUsername = queryGeneric({
       .withIndex("by_userId", (q: any) => q.eq("userId", user._id))
       .collect()
 
-    if (subscriptions.length !== 1) {
-      return null
-    }
-
-    const hasActiveSubscription = isSubscriptionActiveRecord(subscriptions[0], Date.now())
+    const subscription = pickCanonicalSubscription(subscriptions, Date.now())
+    const hasActiveSubscription = getEffectiveSubscriptionStatus(subscription, Date.now()) === "active"
     if (!resolveStoreEnabled({ userStoreEnabled: user.storeEnabled, hasActiveSubscription })) {
       return null
     }

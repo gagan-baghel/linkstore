@@ -6,7 +6,7 @@ import { convexMutation } from "@/lib/convex"
 import { writeAuditLog } from "@/lib/audit"
 import { fetchRazorpayPayment, isRazorpayConfigured, verifyRazorpayPaymentSignature } from "@/lib/razorpay"
 import { checkRateLimitAsync, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
-import { encryptSensitive, hashSensitive, hasPaymentsDataKeyConfigured } from "@/lib/secure-data"
+import { encryptSensitive, hashSensitive } from "@/lib/secure-data"
 import { resolveBillingTimestamp } from "@/lib/subscription-billing"
 import { SUBSCRIPTION_CURRENCY, SUBSCRIPTION_PRICE_PAISE } from "@/lib/subscription"
 
@@ -36,10 +36,6 @@ export async function POST(req: Request) {
     const session = await getSafeServerSession()
     if (!session?.user?.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
-    }
-
-    if (!hasPaymentsDataKeyConfigured()) {
-      return NextResponse.json({ message: "Payment encryption key is not configured." }, { status: 503 })
     }
 
     const body = await req.json()

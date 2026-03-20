@@ -1,14 +1,9 @@
 import crypto from "crypto"
-
-const KEY_ENV = "PAYMENTS_DATA_KEY"
-
-function getRawKeyMaterial() {
-  return process.env[KEY_ENV]?.trim() || ""
-}
+import { getAuthJwtSecret } from "@/lib/auth-config"
 
 function decodeKeyMaterial(raw: string): Buffer {
   if (!raw) {
-    throw new Error(`${KEY_ENV} is required.`)
+    throw new Error("AUTH_JWT_SECRET is required.")
   }
 
   if (/^[0-9a-fA-F]{64}$/.test(raw)) {
@@ -28,7 +23,7 @@ function decodeKeyMaterial(raw: string): Buffer {
 }
 
 function getKey(): Buffer {
-  const raw = getRawKeyMaterial()
+  const raw = getAuthJwtSecret()
   const material = decodeKeyMaterial(raw)
   return crypto.createHash("sha256").update(material).digest()
 }
@@ -62,13 +57,4 @@ export function decryptSensitive(payload: string): string {
   decipher.setAuthTag(tag)
   const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()])
   return decrypted.toString("utf8")
-}
-
-export function hasPaymentsDataKeyConfigured() {
-  try {
-    getKey()
-    return true
-  } catch {
-    return false
-  }
 }

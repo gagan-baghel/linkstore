@@ -47,7 +47,6 @@ test("development readiness allows the auth secret fallback", () => {
       RAZORPAY_KEY_ID: "rzp_test_key",
       RAZORPAY_KEY_SECRET: "rzp_test_secret",
       RAZORPAY_WEBHOOK_SECRET: "webhook-secret",
-      PAYMENTS_DATA_KEY: "payments-data-key",
     },
     () => {
       assert.deepEqual(getMissingRequiredRuntimeConfig(), [])
@@ -69,7 +68,6 @@ test("production readiness reports missing auth and app url configuration", () =
       RAZORPAY_KEY_ID: "rzp_test_key",
       RAZORPAY_KEY_SECRET: "rzp_test_secret",
       RAZORPAY_WEBHOOK_SECRET: "webhook-secret",
-      PAYMENTS_DATA_KEY: "payments-data-key",
     },
     () => {
       const missing = getMissingRequiredRuntimeConfig().sort()

@@ -14,7 +14,7 @@
 ## P0 - Payment Outage
 - Symptoms: checkout/verify/webhook failures, subscriptions not activating.
 - Checks:
-  - `GET /api/health` for Razorpay + `PAYMENTS_DATA_KEY` readiness.
+  - `GET /api/health` for Razorpay + `AUTH_JWT_SECRET` readiness.
   - Razorpay dashboard event delivery + webhook signature errors.
   - API logs for `/api/subscription/checkout|verify|webhook`.
 - Mitigation:

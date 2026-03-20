@@ -41,7 +41,6 @@ export function getRuntimeReadinessChecks(): ReadinessCheck[] {
   const isProduction = process.env.NODE_ENV === "production"
   const convexConfigured = Boolean(readEnv("CONVEX_URL"))
   const authConfigured = hasAuthJwtSecretConfigured() || !isProduction
-  const paymentsDataKeyConfigured = Boolean(readEnv("PAYMENTS_DATA_KEY"))
   const razorpay = getRazorpayCredentials()
   const googleOAuth = getGoogleOAuthCredentials()
   const appUrlConfigured = Boolean(readEnv("NEXT_PUBLIC_APP_URL"))
@@ -56,7 +55,7 @@ export function getRuntimeReadinessChecks(): ReadinessCheck[] {
       key: "AUTH_JWT_SECRET",
       required: true,
       configured: authConfigured,
-      note: "Required in production. Development falls back to an in-repo dev secret unless you override it.",
+      note: "Required in production. Also used to derive billing encryption and hashing keys. Development falls back to an in-repo dev secret unless you override it.",
     },
     {
       key: "GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET",
@@ -76,7 +75,6 @@ export function getRuntimeReadinessChecks(): ReadinessCheck[] {
       configured: razorpay.configured,
     },
     { key: "RAZORPAY_WEBHOOK_SECRET", required: true, configured: Boolean(readEnv("RAZORPAY_WEBHOOK_SECRET")) },
-    { key: "PAYMENTS_DATA_KEY", required: true, configured: paymentsDataKeyConfigured },
     {
       key: "CLOUDINARY_CLOUD_NAME + CLOUDINARY_API_KEY + CLOUDINARY_API_SECRET",
       required: false,
