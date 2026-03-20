@@ -67,4 +67,11 @@ test("coupon activation unlocks premium product flow without payment", async ({ 
   await page.goto("/dashboard/products/new")
   await expect(page).toHaveURL(/\/dashboard\/products\/new$/)
   await expect(page.getByRole("heading", { name: "Add Product" })).toBeVisible()
+
+  await page.goto("/dashboard/account")
+  await expect(page.getByRole("heading", { name: "Starter Monthly Plan" })).toBeVisible()
+  await expect(page.getByText("₹149 per month, up to 200 products.")).toBeVisible()
+  await expect(page.getByText("Coupon Access")).toHaveCount(0)
+  await expect(page.getByText("UTC")).toHaveCount(0)
+  await expect(page.getByText(/[A-Z][a-z]+ \d{1,2}, \d{4}/)).toBeVisible()
 })

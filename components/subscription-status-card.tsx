@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { toast } from "@/components/ui/use-toast"
-import { SUBSCRIPTION_PRICE_PAISE, type SubscriptionAccessState } from "@/lib/subscription"
+import type { SubscriptionAccessState } from "@/lib/subscription"
 
 declare global {
   interface Window {
@@ -39,13 +39,12 @@ function formatDate(timestamp: number | null) {
   if (!timestamp) return "-"
   try {
     const date = new Date(timestamp)
-    const year = date.getUTCFullYear()
-    const month = String(date.getUTCMonth() + 1).padStart(2, "0")
-    const day = String(date.getUTCDate()).padStart(2, "0")
-    const hours = String(date.getUTCHours()).padStart(2, "0")
-    const minutes = String(date.getUTCMinutes()).padStart(2, "0")
-    const seconds = String(date.getUTCSeconds()).padStart(2, "0")
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds} UTC`
+    return new Intl.DateTimeFormat("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+      timeZone: "UTC",
+    }).format(date)
   } catch {
     return "-"
   }
@@ -85,11 +84,7 @@ export function SubscriptionStatusCard({
     return status.charAt(0).toUpperCase() + status.slice(1)
   }, [access?.effectiveStatus])
 
-  const displayAmountPaise =
-    access?.hasActiveSubscription && typeof access?.planAmountPaise === "number"
-      ? access.planAmountPaise
-      : SUBSCRIPTION_PRICE_PAISE
-  const isFreeAccessPeriod = access?.hasActiveSubscription && displayAmountPaise === 0
+  const isActiveAccess = access?.effectiveStatus === "active" && access?.hasActiveSubscription
 
   const canRenew = true
 
@@ -246,10 +241,10 @@ export function SubscriptionStatusCard({
       }
 
       setCouponCode("")
-      setCouponMessage("Coupon applied. Your store access is now active.")
+      setCouponMessage(null)
       completeActivation(
         data.access || null,
-        nextLabel ? `Your free month is active. Continuing to ${nextLabel.toLowerCase()}.` : "Your free month is active. Premium features are now unlocked.",
+        nextLabel ? `Your plan is active. Continuing to ${nextLabel.toLowerCase()}.` : "Your plan is active. Premium features are now unlocked.",
       )
     } catch (error) {
       console.error("Coupon redemption error:", error)
@@ -271,9 +266,7 @@ export function SubscriptionStatusCard({
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Subscription</p>
           <h3 className="mt-1 text-sm font-semibold text-slate-900 sm:text-lg">Starter Monthly Plan</h3>
-          <p className="text-[13px] leading-5 text-slate-600 sm:text-sm sm:leading-6">
-            {isFreeAccessPeriod ? "₹0 for this access period via coupon, up to 200 products." : "₹149 per month, up to 200 products."}
-          </p>
+          <p className="text-[13px] leading-5 text-slate-600 sm:text-sm sm:leading-6">₹149 per month, up to 200 products.</p>
         </div>
         <Badge variant="outline" className="w-fit border-slate-300 bg-slate-50 text-slate-700">
           {statusLabel}
@@ -320,19 +313,13 @@ export function SubscriptionStatusCard({
       ) : null}
 
       <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
-        {isFreeAccessPeriod ? (
-          <div className="flex h-11 w-full items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-4 text-sm font-medium text-emerald-800 sm:h-9 sm:w-auto">
-            Coupon Applied: ₹0 Active
-          </div>
-        ) : (
-          <Button
-            onClick={handleCheckout}
-            disabled={isProcessing || !canRenew}
-            className="h-11 w-full rounded-lg border border-slate-900 bg-slate-900 px-4 text-sm text-white hover:bg-slate-800 sm:h-9 sm:w-auto"
-          >
-            {isProcessing ? "Processing..." : access?.effectiveStatus === "active" ? "Renew +30 Days" : "Pay ₹149 Now"}
-          </Button>
-        )}
+        <Button
+          onClick={handleCheckout}
+          disabled={isProcessing || !canRenew}
+          className="h-11 w-full rounded-lg border border-slate-900 bg-slate-900 px-4 text-sm text-white hover:bg-slate-800 sm:h-9 sm:w-auto"
+        >
+          {isProcessing ? "Processing..." : access?.effectiveStatus === "active" ? "Renew +30 Days" : "Pay ₹149 Now"}
+        </Button>
         <Button
           variant="outline"
           onClick={refreshStatus}
@@ -343,33 +330,35 @@ export function SubscriptionStatusCard({
         </Button>
       </div>
 
-      <div className="mt-4 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Coupon Access</p>
-        <p className="mt-1 text-sm text-slate-600">Apply a valid coupon to unlock one month of store access for free.</p>
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-          <Input
-            value={couponCode}
-            onChange={(event) => setCouponCode(event.target.value)}
-            placeholder="Enter coupon code"
-            autoCapitalize="characters"
-            autoCorrect="off"
-            spellCheck={false}
-            maxLength={64}
-            disabled={isProcessing}
-            className="h-11 border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400 sm:h-9"
-          />
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleCouponRedeem}
-            disabled={isProcessing}
-            className="h-11 w-full border-slate-300 bg-white text-slate-700 hover:bg-slate-100 hover:text-slate-900 sm:h-9 sm:w-auto"
-          >
-            Apply Coupon
-          </Button>
+      {!isActiveAccess ? (
+        <div className="mt-4 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Coupon Access</p>
+          <p className="mt-1 text-sm text-slate-600">Apply a valid coupon to unlock one month of store access for free.</p>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+            <Input
+              value={couponCode}
+              onChange={(event) => setCouponCode(event.target.value)}
+              placeholder="Enter coupon code"
+              autoCapitalize="characters"
+              autoCorrect="off"
+              spellCheck={false}
+              maxLength={64}
+              disabled={isProcessing}
+              className="h-11 border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400 sm:h-9"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCouponRedeem}
+              disabled={isProcessing}
+              className="h-11 w-full border-slate-300 bg-white text-slate-700 hover:bg-slate-100 hover:text-slate-900 sm:h-9 sm:w-auto"
+            >
+              Apply Coupon
+            </Button>
+          </div>
+          {couponMessage ? <p className="mt-2 text-xs text-slate-600">{couponMessage}</p> : null}
         </div>
-        {couponMessage ? <p className="mt-2 text-xs text-slate-600">{couponMessage}</p> : null}
-      </div>
+      ) : null}
 
       {nextLabel ? (
         <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
