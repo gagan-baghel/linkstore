@@ -4,15 +4,14 @@ import { z } from "zod"
 import { getSafeServerSession } from "@/lib/auth"
 import { writeAuditLog } from "@/lib/audit"
 import { convexMutation } from "@/lib/convex"
-import { getConfiguredSubscriptionCoupon } from "@/lib/runtime-config"
 import { checkRateLimitAsync, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
+import { resolveSubscriptionCouponRedemptionPlan } from "@/lib/subscription-coupon-runtime"
 import {
   SUBSCRIPTION_COUPON_DURATION_MS,
   isValidSubscriptionCouponCode,
   maskSubscriptionCouponCode,
   normalizeSubscriptionCouponCode,
 } from "@/lib/subscription-coupons"
-import { hashSubscriptionCouponCode, hasCouponHashSecretConfigured } from "@/lib/subscription-coupon-hash"
 
 const redeemCouponSchema = z.object({
   couponCode: z.string().trim().min(4).max(64),
@@ -40,20 +39,6 @@ export async function POST(req: Request) {
     const payload = redeemCouponSchema.parse(body)
     const normalizedCode = normalizeSubscriptionCouponCode(payload.couponCode)
     const codeHint = maskSubscriptionCouponCode(normalizedCode)
-    const configuredCoupon = getConfiguredSubscriptionCoupon()
-
-    if (!hasCouponHashSecretConfigured()) {
-      return NextResponse.json({ message: "Coupon redemption is temporarily unavailable." }, { status: 503 })
-    }
-
-    if (configuredCoupon.configured && configuredCoupon.code === normalizedCode && !configuredCoupon.usable) {
-      return NextResponse.json(
-        { message: "Configured coupon is incomplete. Set both a redemption limit and an expiry before use." },
-        { status: 503 },
-      )
-    }
-
-    const codeHash = hashSubscriptionCouponCode(normalizedCode)
 
     if (!isValidSubscriptionCouponCode(normalizedCode)) {
       await writeAuditLog({
@@ -67,6 +52,25 @@ export async function POST(req: Request) {
         details: JSON.stringify({ codeHint }),
       })
       return NextResponse.json({ message: "Coupon code format is invalid." }, { status: 400 })
+    }
+
+    const redemptionPlan = resolveSubscriptionCouponRedemptionPlan({
+      couponCode: normalizedCode,
+      userId: session.user.id,
+    })
+
+    if (!redemptionPlan.ok) {
+      await writeAuditLog({
+        actorType: "user",
+        actorUserId: session.user.id,
+        action: "subscription.coupon_redeem_unavailable",
+        resourceType: "subscription_coupon",
+        status: "failed",
+        ip,
+        userAgent,
+        details: JSON.stringify({ codeHint, code: redemptionPlan.code, message: redemptionPlan.message }),
+      })
+      return NextResponse.json({ message: redemptionPlan.message, code: redemptionPlan.code }, { status: redemptionPlan.status })
     }
 
     const result = await convexMutation<
@@ -87,24 +91,8 @@ export async function POST(req: Request) {
         }
       }
     >(
-      configuredCoupon.configured && configuredCoupon.code === normalizedCode
-        ? "subscriptions:redeemConfiguredCoupon"
-        : "subscriptions:redeemCoupon",
-      configuredCoupon.configured && configuredCoupon.code === normalizedCode
-        ? {
-            userId: session.user.id,
-            codeHash,
-            codeHint,
-            couponLabel: configuredCoupon.label,
-            durationMs: configuredCoupon.durationMs,
-            maxRedemptions: configuredCoupon.maxRedemptions,
-            expiresAt: configuredCoupon.expiresAt,
-          }
-        : {
-            userId: session.user.id,
-            codeHash,
-            codeHint,
-          },
+      redemptionPlan.mutationName,
+      redemptionPlan.mutationArgs,
     )
 
     if (!result.ok) {

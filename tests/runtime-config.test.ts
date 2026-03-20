@@ -148,10 +148,33 @@ test("configured env coupon adds security requirements to readiness checks", () 
     () => {
       const missing = getMissingRequiredRuntimeConfig().sort()
       assert.deepEqual(missing, [
-        "COUPON_HASH_SECRET",
         "SUBSCRIPTION_FREE_MONTH_COUPON_EXPIRES_AT",
         "SUBSCRIPTION_FREE_MONTH_COUPON_MAX_REDEMPTIONS",
       ])
+    },
+  )
+})
+
+test("configured env coupon can rely on the auth secret for hashing", () => {
+  withEnv(
+    {
+      NODE_ENV: "production",
+      CONVEX_URL: "https://example.convex.cloud",
+      AUTH_JWT_SECRET: "auth-secret",
+      GOOGLE_CLIENT_ID: "google-client",
+      GOOGLE_CLIENT_SECRET: "google-secret",
+      NEXT_PUBLIC_APP_URL: "https://example.com",
+      RAZORPAY_KEY_ID: "rzp_test_key",
+      RAZORPAY_KEY_SECRET: "rzp_test_secret",
+      RAZORPAY_WEBHOOK_SECRET: "webhook-secret",
+      PAYMENTS_DATA_KEY: "payments-data-key",
+      SUBSCRIPTION_FREE_MONTH_COUPON_CODE: "FREE_MONTH",
+      SUBSCRIPTION_FREE_MONTH_COUPON_MAX_REDEMPTIONS: "10",
+      SUBSCRIPTION_FREE_MONTH_COUPON_EXPIRES_AT: "2026-12-31T23:59:59+05:30",
+      COUPON_HASH_SECRET: undefined,
+    },
+    () => {
+      assert.deepEqual(getMissingRequiredRuntimeConfig(), [])
     },
   )
 })

@@ -1,6 +1,8 @@
 import { hasAuthJwtSecretConfigured } from "@/lib/auth-config"
-import { hasCouponHashSecretConfigured } from "@/lib/subscription-coupon-hash"
-import { SUBSCRIPTION_COUPON_DURATION_MS, normalizeSubscriptionCouponCode } from "@/lib/subscription-coupons"
+import { isCouponHashingAvailable } from "@/lib/subscription-coupon-hash"
+import { getConfiguredSubscriptionCoupon } from "@/lib/subscription-coupon-runtime"
+
+export { getConfiguredSubscriptionCoupon } from "@/lib/subscription-coupon-runtime"
 
 type ReadinessCheck = {
   key: string
@@ -15,24 +17,6 @@ function readEnv(...keys: string[]) {
     if (value) return value
   }
   return ""
-}
-
-function parseOptionalPositiveInteger(raw: string) {
-  if (!raw) return undefined
-  const value = Number.parseInt(raw, 10)
-  return Number.isFinite(value) && value > 0 ? value : undefined
-}
-
-function parseOptionalTimestamp(raw: string) {
-  if (!raw) return undefined
-
-  if (/^\d+$/.test(raw)) {
-    const numeric = Number.parseInt(raw, 10)
-    return Number.isFinite(numeric) && numeric > 0 ? numeric : undefined
-  }
-
-  const parsed = Date.parse(raw)
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
 }
 
 export function getRazorpayCredentials() {
@@ -57,27 +41,6 @@ export function getGoogleOAuthCredentials() {
   }
 }
 
-export function getConfiguredSubscriptionCoupon() {
-  const rawCode = readEnv("SUBSCRIPTION_FREE_MONTH_COUPON_CODE")
-  const code = rawCode ? normalizeSubscriptionCouponCode(rawCode) : ""
-  const maxRedemptions = parseOptionalPositiveInteger(readEnv("SUBSCRIPTION_FREE_MONTH_COUPON_MAX_REDEMPTIONS"))
-  const expiresAt = parseOptionalTimestamp(readEnv("SUBSCRIPTION_FREE_MONTH_COUPON_EXPIRES_AT"))
-  const hasRedemptionLimit = typeof maxRedemptions === "number"
-  const hasExpiry = typeof expiresAt === "number"
-
-  return {
-    configured: Boolean(code),
-    usable: Boolean(code && hasRedemptionLimit && hasExpiry),
-    code,
-    label: readEnv("SUBSCRIPTION_FREE_MONTH_COUPON_LABEL") || "Free Month Access",
-    durationMs: SUBSCRIPTION_COUPON_DURATION_MS,
-    maxRedemptions,
-    expiresAt,
-    hasRedemptionLimit,
-    hasExpiry,
-  }
-}
-
 export function getRuntimeReadinessChecks(): ReadinessCheck[] {
   const isProduction = process.env.NODE_ENV === "production"
   const convexConfigured = Boolean(readEnv("CONVEX_URL"))
@@ -87,7 +50,7 @@ export function getRuntimeReadinessChecks(): ReadinessCheck[] {
   const googleOAuth = getGoogleOAuthCredentials()
   const appUrlConfigured = Boolean(readEnv("NEXT_PUBLIC_APP_URL"))
   const supportEmailConfigured = Boolean(readEnv("SUPPORT_EMAIL", "NEXT_PUBLIC_SUPPORT_EMAIL"))
-  const couponHashSecretConfigured = hasCouponHashSecretConfigured()
+  const couponHashSecretConfigured = isCouponHashingAvailable()
   const configuredCoupon = getConfiguredSubscriptionCoupon()
   const cloudinaryConfigured = Boolean(
     readEnv("CLOUDINARY_CLOUD_NAME") && readEnv("CLOUDINARY_API_KEY") && readEnv("CLOUDINARY_API_SECRET"),
@@ -133,10 +96,10 @@ export function getRuntimeReadinessChecks(): ReadinessCheck[] {
       note: "Used in support contact page and customer communications.",
     },
     {
-      key: "COUPON_HASH_SECRET",
+      key: "COUPON_HASH_SECRET | AUTH_JWT_SECRET",
       required: configuredCoupon.configured,
       configured: couponHashSecretConfigured,
-      note: "Required whenever coupon creation or redemption is enabled.",
+      note: "A dedicated coupon secret is preferred. If omitted, coupon hashing falls back to AUTH_JWT_SECRET.",
     },
     {
       key: "SUBSCRIPTION_FREE_MONTH_COUPON_MAX_REDEMPTIONS",

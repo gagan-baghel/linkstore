@@ -11,7 +11,7 @@ import {
   maskSubscriptionCouponCode,
   normalizeSubscriptionCouponCode,
 } from "@/lib/subscription-coupons"
-import { hashSubscriptionCouponCode, hasCouponHashSecretConfigured } from "@/lib/subscription-coupon-hash"
+import { hashSubscriptionCouponCode, isCouponHashingAvailable } from "@/lib/subscription-coupon-hash"
 
 const createCouponSchema = z.object({
   code: z.string().trim().min(4).max(64),
@@ -104,7 +104,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Coupon code format is invalid." }, { status: 400 })
     }
 
-    if (!hasCouponHashSecretConfigured()) {
+    if (!isCouponHashingAvailable()) {
       return NextResponse.json({ message: "Coupon creation is temporarily unavailable." }, { status: 503 })
     }
 

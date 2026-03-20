@@ -1,7 +1,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 
-import { hashSubscriptionCouponCode, hasCouponHashSecretConfigured } from "@/lib/subscription-coupon-hash"
+import { getCouponHashingSource, hashSubscriptionCouponCode, isCouponHashingAvailable } from "@/lib/subscription-coupon-hash"
 
 function withEnv(overrides: Record<string, string | undefined>, callback: () => void) {
   const keys = Object.keys(overrides)
@@ -36,6 +36,7 @@ test("coupon hash helper uses its dedicated secret", () => {
       AUTH_JWT_SECRET: "auth-secret-a",
     },
     () => {
+      assert.equal(getCouponHashingSource(), "coupon_secret")
       const first = hashSubscriptionCouponCode("free_month")
 
       withEnv(
@@ -52,14 +53,42 @@ test("coupon hash helper uses its dedicated secret", () => {
   )
 })
 
-test("coupon hash helper reports missing secret", () => {
+test("coupon hash helper falls back to the auth secret when a dedicated coupon secret is not set", () => {
   withEnv(
     {
       COUPON_HASH_SECRET: undefined,
+      AUTH_JWT_SECRET: "auth-secret-a",
     },
     () => {
-      assert.equal(hasCouponHashSecretConfigured(), false)
-      assert.throws(() => hashSubscriptionCouponCode("FREE_MONTH"), /COUPON_HASH_SECRET is required/)
+      assert.equal(isCouponHashingAvailable(), true)
+      assert.equal(getCouponHashingSource(), "auth_secret")
+      const first = hashSubscriptionCouponCode("FREE_MONTH")
+
+      withEnv(
+        {
+          COUPON_HASH_SECRET: undefined,
+          AUTH_JWT_SECRET: "auth-secret-a",
+        },
+        () => {
+          const second = hashSubscriptionCouponCode("free_month")
+          assert.equal(second, first)
+        },
+      )
+    },
+  )
+})
+
+test("coupon hash helper reports missing secrets in production", () => {
+  withEnv(
+    {
+      NODE_ENV: "production",
+      COUPON_HASH_SECRET: undefined,
+      AUTH_JWT_SECRET: undefined,
+    },
+    () => {
+      assert.equal(isCouponHashingAvailable(), false)
+      assert.equal(getCouponHashingSource(), "unavailable")
+      assert.throws(() => hashSubscriptionCouponCode("FREE_MONTH"), /Coupon hashing requires COUPON_HASH_SECRET or AUTH_JWT_SECRET/)
     },
   )
 })

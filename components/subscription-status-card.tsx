@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { toast } from "@/components/ui/use-toast"
 import type { SubscriptionAccessState } from "@/lib/subscription"
+import type { SubscriptionCouponEntryState } from "@/lib/subscription-coupon-runtime"
 
 declare global {
   interface Window {
@@ -33,6 +34,7 @@ interface SubscriptionStatusCardProps {
   userEmail: string
   nextPath?: string
   nextLabel?: string
+  couponEntryState: SubscriptionCouponEntryState
 }
 
 function formatDate(timestamp: number | null) {
@@ -72,12 +74,13 @@ export function SubscriptionStatusCard({
   userEmail,
   nextPath,
   nextLabel,
+  couponEntryState,
 }: SubscriptionStatusCardProps) {
   const router = useRouter()
   const [access, setAccess] = useState<SubscriptionAccessState | null>(initialAccess)
   const [isProcessing, setIsProcessing] = useState(false)
   const [couponCode, setCouponCode] = useState("")
-  const [couponMessage, setCouponMessage] = useState<string | null>(null)
+  const [couponMessage, setCouponMessage] = useState<string | null>(couponEntryState.message)
 
   const statusLabel = useMemo(() => {
     const status = access?.effectiveStatus || "inactive"
@@ -223,6 +226,11 @@ export function SubscriptionStatusCard({
       return
     }
 
+    if (!couponEntryState.enabled) {
+      setCouponMessage(couponEntryState.message || "Coupon redemption is temporarily unavailable.")
+      return
+    }
+
     setIsProcessing(true)
     setCouponMessage(null)
 
@@ -343,14 +351,14 @@ export function SubscriptionStatusCard({
               autoCorrect="off"
               spellCheck={false}
               maxLength={64}
-              disabled={isProcessing}
+              disabled={isProcessing || !couponEntryState.enabled}
               className="h-11 border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400 sm:h-9"
             />
             <Button
               type="button"
               variant="outline"
               onClick={handleCouponRedeem}
-              disabled={isProcessing}
+              disabled={isProcessing || !couponEntryState.enabled}
               className="h-11 w-full border-slate-300 bg-white text-slate-700 hover:bg-slate-100 hover:text-slate-900 sm:h-9 sm:w-auto"
             >
               Apply Coupon

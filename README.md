@@ -41,6 +41,7 @@ cp .env.example .env.local
 # RAZORPAY_WEBHOOK_SECRET=...
 # PAYMENTS_DATA_KEY=...
 # Optional one-month free coupon:
+# COUPON_HASH_SECRET is preferred, but coupon hashing falls back to AUTH_JWT_SECRET if omitted.
 # COUPON_HASH_SECRET=...
 # SUBSCRIPTION_FREE_MONTH_COUPON_CODE=FREEMONTH
 # SUBSCRIPTION_FREE_MONTH_COUPON_LABEL=Launch Free Month
@@ -74,7 +75,7 @@ Optional:
 
 - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` for uploads
 - `SUPPORT_EMAIL` for the contact page
-- `COUPON_HASH_SECRET` plus `SUBSCRIPTION_FREE_MONTH_COUPON_*` for the built-in one-month coupon
+- `SUBSCRIPTION_FREE_MONTH_COUPON_*` for the built-in one-month coupon, with optional `COUPON_HASH_SECRET` if you want a dedicated hashing secret instead of reusing `AUTH_JWT_SECRET`
 - `AMAZON_PAAPI_*` for Amazon product metadata enrichment
 
 ## Release Checklist

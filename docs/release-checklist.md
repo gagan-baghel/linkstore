@@ -13,7 +13,8 @@
 - Optional:
   - `CLOUDINARY_*` for uploads
   - `SUPPORT_EMAIL` for contact page
-  - If using the env-managed launch coupon: `COUPON_HASH_SECRET`, `SUBSCRIPTION_FREE_MONTH_COUPON_MAX_REDEMPTIONS`, and `SUBSCRIPTION_FREE_MONTH_COUPON_EXPIRES_AT`
+  - If using the env-managed launch coupon: `SUBSCRIPTION_FREE_MONTH_COUPON_MAX_REDEMPTIONS` and `SUBSCRIPTION_FREE_MONTH_COUPON_EXPIRES_AT`
+  - Optional but recommended for coupons: `COUPON_HASH_SECRET` (otherwise coupon hashing reuses `AUTH_JWT_SECRET`)
 
 ## 2. Readiness Probe
 - Call `GET /api/health`.
