@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { toast } from "@/components/ui/use-toast"
-import type { SubscriptionAccessState } from "@/lib/subscription"
+import { SUBSCRIPTION_PRICE_PAISE, type SubscriptionAccessState } from "@/lib/subscription"
 
 declare global {
   interface Window {
@@ -84,6 +84,12 @@ export function SubscriptionStatusCard({
     const status = access?.effectiveStatus || "inactive"
     return status.charAt(0).toUpperCase() + status.slice(1)
   }, [access?.effectiveStatus])
+
+  const displayAmountPaise =
+    access?.hasActiveSubscription && typeof access?.planAmountPaise === "number"
+      ? access.planAmountPaise
+      : SUBSCRIPTION_PRICE_PAISE
+  const isFreeAccessPeriod = access?.hasActiveSubscription && displayAmountPaise === 0
 
   const canRenew = true
 
@@ -264,7 +270,9 @@ export function SubscriptionStatusCard({
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Subscription</p>
           <h3 className="mt-1 text-sm font-semibold text-slate-900 sm:text-lg">Starter Monthly Plan</h3>
-          <p className="text-[13px] leading-5 text-slate-600 sm:text-sm sm:leading-6">₹149 per month, up to 200 products.</p>
+          <p className="text-[13px] leading-5 text-slate-600 sm:text-sm sm:leading-6">
+            {isFreeAccessPeriod ? "₹0 for this access period via coupon, up to 200 products." : "₹149 per month, up to 200 products."}
+          </p>
         </div>
         <Badge variant="outline" className="w-fit border-slate-300 bg-slate-50 text-slate-700">
           {statusLabel}
@@ -311,13 +319,19 @@ export function SubscriptionStatusCard({
       ) : null}
 
       <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
-        <Button
-          onClick={handleCheckout}
-          disabled={isProcessing || !canRenew}
-          className="h-11 w-full rounded-lg border border-slate-900 bg-slate-900 px-4 text-sm text-white hover:bg-slate-800 sm:h-9 sm:w-auto"
-        >
-          {isProcessing ? "Processing..." : access?.effectiveStatus === "active" ? "Renew +30 Days" : "Pay ₹149 Now"}
-        </Button>
+        {isFreeAccessPeriod ? (
+          <div className="flex h-11 w-full items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-4 text-sm font-medium text-emerald-800 sm:h-9 sm:w-auto">
+            Coupon Applied: ₹0 Active
+          </div>
+        ) : (
+          <Button
+            onClick={handleCheckout}
+            disabled={isProcessing || !canRenew}
+            className="h-11 w-full rounded-lg border border-slate-900 bg-slate-900 px-4 text-sm text-white hover:bg-slate-800 sm:h-9 sm:w-auto"
+          >
+            {isProcessing ? "Processing..." : access?.effectiveStatus === "active" ? "Renew +30 Days" : "Pay ₹149 Now"}
+          </Button>
+        )}
         <Button
           variant="outline"
           onClick={refreshStatus}

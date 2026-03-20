@@ -25,7 +25,6 @@
 - Start Google sign-in from `/auth/login`.
 - Verify first-time Google sign-in creates an account from `/auth/register`.
 - Verify sign out from dashboard menu and side nav.
-- Open `/dashboard/account/security` and confirm "Sign out other sessions" invalidates older sessions.
 
 ## 4. Billing Smoke Tests (Razorpay)
 - Create checkout order (`/api/subscription/checkout`).
@@ -36,7 +35,7 @@
 
 ## 5. Product and Store Smoke Tests
 - Create, edit, duplicate, archive product.
-- Update store settings and theme.
+- Update store settings and public storefront details.
 - Verify public storefront loads on desktop and mobile.
 
 ## 6. Trust and Compliance

@@ -8,7 +8,7 @@ Linkstore is a Next.js + Convex application for creators who want a public produ
 
 - Google OAuth sign-in with signed JWT session cookies
 - Product import with server-side metadata extraction and affiliate URL normalization
-- Public creator storefronts with customizable store settings and theme controls
+- Public creator storefronts with configurable branding, creator profile, and product curation
 - Analytics for storefront views, product clicks, referrers, sources, and devices
 - Razorpay-backed subscription billing, verification, webhooks, and admin support flows
 
@@ -83,8 +83,7 @@ Optional:
 - Test auth flows:
   - Google sign in from `/auth/login`
   - first-time account creation from `/auth/login`
-  - session revocation from `/dashboard/account/security`
-  - logout/session refresh
+  - logout/session refresh from dashboard navigation
 - Test payments end-to-end in Razorpay:
   - checkout order creation
   - successful payment verification
