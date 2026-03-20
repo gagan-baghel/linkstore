@@ -57,12 +57,6 @@ function buildUserDefaults(input: {
     socialWebsite: "",
     socialWhatsapp: "",
     socialWhatsappMessage: "",
-    themePrimaryColor: "#4f46e5",
-    themeAccentColor: "#eef2ff",
-    themeBannerStyle: "gradient",
-    themeButtonStyle: "rounded",
-    themeCardStyle: "shadow",
-    themeMode: "system",
     createdAt: input.now,
     updatedAt: input.now,
   }
@@ -389,41 +383,6 @@ export const updateSocialLinks = mutationGeneric({
       socialWebsite: args.socialWebsite || "",
       socialWhatsapp: args.socialWhatsapp || "",
       socialWhatsappMessage: args.socialWhatsappMessage || "",
-      updatedAt: Date.now(),
-    })
-
-    return { ok: true }
-  },
-})
-
-export const updateStoreTheme = mutationGeneric({
-  args: {
-    userId: v.id("users"),
-    themePrimaryColor: v.string(),
-    themeAccentColor: v.string(),
-    themeBannerStyle: v.string(),
-    themeButtonStyle: v.string(),
-    themeCardStyle: v.string(),
-    themeMode: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const user = await ctx.db.get(args.userId)
-    if (!user) {
-      return { ok: false, message: "User not found" as const }
-    }
-
-    const hasPremiumAccess = await hasActiveSubscription(ctx, args.userId)
-    if (!hasPremiumAccess) {
-      return { ok: false, message: "Active subscription required for store theme changes" as const, code: "SUBSCRIPTION_REQUIRED" as const }
-    }
-
-    await ctx.db.patch(args.userId, {
-      themePrimaryColor: args.themePrimaryColor,
-      themeAccentColor: args.themeAccentColor,
-      themeBannerStyle: args.themeBannerStyle,
-      themeButtonStyle: args.themeButtonStyle,
-      themeCardStyle: args.themeCardStyle,
-      themeMode: args.themeMode,
       updatedAt: Date.now(),
     })
 

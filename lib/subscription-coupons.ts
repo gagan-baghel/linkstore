@@ -17,6 +17,10 @@ export function maskSubscriptionCouponCode(input: string) {
   return `${normalized.slice(0, 4)}...${normalized.slice(-4)}`
 }
 
+export function canRedeemCouponForStatus(status: string | null | undefined) {
+  return status !== "active"
+}
+
 
 export function computeSubscriptionExtensionExpiry(input: {
   currentExpiresAt?: number | null

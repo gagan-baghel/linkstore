@@ -12,7 +12,7 @@ import {
   maskSubscriptionCouponCode,
   normalizeSubscriptionCouponCode,
 } from "@/lib/subscription-coupons"
-import { hashSubscriptionCouponCode } from "@/lib/subscription-coupon-hash"
+import { hashSubscriptionCouponCode, hasCouponHashSecretConfigured } from "@/lib/subscription-coupon-hash"
 
 const redeemCouponSchema = z.object({
   couponCode: z.string().trim().min(4).max(64),
@@ -40,8 +40,20 @@ export async function POST(req: Request) {
     const payload = redeemCouponSchema.parse(body)
     const normalizedCode = normalizeSubscriptionCouponCode(payload.couponCode)
     const codeHint = maskSubscriptionCouponCode(normalizedCode)
-    const codeHash = hashSubscriptionCouponCode(normalizedCode)
     const configuredCoupon = getConfiguredSubscriptionCoupon()
+
+    if (!hasCouponHashSecretConfigured()) {
+      return NextResponse.json({ message: "Coupon redemption is temporarily unavailable." }, { status: 503 })
+    }
+
+    if (configuredCoupon.configured && configuredCoupon.code === normalizedCode && !configuredCoupon.usable) {
+      return NextResponse.json(
+        { message: "Configured coupon is incomplete. Set both a redemption limit and an expiry before use." },
+        { status: 503 },
+      )
+    }
+
+    const codeHash = hashSubscriptionCouponCode(normalizedCode)
 
     if (!isValidSubscriptionCouponCode(normalizedCode)) {
       await writeAuditLog({
@@ -112,6 +124,8 @@ export async function POST(req: Request) {
           ? 404
           : result.code === "AMBIGUOUS_SUBSCRIPTION"
             ? 409
+            : result.code === "ACTIVE_SUBSCRIPTION_EXISTS"
+              ? 409
             : result.code === "COUPON_INVALID"
               ? 404
               : result.code === "COUPON_ALREADY_REDEEMED"

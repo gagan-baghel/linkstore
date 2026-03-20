@@ -2,6 +2,7 @@ import test from "node:test"
 import assert from "node:assert/strict"
 
 import {
+  canRedeemCouponForStatus,
   computeSubscriptionExtensionExpiry,
   isValidSubscriptionCouponCode,
   maskSubscriptionCouponCode,
@@ -47,4 +48,11 @@ test("computeSubscriptionExtensionExpiry starts from grant time when subscriptio
 
   assert.equal(baseStart, now)
   assert.equal(expiresAt, now + 300)
+})
+
+test("canRedeemCouponForStatus blocks stacking onto active subscriptions", () => {
+  assert.equal(canRedeemCouponForStatus("active"), false)
+  assert.equal(canRedeemCouponForStatus("inactive"), true)
+  assert.equal(canRedeemCouponForStatus("expired"), true)
+  assert.equal(canRedeemCouponForStatus("pending"), true)
 })

@@ -19,8 +19,6 @@ export type SubscriptionAccessState = {
   currentProductCount: number
   remainingProductSlots: number
   expiresAt: number | null
-  planAmountPaise: number
-  currency: string
   ambiguous: boolean
   reason: string
 }

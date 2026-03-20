@@ -1,4 +1,5 @@
 import { hasAuthJwtSecretConfigured } from "@/lib/auth-config"
+import { hasCouponHashSecretConfigured } from "@/lib/subscription-coupon-hash"
 import { SUBSCRIPTION_COUPON_DURATION_MS, normalizeSubscriptionCouponCode } from "@/lib/subscription-coupons"
 
 type ReadinessCheck = {
@@ -59,14 +60,21 @@ export function getGoogleOAuthCredentials() {
 export function getConfiguredSubscriptionCoupon() {
   const rawCode = readEnv("SUBSCRIPTION_FREE_MONTH_COUPON_CODE")
   const code = rawCode ? normalizeSubscriptionCouponCode(rawCode) : ""
+  const maxRedemptions = parseOptionalPositiveInteger(readEnv("SUBSCRIPTION_FREE_MONTH_COUPON_MAX_REDEMPTIONS"))
+  const expiresAt = parseOptionalTimestamp(readEnv("SUBSCRIPTION_FREE_MONTH_COUPON_EXPIRES_AT"))
+  const hasRedemptionLimit = typeof maxRedemptions === "number"
+  const hasExpiry = typeof expiresAt === "number"
 
   return {
     configured: Boolean(code),
+    usable: Boolean(code && hasRedemptionLimit && hasExpiry),
     code,
     label: readEnv("SUBSCRIPTION_FREE_MONTH_COUPON_LABEL") || "Free Month Access",
     durationMs: SUBSCRIPTION_COUPON_DURATION_MS,
-    maxRedemptions: parseOptionalPositiveInteger(readEnv("SUBSCRIPTION_FREE_MONTH_COUPON_MAX_REDEMPTIONS")),
-    expiresAt: parseOptionalTimestamp(readEnv("SUBSCRIPTION_FREE_MONTH_COUPON_EXPIRES_AT")),
+    maxRedemptions,
+    expiresAt,
+    hasRedemptionLimit,
+    hasExpiry,
   }
 }
 
@@ -79,6 +87,8 @@ export function getRuntimeReadinessChecks(): ReadinessCheck[] {
   const googleOAuth = getGoogleOAuthCredentials()
   const appUrlConfigured = Boolean(readEnv("NEXT_PUBLIC_APP_URL"))
   const supportEmailConfigured = Boolean(readEnv("SUPPORT_EMAIL", "NEXT_PUBLIC_SUPPORT_EMAIL"))
+  const couponHashSecretConfigured = hasCouponHashSecretConfigured()
+  const configuredCoupon = getConfiguredSubscriptionCoupon()
   const cloudinaryConfigured = Boolean(
     readEnv("CLOUDINARY_CLOUD_NAME") && readEnv("CLOUDINARY_API_KEY") && readEnv("CLOUDINARY_API_SECRET"),
   )
@@ -121,6 +131,24 @@ export function getRuntimeReadinessChecks(): ReadinessCheck[] {
       required: false,
       configured: supportEmailConfigured,
       note: "Used in support contact page and customer communications.",
+    },
+    {
+      key: "COUPON_HASH_SECRET",
+      required: configuredCoupon.configured,
+      configured: couponHashSecretConfigured,
+      note: "Required whenever coupon creation or redemption is enabled.",
+    },
+    {
+      key: "SUBSCRIPTION_FREE_MONTH_COUPON_MAX_REDEMPTIONS",
+      required: configuredCoupon.configured,
+      configured: configuredCoupon.hasRedemptionLimit,
+      note: "Required for the env-managed coupon to avoid unlimited redemptions.",
+    },
+    {
+      key: "SUBSCRIPTION_FREE_MONTH_COUPON_EXPIRES_AT",
+      required: configuredCoupon.configured,
+      configured: configuredCoupon.hasExpiry,
+      note: "Required for the env-managed coupon to avoid indefinite validity.",
     },
   ]
 }

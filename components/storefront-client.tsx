@@ -25,9 +25,6 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { buildWhatsAppUrl } from "@/lib/whatsapp"
 import { cn } from "@/lib/utils"
 
-type ThemeButtonStyle = "rounded" | "pill" | "square"
-type ThemeMode = "system" | "light" | "dark"
-
 interface StorefrontUser {
   _id: string
   name: string
@@ -44,9 +41,6 @@ interface StorefrontUser {
   socialWebsite?: string
   socialWhatsapp?: string
   socialWhatsappMessage?: string
-  themePrimaryColor?: string
-  themeButtonStyle?: ThemeButtonStyle
-  themeMode?: ThemeMode
 }
 
 interface StorefrontProduct {
@@ -219,16 +213,12 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
   const [source, setSource] = useState("storefront")
   const [sessionId, setSessionId] = useState("")
   const [currentPath, setCurrentPath] = useState("")
-  const [prefersDark, setPrefersDark] = useState(false)
   const trackStoreViewOnce = useRef(false)
   const desktopMediaMenuRef = useRef<HTMLDivElement | null>(null)
 
-  const themePrimaryColor = user.themePrimaryColor || "#2563eb"
-  const themeButtonStyle = user.themeButtonStyle || "rounded"
-  const themeMode = user.themeMode || "system"
-  const buttonRadiusClass =
-    themeButtonStyle === "pill" ? "rounded-full" : themeButtonStyle === "square" ? "rounded-none" : "rounded-md"
-  const isDarkMode = themeMode === "dark" || (themeMode === "system" && prefersDark)
+  const brandColor = "#2563eb"
+  const buttonRadiusClass = "rounded-md"
+  const isDarkMode = false
 
   const normalizedProducts = useMemo(
     () => products.map((product) => ({ ...product, category: normalizeCategory(product.category) })),
@@ -385,14 +375,6 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
     setSource(resolvedSource.toLowerCase())
     setSessionId(createSessionId())
     setCurrentPath(window.location.pathname)
-  }, [])
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
-    const sync = () => setPrefersDark(mediaQuery.matches)
-    sync()
-    mediaQuery.addEventListener("change", sync)
-    return () => mediaQuery.removeEventListener("change", sync)
   }, [])
 
   useEffect(() => {
@@ -968,7 +950,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                   "absolute bottom-0 right-0 grid h-16 w-16 place-items-center rounded-full border text-white shadow-[0_18px_44px_rgba(15,23,42,0.3)] transition-transform duration-300 hover:scale-[1.03]",
                   desktopMediaMenuOpen ? "scale-[0.98]" : "scale-100",
                 )}
-                style={{ backgroundColor: themePrimaryColor, borderColor: themePrimaryColor }}
+                style={{ backgroundColor: brandColor, borderColor: brandColor }}
               >
                 <span className="sr-only">Media links</span>
                 {desktopMediaMenuOpen ? <X className="h-6 w-6" /> : <Globe className="h-6 w-6" />}
@@ -1017,7 +999,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                               ? "border-slate-700 bg-slate-800 text-slate-100 hover:bg-slate-700"
                               : "border-slate-300 bg-white hover:bg-slate-50",
                         )}
-                        style={active ? { backgroundColor: themePrimaryColor } : undefined}
+                        style={active ? { backgroundColor: brandColor } : undefined}
                       >
                         <span>{category.name}</span>
                         <span className={cn("text-xs", active ? "text-white/80" : isDarkMode ? "text-slate-400" : "text-slate-500")}>{category.count}</span>

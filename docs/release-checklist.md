@@ -13,6 +13,7 @@
 - Optional:
   - `CLOUDINARY_*` for uploads
   - `SUPPORT_EMAIL` for contact page
+  - If using the env-managed launch coupon: `COUPON_HASH_SECRET`, `SUBSCRIPTION_FREE_MONTH_COUPON_MAX_REDEMPTIONS`, and `SUBSCRIPTION_FREE_MONTH_COUPON_EXPIRES_AT`
 
 ## 2. Readiness Probe
 - Call `GET /api/health`.
@@ -20,6 +21,7 @@
   - `ok: true`
   - no required failures.
 - In production, ensure `NEXT_PUBLIC_APP_URL` is explicitly set.
+- If the env-managed coupon is enabled, ensure `/api/health` reports no coupon-related required failures.
 
 ## 3. Authentication Smoke Tests
 - Start Google sign-in from `/auth/login`.
@@ -53,6 +55,9 @@
 
 ## 8. Edge-Case QA
 - Repeated Google auth starts/callback retries are rate-limited (429) and recover after window.
+- Coupon redemption:
+  - active subscribers cannot stack an additional coupon
+  - env coupon rejects if expiry or redemption cap is missing
 - Session revocation:
   - older session becomes invalid after revoke
   - current session remains valid after revoke

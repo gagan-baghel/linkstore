@@ -11,7 +11,7 @@ import {
   maskSubscriptionCouponCode,
   normalizeSubscriptionCouponCode,
 } from "@/lib/subscription-coupons"
-import { hashSubscriptionCouponCode } from "@/lib/subscription-coupon-hash"
+import { hashSubscriptionCouponCode, hasCouponHashSecretConfigured } from "@/lib/subscription-coupon-hash"
 
 const createCouponSchema = z.object({
   code: z.string().trim().min(4).max(64),
@@ -102,6 +102,10 @@ export async function POST(req: Request) {
 
     if (!isValidSubscriptionCouponCode(normalizedCode)) {
       return NextResponse.json({ message: "Coupon code format is invalid." }, { status: 400 })
+    }
+
+    if (!hasCouponHashSecretConfigured()) {
+      return NextResponse.json({ message: "Coupon creation is temporarily unavailable." }, { status: 503 })
     }
 
     const result = await convexMutation<

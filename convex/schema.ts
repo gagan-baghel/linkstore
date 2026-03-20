@@ -26,12 +26,6 @@ export default defineSchema({
     socialWebsite: v.string(),
     socialWhatsapp: v.optional(v.string()),
     socialWhatsappMessage: v.optional(v.string()),
-    themePrimaryColor: v.optional(v.string()),
-    themeAccentColor: v.optional(v.string()),
-    themeBannerStyle: v.optional(v.string()),
-    themeButtonStyle: v.optional(v.string()),
-    themeCardStyle: v.optional(v.string()),
-    themeMode: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })

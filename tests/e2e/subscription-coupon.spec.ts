@@ -17,6 +17,10 @@ test("coupon activation unlocks premium product flow without payment", async ({ 
     throw new Error("SUBSCRIPTION_FREE_MONTH_COUPON_CODE must be configured for the coupon e2e test.")
   }
 
+  if (!process.env.COUPON_HASH_SECRET?.trim()) {
+    throw new Error("COUPON_HASH_SECRET must be configured for the coupon e2e test.")
+  }
+
   const result = await convexMutation<
     {
       googleSub: string

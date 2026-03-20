@@ -8,7 +8,7 @@ import {
   shouldRevokeAccessForBillingEvent,
   type SubscriptionLifecycleStatus,
 } from "../lib/subscription-billing"
-import { computeSubscriptionExtensionExpiry } from "../lib/subscription-coupons"
+import { canRedeemCouponForStatus, computeSubscriptionExtensionExpiry } from "../lib/subscription-coupons"
 
 const PLAN_CODE = "starter_monthly_149"
 const PLAN_AMOUNT_PAISE = 14900
@@ -222,17 +222,11 @@ function makeAccessState(input: {
   effectiveStatus: EffectiveStatus
   productCount: number
   storeEnabled: boolean
-  couponAppliedToCurrentPeriod?: boolean
   now: number
 }) {
   const expiresAt = typeof input.subscription?.expiresAt === "number" ? input.subscription.expiresAt : null
   const hasActiveSubscription = input.userExists && !input.ambiguous && input.effectiveStatus === "active"
   const remainingProductSlots = Math.max(PRODUCT_LIMIT - input.productCount, 0)
-  const planAmountPaise = input.couponAppliedToCurrentPeriod
-    ? 0
-    : typeof input.subscription?.planAmountPaise === "number"
-      ? input.subscription.planAmountPaise
-      : PLAN_AMOUNT_PAISE
 
   const reason = !input.userExists
     ? "User not found"
@@ -262,8 +256,6 @@ function makeAccessState(input: {
     currentProductCount: input.productCount,
     remainingProductSlots,
     expiresAt,
-    planAmountPaise,
-    currency: input.subscription?.currency || PLAN_CURRENCY,
     ambiguous: input.ambiguous,
     reason,
     evaluatedAt: input.now,
@@ -293,15 +285,6 @@ async function computeAccessState(ctx: any, userId: string) {
       .collect()
   ).length
   const effective = getEffectiveStatus(resolved.subscription, now)
-  const latestCouponRedemption = await ctx.db
-    .query("subscriptionCouponRedemptions")
-    .withIndex("by_userId_createdAt", (q: any) => q.eq("userId", userId))
-    .order("desc")
-    .first()
-  const couponAppliedToCurrentPeriod =
-    effective === "active" &&
-    typeof resolved.subscription?.expiresAt === "number" &&
-    latestCouponRedemption?.resultingExpiresAt === resolved.subscription.expiresAt
 
   return makeAccessState({
     userExists: true,
@@ -310,7 +293,6 @@ async function computeAccessState(ctx: any, userId: string) {
     effectiveStatus: effective,
     productCount,
     storeEnabled: user.storeEnabled === true,
-    couponAppliedToCurrentPeriod,
     now,
   })
 }
@@ -574,6 +556,13 @@ async function grantCouponAccess(
   }
 
   const effectiveBefore = getEffectiveStatus(resolved.subscription, now)
+  if (!canRedeemCouponForStatus(effectiveBefore)) {
+    return {
+      ok: false,
+      message: "You already have an active subscription.",
+      code: "ACTIVE_SUBSCRIPTION_EXISTS" as const,
+    }
+  }
   const { baseStart, expiresAt } = computeSubscriptionExtensionExpiry({
     currentExpiresAt: effectiveBefore === "active" ? resolved.subscription.expiresAt : null,
     grantedAt: now,
