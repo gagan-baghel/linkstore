@@ -23,7 +23,7 @@ export default async function DashboardLayout({
   const canUseShopFeatures = Boolean(session.user.hasActiveSubscription)
 
   return (
-    <div className="dashboard-minimal min-h-screen md:grid md:grid-cols-[16rem_minmax(0,1fr)]">
+    <div className="dashboard-minimal min-h-screen overflow-x-clip md:grid md:grid-cols-[16rem_minmax(0,1fr)]">
       <aside className="dashboard-sidebar hidden h-screen border-r border-slate-200 bg-white md:sticky md:top-0 md:flex md:flex-col">
         <div className="shrink-0 px-6 py-6">
           <Link href="/dashboard" className="flex items-center gap-2 text-xl font-bold text-slate-900">
@@ -41,7 +41,7 @@ export default async function DashboardLayout({
         </div>
       </aside>
 
-      <main className="flex min-h-screen flex-col bg-transparent">
+      <main className="flex min-h-screen min-w-0 flex-col overflow-x-clip bg-transparent">
         <header className="dashboard-topbar sticky top-0 z-40 border-b border-slate-200 bg-white">
           <div className="flex min-h-12 items-center gap-2 px-2.5 py-2 sm:px-4 md:min-h-16 md:px-6">
             <div className="min-w-0 flex-1">

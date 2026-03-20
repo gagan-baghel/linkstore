@@ -9,9 +9,7 @@ import {
   ClipboardCopy,
   ExternalLink,
   PlusCircle,
-  Rocket,
   Share2,
-  ShieldCheck,
   ShoppingBag,
   Store,
 } from "lucide-react"
@@ -22,6 +20,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { toast } from "@/components/ui/use-toast"
 import { buildStorefrontUrl } from "@/lib/storefront-url"
+import { SUBSCRIPTION_UPGRADE_BASE_PATH } from "@/lib/subscription-routing"
 
 interface DashboardInitialData {
   user: any
@@ -61,21 +60,6 @@ function MetricCard({
       <p className="mt-1 text-[10px] leading-4 text-[#8a94a8] sm:text-xs">{hint}</p>
     </div>
   )
-}
-
-function getNextStepLabel(input: {
-  hasSubscription: boolean
-  hasStoreProfile: boolean
-  hasProducts: boolean
-  isStorePublic: boolean
-  hasBrokenLinks: boolean
-}) {
-  if (!input.hasSubscription) return "Unlock premium actions"
-  if (!input.hasStoreProfile) return "Finish your store profile"
-  if (!input.hasProducts) return "Add your first product"
-  if (!input.isStorePublic) return "Review store settings before sharing"
-  if (input.hasBrokenLinks) return "Fix broken product links"
-  return "Share your store and start tracking"
 }
 
 export default function DashboardClientPage({
@@ -152,7 +136,7 @@ export default function DashboardClientPage({
   const hasActiveSubscription = Boolean(session?.user?.hasActiveSubscription)
   const isStorePublic = Boolean(hasActiveSubscription && user?.username && user?.storeEnabled === true)
   const canUseShopActions = hasActiveSubscription
-  const subscriptionRedirectBase = "/dashboard/store?upgrade=1"
+  const subscriptionRedirectBase = SUBSCRIPTION_UPGRADE_BASE_PATH
   const storeUrl = isStorePublic ? buildStorefrontUrl(user.username, baseUrl) : ""
   const hasStoreProfile = Boolean((user?.storeBannerText || "").trim()) && Boolean((user?.storeBio || "").trim())
   const hasBrokenLinks = (linkHealth?.brokenCount || 0) > 0
@@ -168,25 +152,6 @@ export default function DashboardClientPage({
     : canUseShopActions
       ? "/dashboard/store"
       : `${subscriptionRedirectBase}&from=${encodeURIComponent("/dashboard/store")}`
-  const nextStepHref = !hasActiveSubscription
-    ? `${subscriptionRedirectBase}&from=${encodeURIComponent("/dashboard/products/new")}`
-    : !hasStoreProfile
-      ? "/dashboard/store"
-      : totalProducts === 0
-        ? "/dashboard/products/new"
-        : !isStorePublic
-          ? "/dashboard/store"
-          : hasBrokenLinks
-            ? "/dashboard/products"
-            : storeUrl || "/dashboard"
-  const nextStepLabel = getNextStepLabel({
-    hasSubscription: hasActiveSubscription,
-    hasStoreProfile,
-    hasProducts: totalProducts > 0,
-    isStorePublic,
-    hasBrokenLinks,
-  })
-
   const checklist = useMemo(
     () => [
       {
@@ -219,6 +184,7 @@ export default function DashboardClientPage({
 
   const completedChecklistItems = checklist.filter((item) => item.done).length
   const completionPercent = Math.round((completedChecklistItems / checklist.length) * 100)
+  const showSetupProgress = completionPercent < 100
 
   const copyToClipboard = () => {
     if (!isStorePublic) {
@@ -264,7 +230,7 @@ export default function DashboardClientPage({
         heading={`Welcome${user?.name ? `, ${user.name.split(" ")[0]}` : ""}`}
         text="Everything you need to run, optimize, and grow your affiliate storefront."
       >
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+        <div className="hidden w-full flex-col gap-2 sm:flex sm:w-auto sm:flex-row sm:items-center">
           <Link href={addProductHref}>
             <Button className="h-10 w-full border border-[#3e55df] bg-[#4a63f6] text-sm text-white shadow-none hover:bg-[#3f56de] sm:h-9 sm:w-auto sm:text-sm">
               <PlusCircle className="mr-2 h-4 w-4" />
@@ -297,68 +263,14 @@ export default function DashboardClientPage({
         />
       </div>
 
-      <section className="mb-5 overflow-hidden rounded-[1.5rem] border border-[#d8e2f3] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(245,248,255,0.96))] p-3.5 shadow-[0_16px_40px_rgba(81,106,156,0.08)] md:mb-6 md:rounded-2xl md:p-5">
-        <div className="grid gap-3 lg:grid-cols-[1.3fr_0.9fr] lg:items-start">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-indigo-700">
-              <Rocket className="h-3.5 w-3.5" />
-              Launch path
-            </div>
-            <h2 className="mt-3 text-[1.28rem] font-semibold leading-[1.05] tracking-tight text-[#162033] md:text-2xl">
-              Make your store feel ready in under 3 minutes.
-            </h2>
-            <p className="mt-2 max-w-2xl text-[11px] leading-5 text-[#52627b] md:text-sm">
-              Move in order: set your creator story, add products, then share a storefront that looks intentional and
-              trustworthy.
-            </p>
-            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-              <Button asChild className="h-9 rounded-full border border-[#3e55df] bg-[#4a63f6] px-4 text-xs text-white shadow-none hover:bg-[#3f56de] sm:h-10 sm:text-sm">
-                <Link href={nextStepHref}>
-                  {nextStepLabel}
-                  <Rocket className="h-4 w-4" />
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="h-9 rounded-full border-[#cfd8ea] bg-white/90 px-4 text-xs text-[#1f2a44] shadow-none hover:bg-[#f3f6fc] sm:h-10 sm:text-sm">
-                <Link href="/dashboard/store">Review store setup</Link>
-              </Button>
-            </div>
-          </div>
-
-          <div className="grid gap-2.5">
-            <div className="rounded-[1.15rem] border border-slate-200 bg-white/88 p-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#5f6b7e]">Current blocker</p>
-              <p className="mt-1 text-[13px] font-semibold leading-5 text-[#162033]">{nextStepLabel}</p>
-              <p className="mt-1 text-[11px] leading-5 text-[#60708a]">
-                {!hasActiveSubscription
-                  ? "You can explore the dashboard now, but premium actions unlock only after subscription activation."
-                  : !hasStoreProfile
-                    ? "A clear banner and short bio help buyers understand who you are before they click."
-                    : totalProducts === 0
-                      ? "Your store becomes meaningful once you add a few strong affiliate picks."
-                      : !isStorePublic
-                        ? "Check your store profile before you send traffic to it."
-                        : hasBrokenLinks
-                          ? "Broken links hurt trust fast. Clean them up before sharing heavily."
-                          : "Your setup is healthy. Start sharing and watch the 30-day numbers."}
-              </p>
-            </div>
-            <div className="rounded-[1.15rem] border border-slate-200 bg-white/88 p-3">
-              <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#5f6b7e]">
-                <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-                Trust checklist
-              </p>
-              <ul className="mt-2 space-y-2 text-[11px] leading-5 text-[#4f5f7a]">
-                <li>Write a short bio that explains what kind of products you recommend.</li>
-                <li>Add at least 3 products so your storefront feels curated, not empty.</li>
-                <li>Review your links before sharing to avoid broken buyer journeys.</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <div className="mb-5 grid gap-4 border-t border-[#e7eefb] pt-4 md:mb-7 md:gap-6 md:pt-6 lg:grid-cols-[1.55fr_1fr] lg:items-start lg:divide-x lg:divide-[#e7eefb]">
-        <section className="space-y-3 lg:pr-6">
+      <div
+        className={
+          showSetupProgress
+            ? "mb-5 grid gap-4 border-t border-[#e7eefb] pt-4 md:mb-7 md:gap-6 md:pt-6 lg:grid-cols-[1.55fr_1fr] lg:items-start lg:divide-x lg:divide-[#e7eefb]"
+            : "mb-5 border-t border-[#e7eefb] pt-4 md:mb-7 md:pt-6"
+        }
+      >
+        <section className={showSetupProgress ? "space-y-3 lg:pr-6" : "max-w-3xl space-y-3"}>
           <div className="space-y-1 pb-1">
             <h2 className="flex items-center gap-2 text-sm font-semibold text-[#162033]">
               <Share2 className="h-4 w-4 text-indigo-500" />
@@ -422,36 +334,38 @@ export default function DashboardClientPage({
           </div>
         </section>
 
-        <section className="space-y-3 border-t border-[#e7eefb] pt-4 lg:border-t-0 lg:pl-6 lg:pt-0">
-          <div className="space-y-1">
-            <h2 className="text-sm font-semibold text-[#162033]">Setup Progress</h2>
-            <p className="text-xs text-[#60708a]">
-              {completedChecklistItems}/{checklist.length} completed ({completionPercent}%)
-            </p>
-          </div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-[#dbe5fb]">
-            <div className="h-full rounded-full bg-indigo-500 transition-all" style={{ width: `${completionPercent}%` }} />
-          </div>
-          {checklist.map((item) => (
-            <Link
-              key={item.id}
-              href={item.href}
-              className="flex items-center justify-between rounded-2xl border border-[#e7eefb] bg-white/78 px-3 py-2.5 transition-colors hover:bg-[#f8fbff]"
-            >
-              <span className="flex items-center gap-2 text-[11px] text-[#4f5f7a] sm:text-sm">
-                {item.done ? (
-                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                ) : (
-                  <Circle className="h-4 w-4 text-[#bcc9de]" />
-                )}
-                {item.label}
-              </span>
-              <span className={item.done ? "text-xs font-semibold text-emerald-600" : "text-xs font-medium text-indigo-700"}>
-                {item.done ? "Done" : "Open"}
-              </span>
-            </Link>
-          ))}
-        </section>
+        {showSetupProgress ? (
+          <section className="space-y-3 border-t border-[#e7eefb] pt-4 lg:border-t-0 lg:pl-6 lg:pt-0">
+            <div className="space-y-1">
+              <h2 className="text-sm font-semibold text-[#162033]">Setup Progress</h2>
+              <p className="text-xs text-[#60708a]">
+                {completedChecklistItems}/{checklist.length} completed ({completionPercent}%)
+              </p>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-[#dbe5fb]">
+              <div className="h-full rounded-full bg-indigo-500 transition-all" style={{ width: `${completionPercent}%` }} />
+            </div>
+            {checklist.map((item) => (
+              <Link
+                key={item.id}
+                href={item.href}
+                className="flex items-center justify-between rounded-2xl border border-[#e7eefb] bg-white/78 px-3 py-2.5 transition-colors hover:bg-[#f8fbff]"
+              >
+                <span className="flex items-center gap-2 text-[11px] text-[#4f5f7a] sm:text-sm">
+                  {item.done ? (
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                  ) : (
+                    <Circle className="h-4 w-4 text-[#bcc9de]" />
+                  )}
+                  {item.label}
+                </span>
+                <span className={item.done ? "text-xs font-semibold text-emerald-600" : "text-xs font-medium text-indigo-700"}>
+                  {item.done ? "Done" : "Open"}
+                </span>
+              </Link>
+            ))}
+          </section>
+        ) : null}
       </div>
 
       <section className="border-t border-[#e7eefb] pt-5 sm:pt-6">

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation"
 
 export default function ChangePasswordPage() {
-  redirect("/dashboard/account/security")
+  redirect("/dashboard/account")
 }

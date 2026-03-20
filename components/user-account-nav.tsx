@@ -3,10 +3,10 @@
 import { useState } from "react"
 import type React from "react"
 
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 
 import { logoutFromApp } from "@/lib/client-auth"
+import { useIsMobile } from "@/hooks/use-mobile"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +26,7 @@ interface UserAccountNavProps extends React.HTMLAttributes<HTMLDivElement> {
 
 export function UserAccountNav({ user }: UserAccountNavProps) {
   const router = useRouter()
+  const isMobile = useIsMobile()
   const [isSigningOut, setIsSigningOut] = useState(false)
 
   async function handleSignOut() {
@@ -56,23 +57,20 @@ export function UserAccountNav({ user }: UserAccountNavProps) {
             {user.email && <p className="w-52 truncate text-sm text-muted-foreground">{user.email}</p>}
           </div>
         </div>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link href="/dashboard">Dashboard</Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/dashboard/account">Account</Link>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          className="cursor-pointer"
-          onSelect={(event) => {
-            event.preventDefault()
-            void handleSignOut()
-          }}
-        >
-          {isSigningOut ? "Signing out..." : "Sign out"}
-        </DropdownMenuItem>
+        {isMobile ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="cursor-pointer"
+              onSelect={(event) => {
+                event.preventDefault()
+                void handleSignOut()
+              }}
+            >
+              {isSigningOut ? "Signing out..." : "Sign out"}
+            </DropdownMenuItem>
+          </>
+        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   )

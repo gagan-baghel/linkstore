@@ -16,13 +16,6 @@ const CONTEXT_BY_PREFIX: Array<{ prefix: string; context: TopbarContext }> = [
     },
   },
   {
-    prefix: "/dashboard/store-theme",
-    context: {
-      heading: "Store Theme",
-      text: "Customize colors and style for your public store.",
-    },
-  },
-  {
     prefix: "/dashboard/social-links",
     context: {
       heading: "Social Links",

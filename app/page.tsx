@@ -100,7 +100,7 @@ const faqs = [
   },
   {
     q: "How do I manage security now?",
-    a: "Google manages password resets and account recovery. In Linkstore, open Account > Security Settings to revoke older app sessions.",
+    a: "Google manages password resets and account recovery. In Linkstore, use the Account section to manage your profile and billing.",
   },
   {
     q: "Does it work on mobile-first audiences?",
@@ -412,9 +412,9 @@ export default async function Home() {
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   </Link>
-                  <Link href={isLoggedIn ? "/dashboard/account/security" : "/auth/login"}>
+                  <Link href={isLoggedIn ? "/dashboard/account" : "/auth/login"}>
                     <Button size="lg" variant="outline" className="h-12 w-full sm:w-auto rounded-full border border-white/20 bg-white/10 backdrop-blur-md px-8 text-sm font-bold uppercase tracking-wide text-white hover:bg-white/20 hover:border-white/40 transition-all shadow-sm dark:border-white/20 dark:bg-white/10 dark:text-white dark:hover:bg-white/20">
-                      Security Settings
+                      Account
                     </Button>
                   </Link>
                 </div>

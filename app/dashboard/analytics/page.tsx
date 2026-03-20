@@ -1,12 +1,11 @@
 import type { Metadata } from "next"
 import { format } from "date-fns"
-import { MousePointerClick, Package, Store, TrendingUp } from "lucide-react"
+import { MousePointerClick, Package, Store } from "lucide-react"
 import { redirect } from "next/navigation"
 
 import { getSafeServerSession } from "@/lib/auth"
 import { DashboardShell } from "@/components/dashboard-shell"
 import { ClicksChart } from "@/components/clicks-chart"
-import { ClicksTable } from "@/components/clicks-table"
 import { DailyClicksChart } from "@/components/daily-clicks-chart"
 import { ReferrerChart } from "@/components/referrer-chart"
 import { Overview } from "@/components/overview"
@@ -42,21 +41,22 @@ export default async function AnalyticsPage() {
   const last30DaysClicks = analytics?.last30DaysClicks || 0
   const storeViews30 = analytics?.storeViews30 || 0
   const productCardClicks30 = analytics?.productCardClicks30 || 0
-  const outboundClicks30 = analytics?.outboundClicks30 || 0
   const productClicksData = analytics?.productClicksData || []
   const dailyClicksData =
     analytics?.dailyClicksData?.map((item: any) => ({
       date: format(new Date(item.date), "MMM dd"),
       clicks: item.clicks,
     })) || []
-  const referrerChartData = analytics?.referrerChartData || []
   const sourceChartData = analytics?.sourceChartData || []
   const deviceChartData = analytics?.deviceChartData || []
   const funnelData = analytics?.funnelData || []
   const recentClicksData = analytics?.recentClicksData || []
 
-  const conversionRate = Math.round(analytics?.conversionRate || 0)
   const totalDeviceTraffic = deviceChartData.reduce((sum: number, item: any) => sum + Number(item.value || 0), 0)
+  const summaryCardClassName =
+    "min-w-0 rounded-[1.15rem] border border-[#d8e2f3] bg-white p-3 shadow-[0_10px_26px_rgba(87,107,149,0.08)] md:rounded-xl md:p-4"
+  const sectionCardClassName =
+    "min-w-0 rounded-[1.2rem] border border-[#d8e2f3] bg-white p-3 shadow-[0_10px_26px_rgba(87,107,149,0.08)] md:col-span-2 md:rounded-xl md:p-5"
 
   return (
     <DashboardShell>
@@ -65,8 +65,8 @@ export default async function AnalyticsPage() {
           <AlertDescription>Analytics data is temporarily unavailable. Please refresh in a few seconds.</AlertDescription>
         </Alert>
       )}
-      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-[1.15rem] border border-[#d8e2f3] bg-white p-3 shadow-[0_10px_26px_rgba(87,107,149,0.08)] md:rounded-xl md:p-4">
+      <div className="grid min-w-0 grid-cols-2 gap-2.5 md:grid-cols-2 lg:grid-cols-3">
+        <div className={summaryCardClassName}>
           <div className="mb-2 flex items-center justify-between md:mb-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#5f6b7e]">Total Products</p>
             <Package className="h-4 w-4 text-[#8a94a8]" />
@@ -76,7 +76,7 @@ export default async function AnalyticsPage() {
             {totalProducts === 0 ? "Add your first product" : `${totalProducts} products in your store`}
           </p>
         </div>
-        <div className="rounded-[1.15rem] border border-[#d8e2f3] bg-white p-3 shadow-[0_10px_26px_rgba(87,107,149,0.08)] md:rounded-xl md:p-4">
+        <div className={summaryCardClassName}>
           <div className="mb-2 flex items-center justify-between md:mb-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#5f6b7e]">Store Views (30d)</p>
             <Store className="h-4 w-4 text-[#8a94a8]" />
@@ -84,7 +84,7 @@ export default async function AnalyticsPage() {
           <div className="text-[1.15rem] font-semibold tracking-tight text-[#1c1917] md:text-2xl">{storeViews30}</div>
           <p className="mt-1 text-[10px] leading-4 text-[#8a94a8] md:text-xs">Top of funnel audience reach</p>
         </div>
-        <div className="rounded-[1.15rem] border border-[#d8e2f3] bg-white p-3 shadow-[0_10px_26px_rgba(87,107,149,0.08)] md:rounded-xl md:p-4">
+        <div className={summaryCardClassName}>
           <div className="mb-2 flex items-center justify-between md:mb-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#5f6b7e]">Card Clicks (30d)</p>
             <MousePointerClick className="h-4 w-4 text-[#8a94a8]" />
@@ -92,23 +92,15 @@ export default async function AnalyticsPage() {
           <div className="text-[1.15rem] font-semibold tracking-tight text-[#1c1917] md:text-2xl">{productCardClicks30}</div>
           <p className="mt-1 text-[10px] leading-4 text-[#8a94a8] md:text-xs">Product intent signals</p>
         </div>
-        <div className="rounded-[1.15rem] border border-[#d8e2f3] bg-white p-3 shadow-[0_10px_26px_rgba(87,107,149,0.08)] md:rounded-xl md:p-4">
-          <div className="mb-2 flex items-center justify-between md:mb-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#5f6b7e]">Conversion Rate</p>
-            <TrendingUp className="h-4 w-4 text-[#8a94a8]" />
-          </div>
-          <div className="text-[1.15rem] font-semibold tracking-tight text-[#1c1917] md:text-2xl">{conversionRate}%</div>
-          <p className="mt-1 text-[10px] leading-4 text-[#8a94a8] md:text-xs">{outboundClicks30} outbound clicks in last 30 days</p>
-        </div>
       </div>
-      <div className="mt-4 grid gap-3 md:mt-6 md:grid-cols-2 lg:grid-cols-7">
-        <div className="rounded-[1.2rem] border border-[#d8e2f3] bg-white p-3 shadow-[0_10px_26px_rgba(87,107,149,0.08)] md:col-span-2 md:rounded-xl md:p-5 lg:col-span-4">
+      <div className="mt-4 grid min-w-0 gap-3 md:mt-6 md:grid-cols-2 lg:grid-cols-7">
+        <div className={`${sectionCardClassName} lg:col-span-4`}>
           <h2 className="mb-4 text-sm font-semibold text-[#1c1917]">Overview</h2>
-          <div className="pl-2">
+          <div className="min-w-0 pl-2">
             <Overview data={funnelData} />
           </div>
         </div>
-        <div className="rounded-[1.2rem] border border-[#d8e2f3] bg-white p-3 shadow-[0_10px_26px_rgba(87,107,149,0.08)] md:col-span-2 md:rounded-xl md:p-5 lg:col-span-3">
+        <div className={`${sectionCardClassName} lg:col-span-3`}>
           <h2 className="mb-1 text-sm font-semibold text-[#1c1917]">Recent Clicks</h2>
           <p className="mb-4 text-xs text-[#8a94a8]">
             {last30DaysClicks} clicks in the last 30 days, {recentClicks} in the last 7 days, {totalClicks} total
@@ -139,27 +131,22 @@ export default async function AnalyticsPage() {
           </div>
         </div>
       </div>
-      <div className="mt-4 grid gap-3 md:mt-6 md:grid-cols-2 lg:grid-cols-7">
-        <div className="rounded-[1.2rem] border border-[#d8e2f3] bg-white p-3 shadow-[0_10px_26px_rgba(87,107,149,0.08)] md:col-span-2 md:rounded-xl md:p-5 lg:col-span-4">
+      <div className="mt-4 grid min-w-0 gap-3 md:mt-6">
+        <div className={sectionCardClassName}>
           <h2 className="mb-1 text-sm font-semibold text-[#1c1917]">Daily Clicks</h2>
           <p className="mb-4 text-xs text-[#8a94a8]">Click trends over the last 30 days</p>
-          <div className="pl-2">
+          <div className="min-w-0 pl-2">
             <DailyClicksChart data={dailyClicksData} />
           </div>
         </div>
-        <div className="rounded-[1.2rem] border border-[#d8e2f3] bg-white p-3 shadow-[0_10px_26px_rgba(87,107,149,0.08)] md:col-span-2 md:rounded-xl md:p-5 lg:col-span-3">
-          <h2 className="mb-1 text-sm font-semibold text-[#1c1917]">Top Referrers</h2>
-          <p className="mb-4 text-xs text-[#8a94a8]">Where your traffic is coming from</p>
-          <ReferrerChart data={referrerChartData} />
-        </div>
       </div>
-      <div className="mt-4 grid gap-3 md:mt-6 md:grid-cols-2 lg:grid-cols-7">
-        <div className="rounded-[1.2rem] border border-[#d8e2f3] bg-white p-3 shadow-[0_10px_26px_rgba(87,107,149,0.08)] md:col-span-2 md:rounded-xl md:p-5 lg:col-span-4">
+      <div className="mt-4 grid min-w-0 gap-3 md:mt-6 md:grid-cols-2 lg:grid-cols-7">
+        <div className={`${sectionCardClassName} lg:col-span-4`}>
           <h2 className="mb-1 text-sm font-semibold text-[#1c1917]">Traffic Sources</h2>
           <p className="mb-4 text-xs text-[#8a94a8]">Campaign/source attribution for tracked events</p>
           <ReferrerChart data={sourceChartData} />
         </div>
-        <div className="rounded-[1.2rem] border border-[#d8e2f3] bg-white p-3 shadow-[0_10px_26px_rgba(87,107,149,0.08)] md:col-span-2 md:rounded-xl md:p-5 lg:col-span-3">
+        <div className={`${sectionCardClassName} lg:col-span-3`}>
           <h2 className="mb-1 text-sm font-semibold text-[#1c1917]">Device Split</h2>
           <p className="mb-4 text-xs text-[#8a94a8]">Device breakdown from event tracking</p>
           {deviceChartData.length === 0 ? (
@@ -184,18 +171,13 @@ export default async function AnalyticsPage() {
           )}
         </div>
       </div>
-      <div className="mt-4 grid gap-3 md:mt-6 md:grid-cols-2 lg:grid-cols-7">
-        <div className="rounded-[1.2rem] border border-[#d8e2f3] bg-white p-3 shadow-[0_10px_26px_rgba(87,107,149,0.08)] md:col-span-2 md:rounded-xl md:p-5 lg:col-span-4">
+      <div className="mt-4 grid min-w-0 gap-3 md:mt-6">
+        <div className={sectionCardClassName}>
           <h2 className="mb-1 text-sm font-semibold text-[#1c1917]">Clicks by Product</h2>
           <p className="mb-4 text-xs text-[#8a94a8]">Click distribution across your products</p>
-          <div className="pl-2">
+          <div className="min-w-0 pl-2">
             <ClicksChart data={productClicksData} />
           </div>
-        </div>
-        <div className="rounded-[1.2rem] border border-[#d8e2f3] bg-white p-3 shadow-[0_10px_26px_rgba(87,107,149,0.08)] md:col-span-2 md:rounded-xl md:p-5 lg:col-span-3">
-          <h2 className="mb-1 text-sm font-semibold text-[#1c1917]">Recent Clicks</h2>
-          <p className="mb-4 text-xs text-[#8a94a8]">Your most recent affiliate link clicks</p>
-          <ClicksTable clicks={JSON.parse(JSON.stringify(recentClicksData))} />
         </div>
       </div>
     </DashboardShell>

@@ -56,7 +56,11 @@ export function ReferrerChart({ data }: ReferrerChartProps) {
           layout={isMobile ? "horizontal" : "vertical"}
           content={
             <ChartLegendContent
-              className={isMobile ? "justify-center text-xs" : "items-start justify-start text-xs [&>div]:w-full"}
+              className={
+                isMobile
+                  ? "flex-wrap justify-center gap-x-3 gap-y-2 text-xs [&>div]:max-w-full [&>div]:truncate"
+                  : "items-start justify-start text-xs [&>div]:w-full"
+              }
               nameKey="name"
             />
           }

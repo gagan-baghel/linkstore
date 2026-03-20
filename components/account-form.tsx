@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { AtSign, ExternalLink, Mail, PencilLine, ShieldCheck, User, X } from "lucide-react"
+import { AtSign, ExternalLink, Mail, PencilLine, User, X } from "lucide-react"
 
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -226,24 +226,6 @@ export function AccountForm({ name, email, username }: AccountFormProps) {
           </Form>
         </section>
       )}
-
-      <div className="rounded-[1.2rem] border border-[#d8e2f3] bg-white p-3.5 shadow-[0_10px_28px_rgba(87,107,149,0.08)] md:rounded-xl md:p-6 md:shadow-none">
-        <h2 className="text-sm font-semibold text-[#162033] sm:text-base">Authentication & Sessions</h2>
-        <p className="mb-4 mt-1 text-[11px] text-[#60708a] sm:text-xs">Google handles identity. Linkstore handles session revocation.</p>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-[#4f5f7a]">Open security settings to review your Google sign-in method and sign out older app sessions.</p>
-          <Button
-            size="sm"
-            className="h-9 w-full border-[#cfd8ea] bg-white px-3 text-xs text-[#1f2a44] shadow-none hover:bg-[#f3f6fc] sm:w-auto"
-            variant="outline"
-            onClick={() => router.push("/dashboard/account/security")}
-          >
-            <ShieldCheck className="mr-2 h-4 w-4" />
-            Open Security Settings
-          </Button>
-        </div>
-      </div>
-
       <div className="fixed bottom-[5.4rem] left-2 right-2 z-40 flex items-center gap-2 sm:bottom-6 sm:left-auto sm:right-6">
         {!isEditing ? (
           <Button

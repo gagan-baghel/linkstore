@@ -3,31 +3,16 @@
 import { useEffect, useMemo } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { BarChart, Home, Link2, Package, Palette, Settings, Store } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { getSubscriptionRedirectPath } from "@/lib/subscription-routing"
-
-const navItems = [
-  { title: "Dashboard", href: "/dashboard", icon: Home },
-  { title: "Products", href: "/dashboard/products", icon: Package, requiresPremium: true },
-  { title: "Store Settings", href: "/dashboard/store", icon: Store },
-  { title: "Social Links", href: "/dashboard/social-links", icon: Link2, requiresPremium: true },
-  { title: "Store Theme", href: "/dashboard/store-theme", icon: Palette, requiresPremium: true },
-  { title: "Analytics", href: "/dashboard/analytics", icon: BarChart },
-  { title: "Account", href: "/dashboard/account", icon: Settings },
-]
+import { isDashboardNavItemActive, resolveDashboardNavItems } from "@/components/dashboard-nav-items"
 
 export function DashboardNav({ canUseShopFeatures }: { canUseShopFeatures: boolean }) {
   const pathname = usePathname()
   const router = useRouter()
   const resolvedNavItems = useMemo(
-    () =>
-      navItems.map((item) => ({
-        ...item,
-        targetHref: item.requiresPremium && !canUseShopFeatures ? getSubscriptionRedirectPath(item.href) : item.href,
-      })),
+    () => resolveDashboardNavItems(canUseShopFeatures),
     [canUseShopFeatures],
   )
 
@@ -43,10 +28,7 @@ export function DashboardNav({ canUseShopFeatures }: { canUseShopFeatures: boole
     <nav className="grid gap-0.5">
       {resolvedNavItems.map((item) => {
         const targetHref = item.targetHref
-        const isActive =
-          item.href === "/dashboard"
-            ? pathname === item.href
-            : pathname === item.href || pathname.startsWith(`${item.href}/`)
+        const isActive = isDashboardNavItemActive(pathname, item.href)
 
         return (
           <Button

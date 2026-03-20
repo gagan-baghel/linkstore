@@ -4,25 +4,57 @@ import { redirect } from "next/navigation"
 import { getSafeServerSession } from "@/lib/auth"
 import { DashboardShell } from "@/components/dashboard-shell"
 import { AccountForm } from "@/components/account-form"
+import { SubscriptionStatusCard } from "@/components/subscription-status-card"
 import { convexQuery } from "@/lib/convex"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { sanitizeSubscriptionReturnPath } from "@/lib/subscription-routing"
 
 export const metadata: Metadata = {
   title: "Account - Linkstore",
   description: "Manage your account settings",
 }
 
-export default async function AccountPage() {
+function getReturnLabel(path: string) {
+  switch (path) {
+    case "/dashboard/products/new":
+      return "Add your first product"
+    case "/dashboard/products":
+      return "Manage products"
+    case "/dashboard":
+      return "Open dashboard"
+    default:
+      if (path.startsWith("/dashboard/products/") && path.endsWith("/edit")) {
+        return "Resume product editing"
+      }
+      return "Continue setup"
+  }
+}
+
+export default async function AccountPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ upgrade?: string; from?: string }>
+}) {
   const session = await getSafeServerSession()
   if (!session?.user.id) {
     redirect("/auth/login")
   }
 
+  const resolvedSearchParams = await searchParams
+  const nextPath = sanitizeSubscriptionReturnPath(resolvedSearchParams?.from)
+  const nextLabel = resolvedSearchParams?.upgrade === "1" ? getReturnLabel(nextPath) : ""
+
   let user: any | null = null
+  let subscriptionAccess: any | null = null
   let hasDataError = false
 
   try {
-    user = await convexQuery<{ userId: string }, any | null>("users:getById", { userId: session.user.id })
+    const [resolvedUser, resolvedAccess] = await Promise.all([
+      convexQuery<{ userId: string }, any | null>("users:getById", { userId: session.user.id }),
+      convexQuery<{ userId: string }, any | null>("subscriptions:getAccessState", { userId: session.user.id }),
+    ])
+    user = resolvedUser
+    subscriptionAccess = resolvedAccess
   } catch (error) {
     console.error("Account page load error:", error)
     hasDataError = true
@@ -39,6 +71,13 @@ export default async function AccountPage() {
               </AlertDescription>
             </Alert>
           )}
+          <SubscriptionStatusCard
+            initialAccess={subscriptionAccess}
+            userName={user?.name || ""}
+            userEmail={user?.email || ""}
+            nextPath={nextLabel ? nextPath : undefined}
+            nextLabel={nextLabel || undefined}
+          />
           <AccountForm
             name={user?.name || ""}
             email={user?.email || ""}

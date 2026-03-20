@@ -326,7 +326,7 @@ export function ProductForm({ initialData, isEditing = false }: ProductFormProps
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(() => onSubmit())} className="w-full rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-4 sm:p-6 sm:space-y-5">
+      <form onSubmit={form.handleSubmit(() => onSubmit())} className="min-w-0 w-full space-y-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:space-y-5 sm:p-6">
         {error && (
           <Alert variant="destructive">
             <AlertDescription>{error}</AlertDescription>
@@ -452,19 +452,19 @@ export function ProductForm({ initialData, isEditing = false }: ProductFormProps
             <p className="mb-2 text-sm font-semibold text-slate-800">Queued Products ({queuedProducts.length})</p>
             <div className="space-y-2">
               {queuedProducts.map((item, index) => (
-                <div key={item.id} className="flex items-center justify-between gap-3 rounded-md border border-slate-200 bg-white px-3 py-2">
-                  <div className="min-w-0">
+                <div key={item.id} className="flex min-w-0 items-center justify-between gap-3 overflow-hidden rounded-md border border-slate-200 bg-white px-3 py-2">
+                  <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-slate-900">
                       {index + 1}. {item.title}
                     </p>
-                    <p className="truncate text-xs text-slate-600">
+                    <p className="line-clamp-2 break-all text-xs text-slate-600">
                       {item.category} • {item.affiliateUrl}
                     </p>
                   </div>
                   <Button
                     type="button"
                     variant="outline"
-                    className="h-8 border-rose-200 bg-white px-2 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                    className="h-8 shrink-0 border-rose-200 bg-white px-2 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
                     onClick={() => setQueuedProducts((prev) => prev.filter((product) => product.id !== item.id))}
                   >
                     <Trash2 className="h-4 w-4" />

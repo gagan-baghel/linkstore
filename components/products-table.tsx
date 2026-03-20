@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Archive, Copy, Edit, ExternalLink, MoreVertical, Trash, Undo2 } from "lucide-react"
@@ -187,10 +188,14 @@ export function ProductsTable({ products }: ProductsTableProps) {
           const isArchived = product.isArchived === true
           const isHealthy = product.isLinkHealthy !== false
           const showBroken = !isArchived && !isHealthy
+          const productImage = product.images?.[0] || "/placeholder.svg?height=96&width=96"
 
           return (
             <div key={product._id.toString()} className="rounded-[1.2rem] border border-slate-200 bg-white p-3 shadow-[0_10px_24px_rgba(87,107,149,0.08)]">
               <div className="flex items-start gap-3">
+                <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
+                  <Image src={productImage} alt={product.title} fill className="object-cover" sizes="56px" unoptimized />
+                </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start gap-2">
                     <div className="min-w-0 flex-1">
@@ -293,11 +298,19 @@ export function ProductsTable({ products }: ProductsTableProps) {
               const isArchived = product.isArchived === true
               const isHealthy = product.isLinkHealthy !== false
               const showBroken = !isArchived && !isHealthy
+              const productImage = product.images?.[0] || "/placeholder.svg?height=96&width=96"
 
               return (
                 <tr key={product._id.toString()} className="border-b border-slate-100 hover:bg-slate-50/70 last:border-0">
                   <td className="px-3 py-2.5 align-middle sm:px-4 sm:py-3">
-                    <div className="line-clamp-1 text-xs font-medium text-slate-900 sm:text-sm">{product.title}</div>
+                    <div className="flex items-center gap-3">
+                      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+                        <Image src={productImage} alt={product.title} fill className="object-cover" sizes="48px" unoptimized />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="line-clamp-1 text-xs font-medium text-slate-900 sm:text-sm">{product.title}</div>
+                      </div>
+                    </div>
                   </td>
                   <td className="px-3 py-2.5 align-middle sm:px-4 sm:py-3">
                     <span className="inline-flex items-center rounded-md border border-slate-200 bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700 sm:text-xs">
