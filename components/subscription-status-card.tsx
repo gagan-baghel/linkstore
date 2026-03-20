@@ -8,6 +8,7 @@ import { ArrowRight, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
 import { toast } from "@/components/ui/use-toast"
 import type { SubscriptionAccessState } from "@/lib/subscription"
 
@@ -74,9 +75,11 @@ export function SubscriptionStatusCard({
 }: SubscriptionStatusCardProps) {
   const router = useRouter()
   const [access, setAccess] = useState<SubscriptionAccessState | null>(initialAccess)
-  const [isProcessing, setIsProcessing] = useState(false)
+  const [processingAction, setProcessingAction] = useState<"checkout" | "coupon" | null>(null)
+  const [couponCode, setCouponCode] = useState("")
   const statusPollTimeoutRef = useRef<number | null>(null)
   const activationHandledRef = useRef(false)
+  const isProcessing = processingAction !== null
 
   const statusLabel = useMemo(() => {
     const status = access?.effectiveStatus || "inactive"
@@ -102,6 +105,15 @@ export function SubscriptionStatusCard({
 
   function activationDescription() {
     return nextLabel ? `Your plan is active. Continuing to ${nextLabel.toLowerCase()}.` : "Your plan is active. Premium features are now unlocked."
+  }
+
+  function couponActivationDescription() {
+    if (access?.hasActiveSubscription) {
+      return "Your free month has been added to the current subscription."
+    }
+    return nextLabel
+      ? `Your free month is active. Continuing to ${nextLabel.toLowerCase()}.`
+      : "Your free month is active. Premium features are now unlocked."
   }
 
   function completeActivation(nextAccess: SubscriptionAccessState | null, description: string) {
@@ -181,7 +193,7 @@ export function SubscriptionStatusCard({
   }
 
   async function handleCheckout() {
-    setIsProcessing(true)
+    setProcessingAction("checkout")
     activationHandledRef.current = false
     stopStatusPolling()
 
@@ -265,7 +277,61 @@ export function SubscriptionStatusCard({
         variant: "destructive",
       })
     } finally {
-      setIsProcessing(false)
+      setProcessingAction(null)
+    }
+  }
+
+  async function handleApplyCoupon() {
+    const normalizedCoupon = couponCode.trim()
+    if (!normalizedCoupon) {
+      toast({
+        title: "Coupon required",
+        description: "Enter a coupon code before applying it.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (access?.hasActiveSubscription) {
+      toast({
+        title: "Coupon unavailable",
+        description: "This coupon can only be redeemed before a subscription is active.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setProcessingAction("coupon")
+    activationHandledRef.current = false
+    stopStatusPolling()
+
+    try {
+      const response = await fetch("/api/subscription/coupon", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          couponCode: normalizedCoupon,
+        }),
+      })
+
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(data.message || "Could not apply coupon")
+      }
+
+      setCouponCode("")
+      completeActivation(data.access || null, couponActivationDescription())
+    } catch (error) {
+      console.error("Coupon error:", error)
+      toast({
+        title: "Coupon failed",
+        description: error instanceof Error ? error.message : "Unable to apply coupon",
+        variant: "destructive",
+      })
+    } finally {
+      setProcessingAction(null)
     }
   }
 
@@ -302,7 +368,7 @@ export function SubscriptionStatusCard({
       {!access?.hasActiveSubscription && (
         <Alert className="mt-4 border-amber-200 bg-amber-50 text-amber-900">
           <AlertDescription>
-            Premium actions are locked until payment is confirmed. Store creation and product additions stay blocked by server checks.
+            Premium actions are locked until payment is confirmed or a valid coupon is applied. Store creation and product additions stay blocked by server checks.
           </AlertDescription>
         </Alert>
       )}
@@ -327,7 +393,7 @@ export function SubscriptionStatusCard({
           disabled={isProcessing || !canRenew}
           className="h-11 w-full rounded-lg border border-slate-900 bg-slate-900 px-4 text-sm text-white hover:bg-slate-800 sm:h-9 sm:w-auto"
         >
-          {isProcessing ? "Processing..." : access?.effectiveStatus === "active" ? "Renew +30 Days" : "Pay ₹149 Now"}
+          {processingAction === "checkout" ? "Processing..." : access?.effectiveStatus === "active" ? "Renew +30 Days" : "Pay ₹149 Now"}
         </Button>
         <Button
           variant="outline"
@@ -341,6 +407,32 @@ export function SubscriptionStatusCard({
         </Button>
       </div>
 
+      {!access?.hasActiveSubscription ? (
+        <div className="mt-4 rounded-[1rem] border border-slate-200 bg-slate-50 p-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Coupon Code</p>
+          <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <Input
+              value={couponCode}
+              onChange={(event) => setCouponCode(event.target.value)}
+              placeholder="Enter coupon code"
+              className="bg-white"
+              disabled={isProcessing}
+              maxLength={64}
+            />
+            <Button
+              onClick={handleApplyCoupon}
+              disabled={isProcessing || !couponCode.trim()}
+              className="h-11 w-full rounded-lg border border-emerald-700 bg-emerald-700 px-4 text-sm text-white hover:bg-emerald-800 sm:h-10 sm:w-auto"
+            >
+              {processingAction === "coupon" ? "Applying..." : "Apply Coupon"}
+            </Button>
+          </div>
+          <p className="mt-2 text-xs text-slate-600">
+            A valid coupon adds 30 days of subscription access without a Razorpay charge. Redemptions are one-time per account and can be limited server-side.
+          </p>
+        </div>
+      ) : null}
+
       {nextLabel ? (
         <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
           <p className="flex items-center gap-2 font-semibold text-slate-700">
@@ -348,7 +440,7 @@ export function SubscriptionStatusCard({
             Next step after activation
           </p>
           <p className="mt-1">
-            {nextLabel} will open automatically once payment verification completes.
+            {nextLabel} will open automatically once activation completes.
           </p>
         </div>
       ) : null}

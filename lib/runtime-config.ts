@@ -99,3 +99,27 @@ export function getMissingRequiredRuntimeConfig() {
 export function getSupportEmail() {
   return readEnv("SUPPORT_EMAIL", "NEXT_PUBLIC_SUPPORT_EMAIL")
 }
+
+export function getSubscriptionCouponCode() {
+  return readEnv("SUBSCRIPTION_COUPON_CODE")
+}
+
+export function getSubscriptionCouponCodeHash() {
+  return readEnv("SUBSCRIPTION_COUPON_CODE_HASH")
+}
+
+export function getSubscriptionCouponExpiresAt() {
+  return readEnv("SUBSCRIPTION_COUPON_EXPIRES_AT")
+}
+
+export function getSubscriptionCouponMaxRedemptions() {
+  return readEnv("SUBSCRIPTION_COUPON_MAX_REDEMPTIONS")
+}
+
+export function getSubscriptionCouponOnlyForInactive() {
+  const value = readEnv("SUBSCRIPTION_COUPON_ONLY_FOR_INACTIVE")
+  if (!value) return true
+
+  const normalized = value.trim().toLowerCase()
+  return !["0", "false", "no", "off"].includes(normalized)
+}

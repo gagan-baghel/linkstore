@@ -493,6 +493,133 @@ export const getPlan = queryGeneric({
   },
 })
 
+export const grantCouponSubscription = mutationGeneric({
+  args: {
+    userId: v.id("users"),
+    couponHash: v.string(),
+    maxRedemptions: v.number(),
+    expiresAt: v.number(),
+    onlyForInactive: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now()
+    const couponHash = args.couponHash.trim().toLowerCase()
+
+    if (!couponHash) {
+      return { ok: false, message: "Coupon fingerprint is required" as const }
+    }
+
+    if (!Number.isFinite(args.maxRedemptions) || args.maxRedemptions <= 0) {
+      return { ok: false, message: "Coupon redemption limit is invalid" as const }
+    }
+
+    if (!Number.isFinite(args.expiresAt) || args.expiresAt <= now) {
+      return { ok: false, message: "Coupon has expired" as const }
+    }
+
+    const user = await ctx.db.get(args.userId)
+    if (!user) {
+      return { ok: false, message: "User not found" as const }
+    }
+
+    const resolved = await ensureSubscriptionRow(ctx, args.userId, now)
+    if (!resolved.subscription) {
+      return { ok: false, message: "Subscription record could not be resolved" as const }
+    }
+
+    const existingRedemption = await ctx.db
+      .query("couponRedemptions")
+      .withIndex("by_userId_couponHash", (q: any) => q.eq("userId", args.userId).eq("couponHash", couponHash))
+      .first()
+    if (existingRedemption) {
+      return { ok: false, message: "This account has already redeemed the coupon." as const }
+    }
+
+    const couponRedemptions = await ctx.db
+      .query("couponRedemptions")
+      .withIndex("by_couponHash_createdAt", (q: any) => q.eq("couponHash", couponHash))
+      .collect()
+    if (couponRedemptions.length >= Math.floor(args.maxRedemptions)) {
+      return { ok: false, message: "This coupon has reached its redemption limit." as const }
+    }
+
+    const effectiveBefore = getEffectiveSubscriptionStatus(resolved.subscription, now)
+    if (args.onlyForInactive && effectiveBefore === "active") {
+      return { ok: false, message: "Coupons can only be redeemed before a subscription is active." as const }
+    }
+
+    const { baseStart, expiresAt } = computeSubscriptionPeriod({
+      currentExpiresAt:
+        effectiveBefore === "active"
+          ? typeof resolved.subscription.expiresAt === "number"
+            ? resolved.subscription.expiresAt
+            : resolved.subscription.currentPeriodEnd
+          : null,
+      grantedAt: now,
+      durationMs: SUBSCRIPTION_DURATION_MS,
+    })
+
+    const activationPatch = await patchSubscriptionStatus(ctx, resolved.subscription, {
+      nextStatus: "active",
+      patch: {
+        planCode: SUBSCRIPTION_PLAN_CODE,
+        planAmountPaise: SUBSCRIPTION_PRICE_PAISE,
+        currency: SUBSCRIPTION_CURRENCY,
+        currentPeriodStart: baseStart,
+        currentPeriodEnd: expiresAt,
+        activatedAt: resolved.subscription.activatedAt || now,
+        expiresAt,
+        cancelledAt: undefined,
+        pendingOrderId: undefined,
+        lastOrderId: undefined,
+        lastPaymentIdEncrypted: undefined,
+        lastPaymentIdHash: "",
+        lastSignatureHash: "",
+        webhookConfirmedAt: undefined,
+        deactivationReason: undefined,
+        updatedAt: now,
+      },
+    })
+
+    if (!activationPatch.ok) {
+      return { ok: false, message: activationPatch.message || "Invalid subscription transition" as const }
+    }
+
+    await ctx.db.patch(user._id, {
+      storeEnabled: true,
+      storeCreatedAt: user.storeCreatedAt || now,
+      updatedAt: now,
+    })
+
+    await ctx.db.insert("couponRedemptions", {
+      userId: args.userId,
+      subscriptionId: resolved.subscription._id,
+      couponHash,
+      grantedAt: now,
+      expiresAt,
+      createdAt: now,
+      updatedAt: now,
+    })
+
+    await writeAudit(ctx, {
+      actorType: "user",
+      actorUserId: args.userId,
+      action: "subscription.coupon_granted",
+      resourceType: "subscription",
+      resourceId: resolved.subscription._id,
+      status: "ok",
+      details: JSON.stringify({
+        grantSource: "env_coupon",
+        couponHash,
+        expiresAt,
+      }),
+    })
+
+    const access = await computeAccessState(ctx, args.userId)
+    return { ok: true, expiresAt, access }
+  },
+})
+
 export const getAccessState = queryGeneric({
   args: {
     userId: v.id("users"),

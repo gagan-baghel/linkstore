@@ -101,6 +101,18 @@ export default defineSchema({
     .index("by_idempotencyKey", ["idempotencyKey"])
     .index("by_payment_hash", ["razorpayPaymentIdHash"])
     .index("by_createdAt", ["createdAt"]),
+  couponRedemptions: defineTable({
+    userId: v.id("users"),
+    subscriptionId: v.id("subscriptions"),
+    couponHash: v.string(),
+    grantedAt: v.number(),
+    expiresAt: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_userId_couponHash", ["userId", "couponHash"])
+    .index("by_couponHash_createdAt", ["couponHash", "createdAt"])
+    .index("by_userId_createdAt", ["userId", "createdAt"]),
   billingEvents: defineTable({
     provider: v.string(),
     eventKey: v.string(),

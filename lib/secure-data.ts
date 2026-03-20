@@ -1,5 +1,5 @@
 import crypto from "crypto"
-import { getAuthJwtSecret } from "@/lib/auth-config"
+import { getAuthJwtSecret } from "./auth-config"
 
 function decodeKeyMaterial(raw: string): Buffer {
   if (!raw) {

@@ -39,6 +39,11 @@ cp .env.example .env.local
 # RAZORPAY_KEY_ID=...
 # RAZORPAY_KEY_SECRET=...
 # RAZORPAY_WEBHOOK_SECRET=...
+# SUBSCRIPTION_COUPON_CODE=...
+# SUBSCRIPTION_COUPON_CODE_HASH=...
+# SUBSCRIPTION_COUPON_EXPIRES_AT=2026-12-31T23:59:59Z
+# SUBSCRIPTION_COUPON_MAX_REDEMPTIONS=100
+# SUBSCRIPTION_COUPON_ONLY_FOR_INACTIVE=true
 # In Google Cloud Console, authorize:
 # http://localhost:3000/api/auth/google/callback
 
@@ -66,6 +71,10 @@ Required in production:
 
 Optional:
 
+- `SUBSCRIPTION_COUPON_CODE` or `SUBSCRIPTION_COUPON_CODE_HASH` for coupon validation
+  `SUBSCRIPTION_COUPON_CODE_HASH` should be generated with the app's `AUTH_JWT_SECRET`-backed hashing helper, so coupon fingerprints use the same root secret as the rest of billing/auth protection.
+- `SUBSCRIPTION_COUPON_EXPIRES_AT` and `SUBSCRIPTION_COUPON_MAX_REDEMPTIONS` to safely enable coupon redemption
+- `SUBSCRIPTION_COUPON_ONLY_FOR_INACTIVE` to block active subscribers from redeeming the coupon again
 - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` for uploads
 - `SUPPORT_EMAIL` for the contact page
 - `AMAZON_PAAPI_*` for Amazon product metadata enrichment
