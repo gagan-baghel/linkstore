@@ -584,7 +584,7 @@ async function grantCouponAccess(
     nextStatus: "active",
     patch: {
       planCode: PLAN_CODE,
-      planAmountPaise: 0,
+      planAmountPaise: PLAN_AMOUNT_PAISE,
       currency: PLAN_CURRENCY,
       currentPeriodStart: baseStart,
       currentPeriodEnd: expiresAt,

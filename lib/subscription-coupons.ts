@@ -17,6 +17,7 @@ export function maskSubscriptionCouponCode(input: string) {
   return `${normalized.slice(0, 4)}...${normalized.slice(-4)}`
 }
 
+
 export function computeSubscriptionExtensionExpiry(input: {
   currentExpiresAt?: number | null
   grantedAt: number

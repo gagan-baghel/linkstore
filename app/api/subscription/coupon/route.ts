@@ -12,7 +12,7 @@ import {
   maskSubscriptionCouponCode,
   normalizeSubscriptionCouponCode,
 } from "@/lib/subscription-coupons"
-import { hashSensitive } from "@/lib/secure-data"
+import { hashSubscriptionCouponCode } from "@/lib/subscription-coupon-hash"
 
 const redeemCouponSchema = z.object({
   couponCode: z.string().trim().min(4).max(64),
@@ -40,7 +40,7 @@ export async function POST(req: Request) {
     const payload = redeemCouponSchema.parse(body)
     const normalizedCode = normalizeSubscriptionCouponCode(payload.couponCode)
     const codeHint = maskSubscriptionCouponCode(normalizedCode)
-    const codeHash = hashSensitive(normalizedCode)
+    const codeHash = hashSubscriptionCouponCode(normalizedCode)
     const configuredCoupon = getConfiguredSubscriptionCoupon()
 
     if (!isValidSubscriptionCouponCode(normalizedCode)) {

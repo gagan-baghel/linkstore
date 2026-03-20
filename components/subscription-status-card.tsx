@@ -108,7 +108,8 @@ export function SubscriptionStatusCard({
   function completeActivation(nextAccess: SubscriptionAccessState | null, description: string) {
     setAccess(nextAccess)
     if (nextPath) {
-      router.push(nextPath)
+      window.location.assign(nextPath)
+      return
     }
     router.refresh()
 

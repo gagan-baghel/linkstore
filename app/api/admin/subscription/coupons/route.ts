@@ -11,7 +11,7 @@ import {
   maskSubscriptionCouponCode,
   normalizeSubscriptionCouponCode,
 } from "@/lib/subscription-coupons"
-import { hashSensitive } from "@/lib/secure-data"
+import { hashSubscriptionCouponCode } from "@/lib/subscription-coupon-hash"
 
 const createCouponSchema = z.object({
   code: z.string().trim().min(4).max(64),
@@ -118,7 +118,7 @@ export async function POST(req: Request) {
       { ok: boolean; message?: string; code?: string; coupon?: any }
     >("subscriptions:createCoupon", {
       adminUserId: session.user.id,
-      codeHash: hashSensitive(normalizedCode),
+      codeHash: hashSubscriptionCouponCode(normalizedCode),
       codeHint,
       label: payload.label,
       durationMs: SUBSCRIPTION_COUPON_DURATION_MS,
