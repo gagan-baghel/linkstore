@@ -10,9 +10,10 @@ interface ClicksChartProps {
     name: string
     clicks: number
   }[]
+  metricLabel?: string
 }
 
-export function ClicksChart({ data }: ClicksChartProps) {
+export function ClicksChart({ data, metricLabel = "Outbound Clicks" }: ClicksChartProps) {
   const chartData = [...data]
     .sort((a, b) => b.clicks - a.clicks)
     .slice(0, 8)
@@ -27,7 +28,7 @@ export function ClicksChart({ data }: ClicksChartProps) {
 
   return (
     <ChartContainer
-      config={{ clicks: { label: "Outbound Clicks", color: "#14b8a6" } }}
+      config={{ clicks: { label: metricLabel, color: "#14b8a6" } }}
       className="h-64 w-full [--grid:#e8edf7] sm:h-80"
     >
       <BarChart data={chartData} margin={{ left: 8, right: 8, top: 8, bottom: 8 }}>
@@ -36,7 +37,7 @@ export function ClicksChart({ data }: ClicksChartProps) {
         <YAxis tickLine={false} axisLine={false} allowDecimals={false} width={36} />
         <ChartTooltip
           cursor={false}
-          content={<ChartTooltipContent formatter={(value) => [Number(value).toLocaleString(), "Outbound Clicks"]} />}
+          content={<ChartTooltipContent formatter={(value) => [Number(value).toLocaleString(), metricLabel]} />}
         />
         <Bar dataKey="clicks" fill="var(--color-clicks)" radius={[8, 8, 0, 0]} />
       </BarChart>

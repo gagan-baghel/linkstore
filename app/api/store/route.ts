@@ -69,6 +69,7 @@ const storeSchema = z.object({
     .or(z.literal(""))
     .refine((value) => !value || isValidWhatsAppNumber(value), "Invalid WhatsApp number"),
   socialWhatsappMessage: z.string().trim().max(500).optional().or(z.literal("")),
+  leadCaptureChannel: z.enum(["email", "whatsapp"]).optional().default("email"),
 })
 
 export async function PUT(req: Request) {
@@ -104,6 +105,7 @@ export async function PUT(req: Request) {
       socialWebsite,
       socialWhatsapp,
       socialWhatsappMessage,
+      leadCaptureChannel,
     } = storeSchema.parse(body)
     const user = await convexQuery<{ userId: string }, any | null>("users:getById", { userId: session.user.id }).catch(
       () => null,
@@ -124,6 +126,7 @@ export async function PUT(req: Request) {
         socialWebsite?: string
         socialWhatsapp?: string
         socialWhatsappMessage?: string
+        leadCaptureChannel?: "email" | "whatsapp"
       },
       { ok: boolean; message?: string; code?: string }
     >("users:updateStore", {
@@ -139,6 +142,7 @@ export async function PUT(req: Request) {
       socialWebsite: socialWebsite || "",
       socialWhatsapp: socialWhatsapp || "",
       socialWhatsappMessage: socialWhatsappMessage || "",
+      leadCaptureChannel,
     })
 
     if (!result.ok) {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 
 import { convexMutation, convexQuery } from "@/lib/convex"
+import { getRequestInsights } from "@/lib/request-insights"
 import { checkRateLimitAsync, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
 
 const trackEventSchema = z.object({
@@ -9,10 +10,15 @@ const trackEventSchema = z.object({
   productId: z.string().trim().regex(/^[a-zA-Z0-9_-]+$/).max(128).optional(),
   storeUsername: z.string().trim().min(1).max(64),
   source: z.string().trim().max(100).optional(),
+  medium: z.string().trim().max(100).optional(),
+  campaign: z.string().trim().max(120).optional(),
+  content: z.string().trim().max(120).optional(),
+  term: z.string().trim().max(120).optional(),
   referrer: z.string().trim().max(500).optional(),
   device: z.string().trim().max(40).optional(),
   path: z.string().trim().max(240).optional(),
   sessionId: z.string().trim().max(120).optional(),
+  collectionSlug: z.string().trim().max(120).optional(),
 }).superRefine((value, ctx) => {
   const requiresProduct = value.eventType === "product_card_click" || value.eventType === "outbound_click"
   if (requiresProduct && !value.productId) {
@@ -55,6 +61,7 @@ export async function POST(req: Request) {
     }
 
     const userAgent = (req.headers.get("user-agent") || "").slice(0, 500)
+    const insights = getRequestInsights(req.headers, userAgent, payload.device || "unknown")
 
     const result = await convexMutation<
       {
@@ -63,10 +70,21 @@ export async function POST(req: Request) {
         productId?: string
         storeUsername: string
         source?: string
+        medium?: string
+        campaign?: string
+        content?: string
+        term?: string
         referrer?: string
         device?: string
+        browser?: string
+        os?: string
+        deviceName?: string
+        country?: string
+        region?: string
+        city?: string
         path?: string
         sessionId?: string
+        collectionSlug?: string
         userAgent?: string
         ip?: string
       },
@@ -77,10 +95,21 @@ export async function POST(req: Request) {
       productId: payload.productId,
       storeUsername: owner.username,
       source: payload.source || "direct",
+      medium: payload.medium || "",
+      campaign: payload.campaign || "",
+      content: payload.content || "",
+      term: payload.term || "",
       referrer: (payload.referrer || req.headers.get("referer") || "").slice(0, 500),
-      device: payload.device || "unknown",
+      device: insights.device,
+      browser: insights.browser,
+      os: insights.os,
+      deviceName: insights.deviceName,
+      country: insights.country,
+      region: insights.region,
+      city: insights.city,
       path: payload.path || "",
       sessionId: payload.sessionId || "",
+      collectionSlug: payload.collectionSlug || "",
       userAgent,
       ip,
     })

@@ -19,6 +19,14 @@ export async function PublicNavbar() {
         </Link>
 
         <div className="flex items-center gap-3">
+          <nav className="hidden items-center gap-4 text-sm text-slate-600 md:flex">
+            <Link href="/privacy" className="transition-colors hover:text-slate-900 dark:text-slate-300 dark:hover:text-white">
+              Privacy
+            </Link>
+            <Link href="/terms" className="transition-colors hover:text-slate-900 dark:text-slate-300 dark:hover:text-white">
+              Terms
+            </Link>
+          </nav>
           {isLoggedIn ? (
             <Link href="/dashboard">
               <Button>Open Dashboard</Button>

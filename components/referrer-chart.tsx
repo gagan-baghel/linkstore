@@ -10,9 +10,10 @@ interface ReferrerChartProps {
     name: string
     value: number
   }[]
+  metricLabel?: string
 }
 
-export function ReferrerChart({ data }: ReferrerChartProps) {
+export function ReferrerChart({ data, metricLabel = "Events" }: ReferrerChartProps) {
   const COLORS = ["#0ea5e9", "#14b8a6", "#f59e0b", "#ef4444", "#8b5cf6", "#f97316"]
   const isMobile = useIsMobile()
   const total = data.reduce((sum, item) => sum + Number(item.value || 0), 0)
@@ -46,7 +47,7 @@ export function ReferrerChart({ data }: ReferrerChartProps) {
           cursor={false}
           content={
             <ChartTooltipContent
-              formatter={(value, _name, item) => [Number(value).toLocaleString(), item?.name || "Clicks"]}
+              formatter={(value, _name, item) => [Number(value).toLocaleString(), item?.name || metricLabel]}
             />
           }
         />

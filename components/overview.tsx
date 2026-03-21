@@ -11,7 +11,7 @@ interface OverviewProps {
   }[]
 }
 
-const barColors = ["#0ea5e9", "#14b8a6", "#f97316"]
+const barColors = ["#0ea5e9", "#14b8a6", "#f97316", "#8b5cf6"]
 
 export function Overview({ data }: OverviewProps) {
   const chartData = data.map((item) => ({ ...item, shortName: item.name.replace(" (30d)", "") }))

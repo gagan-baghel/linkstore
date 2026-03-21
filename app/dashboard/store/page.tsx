@@ -44,10 +44,10 @@ export default async function StoreSettingsPage() {
           <StoreForm
             storeBannerText={user?.storeBannerText || ""}
             storeBio={user?.storeBio || ""}
-            contactInfo={user?.contactInfo || ""}
             username={user?.username || ""}
             storeUrl={buildStorefrontUrl(user?.username || "", requestOrigin)}
             storeLogo={user?.storeLogo || ""}
+            leadCaptureChannel={user?.leadCaptureChannel || "email"}
           />
         </div>
       </div>

@@ -46,7 +46,7 @@ export function UserAccountNav({ user }: UserAccountNavProps) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex items-center gap-1 overflow-hidden rounded-[1rem] border border-white/80 bg-white/88 px-1 py-1 text-[#1c2433] shadow-[0_10px_24px_rgba(87,107,149,0.08)] hover:bg-white focus-visible:outline-none sm:gap-2 sm:px-2">
+      <DropdownMenuTrigger className="flex items-center gap-1.5 overflow-hidden rounded-[1rem] border border-[#d8e2f3] bg-white/92 px-1.5 py-1.5 text-[#1c2433] shadow-[0_10px_24px_rgba(87,107,149,0.06)] transition-colors hover:bg-white focus-visible:outline-none sm:gap-2 sm:px-2.5">
         <UserAvatar user={{ name: user.name || null, image: user.image || null }} className="h-7 w-7 sm:h-8 sm:w-8" />
         <span className="hidden pr-1 text-sm font-semibold md:inline-block">{user.name}</span>
       </DropdownMenuTrigger>

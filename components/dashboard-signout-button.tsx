@@ -32,7 +32,7 @@ export function DashboardSignOutButton({ className }: { className?: string }) {
       variant="outline"
       size="sm"
       className={cn(
-        "h-9 rounded-md border-red-300 bg-transparent px-3 text-xs text-red-600 shadow-none hover:border-red-400 hover:bg-red-50 hover:text-red-700",
+        "h-10 rounded-xl border-[#f0c8cf] bg-white/80 px-3 text-xs text-[#b14b5b] shadow-none hover:border-[#e5aebb] hover:bg-[#fff5f7] hover:text-[#983949]",
         className,
       )}
       disabled={isSigningOut}

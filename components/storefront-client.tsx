@@ -1,6 +1,6 @@
 "use client"
 
-import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState, type ComponentType } from "react"
+import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState, type ComponentType, type FormEvent } from "react"
 import Image from "next/image"
 import {
   Facebook,
@@ -18,6 +18,7 @@ import {
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
@@ -40,6 +41,7 @@ interface StorefrontUser {
   socialWebsite?: string
   socialWhatsapp?: string
   socialWhatsappMessage?: string
+  leadCaptureChannel?: "email" | "whatsapp"
 }
 
 interface StorefrontProduct {
@@ -210,8 +212,20 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
   const [activeTab, setActiveTab] = useState<"links" | "shop">("links")
   const [desktopMediaMenuOpen, setDesktopMediaMenuOpen] = useState(false)
   const [source, setSource] = useState("storefront")
+  const [medium, setMedium] = useState("")
+  const [campaign, setCampaign] = useState("")
+  const [content, setContent] = useState("")
+  const [term, setTerm] = useState("")
+  const [collectionSlug, setCollectionSlug] = useState("")
   const [sessionId, setSessionId] = useState("")
   const [currentPath, setCurrentPath] = useState("")
+  const [leadEmail, setLeadEmail] = useState("")
+  const [leadWhatsapp, setLeadWhatsapp] = useState("")
+  const [leadConsent, setLeadConsent] = useState(false)
+  const [leadCaptureMessage, setLeadCaptureMessage] = useState("")
+  const [leadCaptureError, setLeadCaptureError] = useState("")
+  const [isLeadSubmitting, setIsLeadSubmitting] = useState(false)
+  const [isLeadPopupOpen, setIsLeadPopupOpen] = useState(false)
   const trackStoreViewOnce = useRef(false)
   const desktopMediaMenuRef = useRef<HTMLDivElement | null>(null)
 
@@ -312,6 +326,8 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
   const displayName = (user.name || "Store").trim()
   const normalizedUsername = (user.username || "").trim().replace(/^@+/, "")
   const storeUsernameLabel = normalizedUsername ? `@${normalizedUsername}` : displayName
+  const leadCaptureChannel = user.leadCaptureChannel === "whatsapp" ? "whatsapp" : "email"
+  const leadPopupStorageKey = `linkstore_lead_popup_seen:${(normalizedUsername || user._id).toLowerCase()}`
   const usesFallbackLogo = !hasCustomStoreLogo(user)
   const mobileSocialIcons = socialItems.filter((item) => item.key === "instagram" || item.key === "youtube").slice(0, 2)
   const hasCreatorLinks = socialItems.length > 0
@@ -373,6 +389,11 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
     const params = new URLSearchParams(window.location.search)
     const resolvedSource = params.get("utm_source") || params.get("source") || "storefront"
     setSource(resolvedSource.toLowerCase())
+    setMedium((params.get("utm_medium") || "").toLowerCase())
+    setCampaign(params.get("utm_campaign") || "")
+    setContent(params.get("utm_content") || "")
+    setTerm(params.get("utm_term") || "")
+    setCollectionSlug((params.get("collection") || "").toLowerCase())
     setSessionId(createSessionId())
     setCurrentPath(window.location.pathname)
   }, [])
@@ -413,10 +434,15 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
       productId,
       storeUsername: user.username || "store",
       source,
+      medium,
+      campaign,
+      content,
+      term,
       referrer: document.referrer || "",
       device: getDeviceType(),
       path: window.location.pathname,
       sessionId,
+      collectionSlug,
     }
 
     fetch("/api/events/track", {
@@ -439,12 +465,145 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, user._id, source])
 
+  useEffect(() => {
+    if (!sessionId || !user._id) return
+    if (sessionStorage.getItem(leadPopupStorageKey)) return
+
+    const timer = window.setTimeout(() => {
+      setIsLeadPopupOpen(true)
+    }, 30_000)
+
+    return () => window.clearTimeout(timer)
+  }, [leadPopupStorageKey, sessionId, user._id])
+
   function buildTrackHref(productId: string) {
     const params = new URLSearchParams()
     if (source) params.set("source", source)
+    if (medium) params.set("utm_medium", medium)
+    if (campaign) params.set("utm_campaign", campaign)
+    if (content) params.set("utm_content", content)
+    if (term) params.set("utm_term", term)
     if (sessionId) params.set("sessionId", sessionId)
     if (currentPath) params.set("path", currentPath)
+    if (collectionSlug) params.set("collection", collectionSlug)
     return `/api/track/${productId}?${params.toString()}`
+  }
+
+  async function submitLeadCapture(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (isLeadSubmitting) return
+
+    setLeadCaptureMessage("")
+    setLeadCaptureError("")
+
+    if (!leadConsent) {
+      setLeadCaptureError("Please confirm that we can contact you.")
+      return
+    }
+
+    if (leadCaptureChannel === "email" && !leadEmail.trim()) {
+      setLeadCaptureError("Add your email to continue.")
+      return
+    }
+
+    if (leadCaptureChannel === "whatsapp" && !leadWhatsapp.trim()) {
+      setLeadCaptureError("Add your WhatsApp number to continue.")
+      return
+    }
+
+    setIsLeadSubmitting(true)
+
+    try {
+      const response = await fetch("/api/audience-leads", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          storeUsername: user.username || "store",
+          email: leadCaptureChannel === "email" ? leadEmail : "",
+          whatsapp: leadCaptureChannel === "whatsapp" ? leadWhatsapp : "",
+          consent: leadConsent,
+          source,
+          medium,
+          campaign,
+          content,
+          term,
+          collectionSlug,
+        }),
+      })
+
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        setLeadCaptureError(payload.message || "Unable to save your contact right now.")
+        return
+      }
+
+      setLeadEmail("")
+      setLeadWhatsapp("")
+      setLeadConsent(false)
+      setLeadCaptureMessage("You’re in. Expect fresh drops, deal alerts, and restock updates here.")
+      sessionStorage.setItem(leadPopupStorageKey, "1")
+      window.setTimeout(() => setIsLeadPopupOpen(false), 800)
+    } catch {
+      setLeadCaptureError("Unable to save your contact right now.")
+    } finally {
+      setIsLeadSubmitting(false)
+    }
+  }
+
+  function handleLeadPopupChange(nextOpen: boolean) {
+    setIsLeadPopupOpen(nextOpen)
+    if (!nextOpen) {
+      sessionStorage.setItem(leadPopupStorageKey, "1")
+    }
+  }
+
+  function renderLeadCaptureForm() {
+    return (
+      <>
+        {collectionSlug ? (
+          <p className="text-[11px] font-medium text-[#64748b]">From: {collectionSlug}</p>
+        ) : null}
+        <form onSubmit={submitLeadCapture} className="mt-4 grid gap-3">
+          {leadCaptureChannel === "email" ? (
+            <Input
+              type="email"
+              value={leadEmail}
+              onChange={(event) => setLeadEmail(event.target.value)}
+              placeholder="Email address"
+              aria-label="Email address"
+              className="h-10 border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400"
+            />
+          ) : (
+            <Input
+              type="tel"
+              value={leadWhatsapp}
+              onChange={(event) => setLeadWhatsapp(event.target.value)}
+              placeholder="WhatsApp number"
+              aria-label="WhatsApp number"
+              className="h-10 border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400"
+            />
+          )}
+          <Button type="submit" disabled={isLeadSubmitting} className="h-10 w-full px-4">
+            {isLeadSubmitting ? "Joining..." : "Join now"}
+          </Button>
+          <label className="flex items-start gap-2 text-xs leading-5">
+            <input
+              type="checkbox"
+              checked={leadConsent}
+              onChange={(event) => setLeadConsent(event.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-slate-900"
+            />
+            <span className={isDarkMode ? "text-slate-300" : "text-slate-600"}>
+              I’d like to join this creator’s updates list and hear about new recommendations, deals, and restocks.
+            </span>
+          </label>
+          {leadCaptureError ? <p className="text-xs font-medium text-rose-600">{leadCaptureError}</p> : null}
+          {leadCaptureMessage ? <p className="text-xs font-medium text-emerald-600">{leadCaptureMessage}</p> : null}
+        </form>
+      </>
+    )
   }
 
   function toggleCategory(category: string) {
@@ -685,7 +844,6 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                   </a>
                 )
               })}
-
               {renderShowcaseCard()}
             </section>
           ) : (
@@ -1019,6 +1177,21 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
             </div>
           </SheetContent>
         </Sheet>
+
+        <Dialog open={isLeadPopupOpen} onOpenChange={handleLeadPopupChange}>
+          <DialogContent className="max-w-[calc(100%-1rem)] rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-[0_24px_80px_rgba(15,23,42,0.24)] sm:max-w-md sm:p-7">
+            <DialogHeader className="pr-10 text-left">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-600">Join the inner circle</p>
+              <DialogTitle className="mt-1 text-xl font-semibold tracking-tight text-slate-900">
+                Get first access to new drops, coupon alerts, and restocks
+              </DialogTitle>
+              <DialogDescription className="text-sm leading-6 text-slate-600">
+                Leave your {leadCaptureChannel === "whatsapp" ? "WhatsApp number" : "email"} to stay in the loop whenever {displayName} shares a fresh recommendation, deal, or restock.
+              </DialogDescription>
+            </DialogHeader>
+            {renderLeadCaptureForm()}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   )

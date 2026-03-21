@@ -37,6 +37,13 @@ const CONTEXT_BY_PREFIX: Array<{ prefix: string; context: TopbarContext }> = [
     },
   },
   {
+    prefix: "/dashboard/audience",
+    context: {
+      heading: "Audience",
+      text: "Review shopper contacts captured from your storefront.",
+    },
+  },
+  {
     prefix: "/dashboard/account",
     context: {
       heading: "Account",

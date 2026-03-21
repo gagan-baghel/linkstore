@@ -6,8 +6,8 @@ interface DashboardShellProps {
 
 export function DashboardShell({ children }: DashboardShellProps) {
   return (
-    <div className="app-page-shell flex-1 min-w-0 overflow-x-clip bg-transparent px-2.5 py-2.5 pb-24 sm:px-4 sm:py-4 md:px-6 md:py-6 md:pb-6">
-      <div className="mx-auto min-w-0 w-full max-w-[28rem] sm:max-w-none">{children}</div>
+    <div className="app-page-shell flex-1 min-w-0 overflow-x-clip bg-transparent px-3 py-3 pb-24 sm:px-5 sm:py-5 md:px-7 md:py-7 md:pb-7">
+      <div className="mx-auto min-w-0 w-full max-w-[30rem] sm:max-w-none">{children}</div>
     </div>
   )
 }

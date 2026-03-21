@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { format } from "date-fns"
-import { MousePointerClick, Package, Store } from "lucide-react"
+import { MousePointerClick, Package, Store, Users } from "lucide-react"
 import { redirect } from "next/navigation"
 
 import { getSafeServerSession } from "@/lib/auth"
@@ -49,8 +49,16 @@ export default async function AnalyticsPage() {
     })) || []
   const sourceChartData = analytics?.sourceChartData || []
   const deviceChartData = analytics?.deviceChartData || []
+  const campaignChartData = analytics?.campaignChartData || []
+  const browserChartData = analytics?.browserChartData || []
+  const osChartData = analytics?.osChartData || []
+  const countryChartData = analytics?.countryChartData || []
+  const cityChartData = analytics?.cityChartData || []
+  const collectionPerformanceData = analytics?.collectionPerformanceData || []
+  const leadsByCollectionData = analytics?.leadsByCollectionData || []
   const funnelData = analytics?.funnelData || []
   const recentClicksData = analytics?.recentClicksData || []
+  const leadsCount30 = analytics?.leadsCount30 || 0
 
   const totalDeviceTraffic = deviceChartData.reduce((sum: number, item: any) => sum + Number(item.value || 0), 0)
   const summaryCardClassName =
@@ -65,7 +73,7 @@ export default async function AnalyticsPage() {
           <AlertDescription>Analytics data is temporarily unavailable. Please refresh in a few seconds.</AlertDescription>
         </Alert>
       )}
-      <div className="grid min-w-0 grid-cols-2 gap-2.5 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid min-w-0 grid-cols-2 gap-2.5 md:grid-cols-2 lg:grid-cols-4">
         <div className={summaryCardClassName}>
           <div className="mb-2 flex items-center justify-between md:mb-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#5f6b7e]">Total Products</p>
@@ -91,6 +99,14 @@ export default async function AnalyticsPage() {
           </div>
           <div className="text-[1.15rem] font-semibold tracking-tight text-[#1c1917] md:text-2xl">{productCardClicks30}</div>
           <p className="mt-1 text-[10px] leading-4 text-[#8a94a8] md:text-xs">Product intent signals</p>
+        </div>
+        <div className={summaryCardClassName}>
+          <div className="mb-2 flex items-center justify-between md:mb-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#5f6b7e]">Leads Captured (30d)</p>
+            <Users className="h-4 w-4 text-[#8a94a8]" />
+          </div>
+          <div className="text-[1.15rem] font-semibold tracking-tight text-[#1c1917] md:text-2xl">{leadsCount30}</div>
+          <p className="mt-1 text-[10px] leading-4 text-[#8a94a8] md:text-xs">Owned audience from your storefront</p>
         </div>
       </div>
       <div className="mt-4 grid min-w-0 gap-3 md:mt-6 md:grid-cols-2 lg:grid-cols-7">
@@ -124,6 +140,13 @@ export default async function AnalyticsPage() {
                       {click.productId && typeof click.productId === "object" ? click.productId.title : "Unknown Product"}
                     </p>
                     <p className="font-mono text-xs text-[#8a94a8]">{format(new Date(click.createdAt), "MMM d, yyyy HH:mm")}</p>
+                    <p className="text-[11px] text-[#8a94a8]">
+                      {(click.source || "direct").toString()}
+                      {click.collectionSlug ? ` • ${click.collectionSlug}` : ""}
+                      {click.deviceName ? ` • ${click.deviceName}` : click.device ? ` • ${click.device}` : ""}
+                      {click.browser ? ` • ${click.browser}` : ""}
+                      {click.city || click.country ? ` • ${[click.city, click.country].filter(Boolean).join(", ")}` : ""}
+                    </p>
                   </div>
                 </div>
               ))
@@ -144,7 +167,7 @@ export default async function AnalyticsPage() {
         <div className={`${sectionCardClassName} lg:col-span-4`}>
           <h2 className="mb-1 text-sm font-semibold text-[#1c1917]">Traffic Sources</h2>
           <p className="mb-4 text-xs text-[#8a94a8]">Campaign/source attribution for tracked events</p>
-          <ReferrerChart data={sourceChartData} />
+          <ReferrerChart data={sourceChartData} metricLabel="Events" />
         </div>
         <div className={`${sectionCardClassName} lg:col-span-3`}>
           <h2 className="mb-1 text-sm font-semibold text-[#1c1917]">Device Split</h2>
@@ -171,12 +194,61 @@ export default async function AnalyticsPage() {
           )}
         </div>
       </div>
+      <div className="mt-4 grid min-w-0 gap-3 md:mt-6 md:grid-cols-2 lg:grid-cols-7">
+        <div className={`${sectionCardClassName} lg:col-span-3`}>
+          <h2 className="mb-1 text-sm font-semibold text-[#1c1917]">Campaigns</h2>
+          <p className="mb-4 text-xs text-[#8a94a8]">UTM campaign labels attached to tracked storefront traffic</p>
+          <ReferrerChart data={campaignChartData} metricLabel="Events" />
+        </div>
+        <div className={`${sectionCardClassName} lg:col-span-4`}>
+          <h2 className="mb-1 text-sm font-semibold text-[#1c1917]">Collection Performance</h2>
+          <p className="mb-4 text-xs text-[#8a94a8]">Outbound clicks grouped by `collection` or post attribution</p>
+          <div className="min-w-0 pl-2">
+            <ClicksChart data={collectionPerformanceData} />
+          </div>
+        </div>
+      </div>
+      <div className="mt-4 grid min-w-0 gap-3 md:mt-6 md:grid-cols-2 lg:grid-cols-7">
+        <div className={`${sectionCardClassName} lg:col-span-3`}>
+          <h2 className="mb-1 text-sm font-semibold text-[#1c1917]">Browsers</h2>
+          <p className="mb-4 text-xs text-[#8a94a8]">Approximate browser breakdown from tracked storefront activity</p>
+          <ReferrerChart data={browserChartData} metricLabel="Visitors" />
+        </div>
+        <div className={`${sectionCardClassName} lg:col-span-4`}>
+          <h2 className="mb-1 text-sm font-semibold text-[#1c1917]">Operating Systems</h2>
+          <p className="mb-4 text-xs text-[#8a94a8]">OS split based on the visitor user agent</p>
+          <ReferrerChart data={osChartData} metricLabel="Visitors" />
+        </div>
+      </div>
+      <div className="mt-4 grid min-w-0 gap-3 md:mt-6 md:grid-cols-2 lg:grid-cols-7">
+        <div className={`${sectionCardClassName} lg:col-span-3`}>
+          <h2 className="mb-1 text-sm font-semibold text-[#1c1917]">Top Countries</h2>
+          <p className="mb-4 text-xs text-[#8a94a8]">Approximate geo based on request headers from your hosting platform</p>
+          <ReferrerChart data={countryChartData} metricLabel="Visitors" />
+        </div>
+        <div className={`${sectionCardClassName} lg:col-span-4`}>
+          <h2 className="mb-1 text-sm font-semibold text-[#1c1917]">Top Cities</h2>
+          <p className="mb-4 text-xs text-[#8a94a8]">Cities are approximate and depend on available edge location headers</p>
+          <div className="min-w-0 pl-2">
+            <ClicksChart data={cityChartData} metricLabel="Visitors" />
+          </div>
+        </div>
+      </div>
       <div className="mt-4 grid min-w-0 gap-3 md:mt-6">
         <div className={sectionCardClassName}>
           <h2 className="mb-1 text-sm font-semibold text-[#1c1917]">Clicks by Product</h2>
           <p className="mb-4 text-xs text-[#8a94a8]">Click distribution across your products</p>
           <div className="min-w-0 pl-2">
             <ClicksChart data={productClicksData} />
+          </div>
+        </div>
+      </div>
+      <div className="mt-4 grid min-w-0 gap-3 md:mt-6">
+        <div className={sectionCardClassName}>
+          <h2 className="mb-1 text-sm font-semibold text-[#1c1917]">Leads by Collection</h2>
+          <p className="mb-4 text-xs text-[#8a94a8]">Which attributed posts or drops are actually capturing contacts</p>
+          <div className="min-w-0 pl-2">
+            <ClicksChart data={leadsByCollectionData} metricLabel="Leads" />
           </div>
         </div>
       </div>

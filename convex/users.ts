@@ -54,6 +54,7 @@ function buildUserDefaults(input: {
     socialWebsite: "",
     socialWhatsapp: "",
     socialWhatsappMessage: "",
+    leadCaptureChannel: "email" as const,
     createdAt: input.now,
     updatedAt: input.now,
   }
@@ -318,6 +319,7 @@ export const updateStore = mutationGeneric({
     socialWebsite: v.optional(v.string()),
     socialWhatsapp: v.optional(v.string()),
     socialWhatsappMessage: v.optional(v.string()),
+    leadCaptureChannel: v.optional(v.union(v.literal("email"), v.literal("whatsapp"))),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId)
@@ -342,6 +344,7 @@ export const updateStore = mutationGeneric({
       socialWebsite: args.socialWebsite || "",
       socialWhatsapp: args.socialWhatsapp || "",
       socialWhatsappMessage: args.socialWhatsappMessage || "",
+      leadCaptureChannel: args.leadCaptureChannel || "email",
       updatedAt: Date.now(),
     })
 

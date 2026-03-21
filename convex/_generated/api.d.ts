@@ -9,6 +9,7 @@
  */
 
 import type * as analytics from "../analytics.js";
+import type * as audienceLeads from "../audienceLeads.js";
 import type * as auditLogs from "../auditLogs.js";
 import type * as billing from "../billing.js";
 import type * as clicks from "../clicks.js";
@@ -28,6 +29,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   analytics: typeof analytics;
+  audienceLeads: typeof audienceLeads;
   auditLogs: typeof auditLogs;
   billing: typeof billing;
   clicks: typeof clicks;

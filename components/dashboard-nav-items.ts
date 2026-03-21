@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react"
-import { BarChart3, Home, Link2, Package, Settings, Store } from "lucide-react"
+import { BarChart3, Home, Link2, Package, Settings, Store, Users } from "lucide-react"
 
 import { getSubscriptionRedirectPath } from "@/lib/subscription-routing"
 
@@ -16,6 +16,7 @@ export const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
   { title: "Products", mobileLabel: "Products", href: "/dashboard/products", icon: Package, requiresPremium: true },
   { title: "Store Settings", mobileLabel: "Store", href: "/dashboard/store", icon: Store },
   { title: "Social Links", mobileLabel: "Social", href: "/dashboard/social-links", icon: Link2, requiresPremium: true },
+  { title: "Audience", mobileLabel: "Audience", href: "/dashboard/audience", icon: Users },
   { title: "Analytics", mobileLabel: "Stats", href: "/dashboard/analytics", icon: BarChart3 },
   { title: "Account", mobileLabel: "Account", href: "/dashboard/account", icon: Settings },
 ]

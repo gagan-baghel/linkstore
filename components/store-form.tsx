@@ -23,8 +23,8 @@ const storeFormSchema = z.object({
     message: "Store banner text must be at least 2 characters.",
   }),
   storeBio: z.string().max(500).optional().or(z.literal("")),
-  contactInfo: z.string().optional(),
   storeLogo: z.string().optional(),
+  leadCaptureChannel: z.enum(["email", "whatsapp"]).default("email"),
 })
 
 type StoreFormValues = z.infer<typeof storeFormSchema>
@@ -32,19 +32,19 @@ type StoreFormValues = z.infer<typeof storeFormSchema>
 interface StoreFormProps {
   storeBannerText: string
   storeBio: string
-  contactInfo: string
   username: string
   storeUrl: string
   storeLogo?: string
+  leadCaptureChannel?: "email" | "whatsapp"
 }
 
 export function StoreForm({
   storeBannerText,
   storeBio,
-  contactInfo,
   username,
   storeUrl,
   storeLogo = "",
+  leadCaptureChannel = "email",
 }: StoreFormProps) {
   const router = useRouter()
   const [isEditing, setIsEditing] = useState(false)
@@ -55,8 +55,8 @@ export function StoreForm({
   const defaultValues: StoreFormValues = {
     storeBannerText: storeBannerText || "",
     storeBio: storeBio || "",
-    contactInfo: contactInfo || "",
     storeLogo: storeLogo || "",
+    leadCaptureChannel,
   }
 
   const form = useForm<StoreFormValues>({
@@ -258,8 +258,8 @@ export function StoreForm({
             <h3 className="text-sm font-semibold text-slate-900">Contact</h3>
             <div className="mt-4 space-y-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Contact</p>
-                <p className="mt-1 text-sm text-slate-800">{values.contactInfo?.trim() || "No contact info added yet."}</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Wishlist Sign-up Method</p>
+                <p className="mt-1 text-sm text-slate-800 capitalize">{values.leadCaptureChannel || "email"}</p>
               </div>
             </div>
           </section>
@@ -323,14 +323,23 @@ export function StoreForm({
                 <h3 className="text-sm font-semibold text-slate-900">Contact</h3>
                 <FormField
                   control={form.control}
-                  name="contactInfo"
+                  name="leadCaptureChannel"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs font-semibold uppercase tracking-wide text-slate-700">Contact Information (Optional)</FormLabel>
+                      <FormLabel className="text-xs font-semibold uppercase tracking-wide text-slate-700">Wishlist Sign-up Method</FormLabel>
                       <FormControl>
-                        <Input className="h-10 border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400" placeholder="Email or phone number" {...field} />
+                        <select
+                          value={field.value}
+                          onChange={field.onChange}
+                          className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none"
+                        >
+                          <option value="email">Email</option>
+                          <option value="whatsapp">WhatsApp</option>
+                        </select>
                       </FormControl>
-                      <FormDescription className="text-xs">Optional way for visitors to reach you.</FormDescription>
+                      <FormDescription className="text-xs">
+                        Choose whether shoppers join with Email or WhatsApp. Email is the default.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

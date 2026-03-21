@@ -25,7 +25,7 @@ export function DashboardNav({ canUseShopFeatures }: { canUseShopFeatures: boole
   }, [pathname, resolvedNavItems, router])
 
   return (
-    <nav className="grid gap-0.5">
+    <nav className="grid gap-1">
       {resolvedNavItems.map((item) => {
         const targetHref = item.targetHref
         const isActive = isDashboardNavItemActive(pathname, item.href)
@@ -36,9 +36,9 @@ export function DashboardNav({ canUseShopFeatures }: { canUseShopFeatures: boole
             asChild
             variant={isActive ? "secondary" : "ghost"}
             className={cn(
-              "h-10 w-full justify-start rounded-md border border-transparent text-sm shadow-none",
-              isActive && "border-slate-200 bg-slate-100 font-medium text-slate-900 hover:bg-slate-100 hover:text-slate-900",
-              !isActive && "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+              "h-11 w-full justify-start rounded-xl border border-transparent px-3 text-sm shadow-none transition-colors",
+              isActive && "border-[#d6e0f2] bg-white font-medium text-slate-900 shadow-[0_8px_18px_rgba(87,107,149,0.08)] hover:bg-white hover:text-slate-900",
+              !isActive && "text-slate-600 hover:bg-white/70 hover:text-slate-900",
             )}
           >
             <Link

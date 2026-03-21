@@ -109,29 +109,37 @@ export const getAnalyticsData = queryGeneric({
     const last7Days = now - 7 * 24 * 60 * 60 * 1000
     const last30Days = now - 30 * 24 * 60 * 60 * 1000
 
-    const products = await ctx.db
-      .query("products")
-      .withIndex("by_userId_createdAt", (q) => q.eq("userId", args.userId))
-      .order("desc")
-      .collect()
+    const [products, clicks30, events30, leads30] = await Promise.all([
+      ctx.db
+        .query("products")
+        .withIndex("by_userId_createdAt", (q) => q.eq("userId", args.userId))
+        .order("desc")
+        .collect(),
+      ctx.db
+        .query("clicks")
+        .withIndex("by_userId_createdAt", (q) => q.eq("userId", args.userId))
+        .filter((q) => q.gte(q.field("createdAt"), last30Days))
+        .order("desc")
+        .collect(),
+      ctx.db
+        .query("events")
+        .withIndex("by_userId_createdAt", (q) => q.eq("userId", args.userId))
+        .filter((q) => q.gte(q.field("createdAt"), last30Days))
+        .order("desc")
+        .collect(),
+      ctx.db
+        .query("audienceLeads")
+        .withIndex("by_userId_createdAt", (q) => q.eq("userId", args.userId))
+        .filter((q) => q.gte(q.field("createdAt"), last30Days))
+        .order("desc")
+        .collect(),
+    ])
+
     const activeProducts = products.filter((product) => product.isArchived !== true)
-
-    const clicks30 = await ctx.db
-      .query("clicks")
-      .withIndex("by_userId_createdAt", (q) => q.eq("userId", args.userId))
-      .filter((q) => q.gte(q.field("createdAt"), last30Days))
-      .order("desc")
-      .collect()
-
-    const events30 = await ctx.db
-      .query("events")
-      .withIndex("by_userId_createdAt", (q) => q.eq("userId", args.userId))
-      .filter((q) => q.gte(q.field("createdAt"), last30Days))
-      .order("desc")
-      .collect()
 
     const last7DayEvents = events30.filter((event) => event.createdAt >= last7Days)
     const clicks7 = clicks30.filter((click) => click.createdAt >= last7Days)
+    const leads7 = leads30.filter((lead) => lead.createdAt >= last7Days)
 
     const storeViews30 = events30.filter((event) => event.eventType === "store_view").length
     const storeViews7 = last7DayEvents.filter((event) => event.eventType === "store_view").length
@@ -139,6 +147,8 @@ export const getAnalyticsData = queryGeneric({
     const productCardClicks7 = last7DayEvents.filter((event) => event.eventType === "product_card_click").length
     const outboundClicks30 = clicks30.length
     const outboundClicks7 = clicks7.length
+    const leadsCount30 = leads30.length
+    const leadsCount7 = leads7.length
 
     const totalProducts = activeProducts.length
     const totalClicks = outboundClicks30
@@ -151,8 +161,34 @@ export const getAnalyticsData = queryGeneric({
     const outboundMap30 = new Map<string, number>()
     const outboundMap7 = new Map<string, number>()
     const dayCounts = new Map<string, number>()
+    const sourceCounts = new Map<string, number>()
+    const campaignCounts = new Map<string, number>()
+    const deviceCounts = new Map<string, number>()
+    const browserCounts = new Map<string, number>()
+    const osCounts = new Map<string, number>()
+    const countryCounts = new Map<string, number>()
+    const cityCounts = new Map<string, number>()
+    const collectionClickCounts = new Map<string, number>()
+    const leadCollectionCounts = new Map<string, number>()
+    const leadSourceCounts = new Map<string, number>()
 
     for (const event of events30) {
+      const source = (event.source || "direct").trim() || "direct"
+      const campaign = (event.campaign || "").trim() || "Organic"
+      const device = (event.device || "unknown").trim() || "unknown"
+      const browser = (event.browser || "").trim() || "Unknown"
+      const os = (event.os || "").trim() || "Unknown"
+      const country = (event.country || "").trim() || "Unknown"
+      const city = (event.city || "").trim() || "Unknown"
+
+      sourceCounts.set(source, (sourceCounts.get(source) || 0) + 1)
+      campaignCounts.set(campaign, (campaignCounts.get(campaign) || 0) + 1)
+      deviceCounts.set(device, (deviceCounts.get(device) || 0) + 1)
+      browserCounts.set(browser, (browserCounts.get(browser) || 0) + 1)
+      osCounts.set(os, (osCounts.get(os) || 0) + 1)
+      countryCounts.set(country, (countryCounts.get(country) || 0) + 1)
+      cityCounts.set(city, (cityCounts.get(city) || 0) + 1)
+
       if (!event.productId) continue
 
       if (event.eventType === "product_card_click") {
@@ -170,6 +206,16 @@ export const getAnalyticsData = queryGeneric({
       }
       const key = toDayKey(click.createdAt)
       dayCounts.set(key, (dayCounts.get(key) || 0) + 1)
+
+      const collectionKey = (click.collectionSlug || "").trim() || "Unattributed"
+      collectionClickCounts.set(collectionKey, (collectionClickCounts.get(collectionKey) || 0) + 1)
+    }
+
+    for (const lead of leads30) {
+      const collectionKey = (lead.collectionSlug || "").trim() || "Unattributed"
+      const sourceKey = (lead.source || "").trim() || "direct"
+      leadCollectionCounts.set(collectionKey, (leadCollectionCounts.get(collectionKey) || 0) + 1)
+      leadSourceCounts.set(sourceKey, (leadSourceCounts.get(sourceKey) || 0) + 1)
     }
 
     const productClicksData = activeProducts.map((product) => ({
@@ -215,18 +261,6 @@ export const getAnalyticsData = queryGeneric({
       referrerCounts.set(domain, (referrerCounts.get(domain) || 0) + 1)
     }
 
-    const sourceCounts = new Map<string, number>()
-    for (const event of events30) {
-      const source = event.source || "direct"
-      sourceCounts.set(source, (sourceCounts.get(source) || 0) + 1)
-    }
-
-    const deviceCounts = new Map<string, number>()
-    for (const event of events30) {
-      const device = event.device || "unknown"
-      deviceCounts.set(device, (deviceCounts.get(device) || 0) + 1)
-    }
-
     const referrerChartData = Array.from(referrerCounts.entries())
       .sort((a, b) => b[1] - a[1])
       .slice(0, 6)
@@ -241,14 +275,72 @@ export const getAnalyticsData = queryGeneric({
       .sort((a, b) => b[1] - a[1])
       .map(([name, value]) => ({ name, value }))
 
+    const campaignChartData = Array.from(campaignCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([name, value]) => ({ name, value }))
+
+    const browserChartData = Array.from(browserCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([name, value]) => ({ name, value }))
+
+    const osChartData = Array.from(osCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([name, value]) => ({ name, value }))
+
+    const countryChartData = Array.from(countryCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([name, value]) => ({ name, value }))
+
+    const cityChartData = Array.from(cityCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([name, clicks]) => ({
+        id: name,
+        name,
+        clicks,
+      }))
+
+    const collectionPerformanceData = Array.from(collectionClickCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([name, clicks]) => ({
+        id: name,
+        name,
+        clicks,
+      }))
+
+    const leadsByCollectionData = Array.from(leadCollectionCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([name, clicks]) => ({
+        id: name,
+        name,
+        clicks,
+      }))
+
+    const leadsBySourceData = Array.from(leadSourceCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([name, value]) => ({ name, value }))
+
     const recentClicksData = clicks30.slice(0, 10).map((click) => {
       const product = productMap.get(click.productId)
       return {
         _id: click._id,
         createdAt: click.createdAt,
-        source: "direct",
+        source: click.source || "direct",
         referrer: click.referrer || "",
-        device: "unknown",
+        device: click.device || "unknown",
+        browser: click.browser || "Unknown",
+        os: click.os || "Unknown",
+        deviceName: click.deviceName || "Unknown",
+        country: click.country || "",
+        city: click.city || "",
+        collectionSlug: click.collectionSlug || "",
         productId: product
           ? {
               title: product.title,
@@ -271,6 +363,8 @@ export const getAnalyticsData = queryGeneric({
       productCardClicks30,
       outboundClicks7,
       outboundClicks30,
+      leadsCount7,
+      leadsCount30,
       conversionRate,
       productClicksData,
       productPerformanceData,
@@ -283,11 +377,20 @@ export const getAnalyticsData = queryGeneric({
       referrerChartData,
       sourceChartData,
       deviceChartData,
+      campaignChartData,
+      browserChartData,
+      osChartData,
+      countryChartData,
+      cityChartData,
+      collectionPerformanceData,
+      leadsByCollectionData,
+      leadsBySourceData,
       recentClicksData,
       funnelData: [
         { name: "Store Views (30d)", value: storeViews30 },
         { name: "Card Clicks (30d)", value: productCardClicks30 },
         { name: "Outbound Clicks (30d)", value: outboundClicks30 },
+        { name: "Leads (30d)", value: leadsCount30 },
       ],
     }
   },

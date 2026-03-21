@@ -11,6 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 
 const MOBILE_OVERFLOW_HREFS = new Set([
   "/dashboard/social-links",
+  "/dashboard/audience",
   "/dashboard/analytics",
 ])
 
@@ -124,8 +125,10 @@ export function MobileDashboardNav({ canUseShopFeatures }: { canUseShopFeatures:
                         <div className="min-w-0">
                           <p className="truncate font-medium">{item.title}</p>
                           <p className="truncate text-xs text-slate-500">
-                            {item.mobileLabel === "Stats"
-                                ? "View performance"
+                            {item.href === "/dashboard/analytics"
+                              ? "View performance"
+                              : item.href === "/dashboard/audience"
+                                ? "Review captured contacts"
                                 : "Manage creator links"}
                           </p>
                         </div>
