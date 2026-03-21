@@ -553,7 +553,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
 
   return (
     <div className="min-h-screen">
-      <div className={cn("relative min-h-screen overflow-x-hidden md:hidden", isDarkMode ? "bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-900")}>
+      <div className={cn("relative min-h-screen overflow-x-hidden lg:hidden", isDarkMode ? "bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-900")}>
         <main className="relative z-10 mx-auto w-full max-w-md px-2 pb-6 pt-4">
           <section className="text-center">
             <div
@@ -605,7 +605,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
 
           <div
             className={cn(
-              "mx-auto mt-4 flex w-52 rounded-full border p-1 text-[13px] font-semibold shadow-none",
+              "mx-auto mt-4 flex w-full rounded-full border p-1 text-[13px] font-semibold shadow-none",
               isDarkMode ? "bg-slate-800 text-slate-200" : "bg-white text-slate-700",
             )}
           >
@@ -754,7 +754,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
         </main>
       </div>
 
-      <div className={cn("relative hidden min-h-screen overflow-x-hidden pb-8 md:block", isDarkMode ? "bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-900")}>
+      <div className={cn("relative hidden min-h-screen overflow-x-hidden pb-8 lg:block", isDarkMode ? "bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-900")}>
         <header className={cn("sticky top-0 z-40", isDarkMode ? "border-b border-slate-700/80 bg-slate-900" : "border-b border-slate-200 bg-white")}>
           <div className="w-full px-2 sm:px-3 md:px-4 lg:px-5">
             <div className="flex items-center gap-1.5 py-1.5 sm:gap-2 sm:py-2">
@@ -879,7 +879,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
         </main>
 
         {hasCreatorLinks ? (
-          <div className="pointer-events-none fixed bottom-6 right-6 z-50 hidden md:block">
+          <div className="pointer-events-none fixed bottom-6 right-6 z-50 hidden lg:block">
             <div ref={desktopMediaMenuRef} className="pointer-events-auto relative h-16 w-16">
               {desktopMediaMenuItems.map((item, index) => {
                 const Icon = item.icon
