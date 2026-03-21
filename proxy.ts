@@ -3,6 +3,7 @@ import { NextResponse } from "next/server"
 
 import { AUTH_JWT_AUDIENCE, AUTH_JWT_ISSUER, getAuthCookieName, getAuthJwtSecret } from "@/lib/auth-config"
 import { verifyJwtToken } from "@/lib/jwt"
+import { extractStoreUsernameFromHostname } from "@/lib/storefront-url"
 
 type SessionTokenPayload = {
   sub: string
@@ -43,6 +44,15 @@ function redirectToLogin(req: NextRequest) {
 
 export default async function proxy(req: NextRequest) {
   const pathname = req.nextUrl.pathname
+  const hostHeader = req.headers.get("x-forwarded-host") || req.headers.get("host") || ""
+  const hostname = hostHeader.split(":")[0] || ""
+  const storefrontUsername = extractStoreUsernameFromHostname(hostname)
+
+  if (storefrontUsername && pathname === "/store") {
+    const rewrittenUrl = req.nextUrl.clone()
+    rewrittenUrl.pathname = `/stores/${storefrontUsername}`
+    return NextResponse.rewrite(rewrittenUrl)
+  }
 
   if (!pathname.startsWith("/dashboard")) {
     return NextResponse.next()
