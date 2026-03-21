@@ -54,9 +54,9 @@ export default async function AnalyticsPage() {
 
   const totalDeviceTraffic = deviceChartData.reduce((sum: number, item: any) => sum + Number(item.value || 0), 0)
   const summaryCardClassName =
-    "min-w-0 rounded-[1.15rem] border border-[#d8e2f3] bg-white p-3 shadow-[0_10px_26px_rgba(87,107,149,0.08)] md:rounded-xl md:p-4"
+    "app-reveal app-surface content-auto min-w-0 rounded-[1.15rem] border border-[#d8e2f3] bg-white p-3 shadow-[0_10px_26px_rgba(87,107,149,0.08)] md:rounded-xl md:p-4"
   const sectionCardClassName =
-    "min-w-0 rounded-[1.2rem] border border-[#d8e2f3] bg-white p-3 shadow-[0_10px_26px_rgba(87,107,149,0.08)] md:col-span-2 md:rounded-xl md:p-5"
+    "app-reveal app-surface content-auto min-w-0 rounded-[1.2rem] border border-[#d8e2f3] bg-white p-3 shadow-[0_10px_26px_rgba(87,107,149,0.08)] md:col-span-2 md:rounded-xl md:p-5"
 
   return (
     <DashboardShell>

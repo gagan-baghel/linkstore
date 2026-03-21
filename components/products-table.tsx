@@ -184,14 +184,18 @@ export function ProductsTable({ products }: ProductsTableProps) {
   return (
     <>
       <div className="grid gap-3 md:hidden">
-        {localProducts.map((product) => {
+        {localProducts.map((product, index) => {
           const isArchived = product.isArchived === true
           const isHealthy = product.isLinkHealthy !== false
           const showBroken = !isArchived && !isHealthy
           const productImage = product.images?.[0] || "/placeholder.svg?height=96&width=96"
 
           return (
-            <div key={product._id.toString()} className="rounded-[1.2rem] border border-slate-200 bg-white p-3 shadow-[0_10px_24px_rgba(87,107,149,0.08)]">
+            <div
+              key={product._id.toString()}
+              className="app-reveal app-surface content-auto rounded-[1.2rem] border border-slate-200 bg-white p-3 shadow-[0_10px_24px_rgba(87,107,149,0.08)]"
+              style={{ animationDelay: `${Math.min(index, 7) * 40}ms` }}
+            >
               <div className="flex items-start gap-3">
                 <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
                   <Image src={productImage} alt={product.title} fill className="object-cover" sizes="56px" unoptimized />
@@ -281,7 +285,7 @@ export function ProductsTable({ products }: ProductsTableProps) {
         })}
       </div>
 
-      <div className="hidden overflow-hidden rounded-lg border border-slate-200 bg-white md:block">
+      <div className="app-reveal content-auto hidden overflow-hidden rounded-lg border border-slate-200 bg-white md:block">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>

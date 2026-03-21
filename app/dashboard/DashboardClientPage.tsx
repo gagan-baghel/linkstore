@@ -1,6 +1,6 @@
 "use client"
 
-import { type ReactNode, useEffect, useMemo, useState } from "react"
+import { startTransition, type ReactNode, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import {
@@ -51,7 +51,7 @@ function MetricCard({
   icon: ReactNode
 }) {
   return (
-    <div className="rounded-[1.15rem] border border-[#d8e2f3] bg-white/92 p-3 shadow-[0_10px_30px_rgba(87,107,149,0.08)] sm:rounded-xl sm:p-4">
+    <div className="app-reveal app-surface content-auto rounded-[1.15rem] border border-[#d8e2f3] bg-white/92 p-3 shadow-[0_10px_30px_rgba(87,107,149,0.08)] sm:rounded-xl sm:p-4">
       <div className="mb-2 flex items-center justify-between sm:mb-3">
         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#5f6b7e] sm:text-xs">{title}</p>
         <span className="text-[#8a94a8]">{icon}</span>
@@ -96,7 +96,9 @@ export default function DashboardClientPage({
         const response = await fetch("/api/subscription/status", { method: "GET", cache: "no-store" })
         const data = await response.json().catch(() => null)
         if (!cancelled && response.ok) {
-          setHasActiveSubscription(Boolean(data?.access?.hasActiveSubscription))
+          startTransition(() => {
+            setHasActiveSubscription(Boolean(data?.access?.hasActiveSubscription))
+          })
         }
       } catch (error) {
         console.error("Dashboard subscription sync failed:", error)
@@ -147,12 +149,14 @@ export default function DashboardClientPage({
           throw new Error(apiMessage || `HTTP error! status: ${response.status}`)
         }
 
-        setTotalProducts(data.totalProducts || 0)
-        setUser(data.user || null)
-        setRecentProducts(data.recentProducts || [])
-        setQuickMetrics(data.quickMetrics)
-        setLinkHealth(data.linkHealth)
-        setError(null)
+        startTransition(() => {
+          setTotalProducts(data.totalProducts || 0)
+          setUser(data.user || null)
+          setRecentProducts(data.recentProducts || [])
+          setQuickMetrics(data.quickMetrics)
+          setLinkHealth(data.linkHealth)
+          setError(null)
+        })
       } catch (fetchError) {
         const fallbackMessage =
           fetchError instanceof Error && fetchError.message
@@ -274,7 +278,7 @@ export default function DashboardClientPage({
         </div>
       </DashboardHeader>
 
-      {error && <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 sm:mb-6 sm:px-4 sm:py-3 sm:text-sm">{error}</div>}
+      {error && <div className="app-reveal mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 sm:mb-6 sm:px-4 sm:py-3 sm:text-sm">{error}</div>}
 
       <div className="mb-4 grid grid-cols-2 gap-2.5 md:mb-6 md:grid-cols-2 lg:grid-cols-3">
         <MetricCard
@@ -312,7 +316,7 @@ export default function DashboardClientPage({
             </h2>
             <p className="text-xs text-[#60708a]">Share this link in socials, bios, newsletters, and videos.</p>
           </div>
-          <div className="space-y-1.5 rounded-[1.15rem] border border-[#d8e2f3] bg-white/86 p-3">
+          <div className="app-reveal app-surface rounded-[1.15rem] border border-[#d8e2f3] bg-white/86 p-3">
             <p className="text-xs font-semibold text-[#41506a]">Your public URL</p>
             <Input
               className="h-9 rounded-2xl border-[#cfd8ea] bg-white font-mono text-[11px] text-[#1f2a44] sm:h-10 sm:text-sm"
@@ -383,7 +387,7 @@ export default function DashboardClientPage({
               <Link
                 key={item.id}
                 href={item.href}
-                className="flex items-center justify-between rounded-2xl border border-[#e7eefb] bg-white/78 px-3 py-2.5 transition-colors hover:bg-[#f8fbff]"
+                className="app-surface flex items-center justify-between rounded-2xl border border-[#e7eefb] bg-white/78 px-3 py-2.5 transition-colors hover:bg-[#f8fbff]"
               >
                 <span className="flex items-center gap-2 text-[11px] text-[#4f5f7a] sm:text-sm">
                   {item.done ? (
@@ -416,8 +420,12 @@ export default function DashboardClientPage({
           </div>
         ) : recentProducts.length > 0 ? (
           <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-            {recentProducts.map((product: any) => (
-              <div key={product._id.toString()} className="overflow-hidden rounded-[1.2rem] border border-[#d8e2f3] bg-white shadow-[0_10px_28px_rgba(87,107,149,0.08)]">
+            {recentProducts.map((product: any, index: number) => (
+              <div
+                key={product._id.toString()}
+                className="app-reveal app-surface content-auto overflow-hidden rounded-[1.2rem] border border-[#d8e2f3] bg-white shadow-[0_10px_28px_rgba(87,107,149,0.08)]"
+                style={{ animationDelay: `${Math.min(index, 5) * 50}ms` }}
+              >
                 <div className="relative aspect-video w-full overflow-hidden">
                   <Image
                     src={product.images?.[0] || "/placeholder.svg?height=200&width=300"}

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState, type ComponentType } from "react"
+import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState, type ComponentType } from "react"
 import Image from "next/image"
 import {
   Facebook,
@@ -218,6 +218,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
   const brandColor = "#2563eb"
   const buttonRadiusClass = "rounded-md"
   const isDarkMode = false
+  const deferredQuery = useDeferredValue(query)
 
   const normalizedProducts = useMemo(
     () => products.map((product) => ({ ...product, category: normalizeCategory(product.category) })),
@@ -231,13 +232,13 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
   const socialItems = useMemo(() => buildSocialItems(user), [user])
   const featuredProducts = useMemo(() => latestProducts.slice(0, 6), [latestProducts])
   const mobileFilteredProducts = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase()
+    const normalizedQuery = deferredQuery.trim().toLowerCase()
     if (!normalizedQuery) return latestProducts
     return latestProducts.filter((product) => {
       const category = normalizeCategory(product.category)
       return product.title.toLowerCase().includes(normalizedQuery) || category.toLowerCase().includes(normalizedQuery)
     })
-  }, [latestProducts, query])
+  }, [deferredQuery, latestProducts])
 
   const categoryCounts = useMemo(() => {
     const counts = new Map<string, number>()
@@ -251,7 +252,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
   }, [normalizedProducts])
 
   const desktopFilteredProducts = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase()
+    const normalizedQuery = deferredQuery.trim().toLowerCase()
     let list = normalizedProducts
 
     if (selectedCategories.length > 0) {
@@ -282,7 +283,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
       return b.createdAt - a.createdAt
     })
     return sorted
-  }, [normalizedProducts, query, selectedCategories, sortBy])
+  }, [deferredQuery, normalizedProducts, selectedCategories, sortBy])
 
   const groupedProducts = useMemo(() => {
     const groups = new Map<string, StorefrontProduct[]>()
@@ -447,15 +448,19 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
   }
 
   function toggleCategory(category: string) {
-    setSelectedCategories((prev) =>
-      prev.includes(category) ? prev.filter((item) => item !== category) : [...prev, category],
-    )
+    startTransition(() => {
+      setSelectedCategories((prev) =>
+        prev.includes(category) ? prev.filter((item) => item !== category) : [...prev, category],
+      )
+    })
   }
 
   function clearFilters() {
-    setSelectedCategories([])
-    setQuery("")
-    setSortBy("performance")
+    startTransition(() => {
+      setSelectedCategories([])
+      setQuery("")
+      setSortBy("performance")
+    })
   }
 
   function renderShowcaseCard() {
@@ -555,7 +560,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
     <div className="min-h-screen">
       <div className={cn("relative min-h-screen overflow-x-hidden lg:hidden", isDarkMode ? "bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-900")}>
         <main className="relative z-10 mx-auto w-full max-w-md px-2 pb-6 pt-4">
-          <section className="text-center">
+          <section className="app-reveal text-center">
             <div
               className={cn(
                 "mx-auto h-20 w-20 overflow-hidden rounded-full border shadow-none",
@@ -590,7 +595,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                     target="_blank"
                     rel="noopener noreferrer"
                     className={cn(
-                      "grid h-8 w-8 place-items-center rounded-full border",
+                      "app-surface grid h-8 w-8 place-items-center rounded-full border",
                       isDarkMode ? "border-slate-600 bg-slate-900 text-slate-100" : "border-white/65 bg-white text-slate-700",
                     )}
                     aria-label={item.label}
@@ -611,7 +616,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
           >
             <button
               type="button"
-              onClick={() => setActiveTab("links")}
+              onClick={() => startTransition(() => setActiveTab("links"))}
               className={cn(
                 "flex-1 rounded-full py-1.5 transition",
                 activeTab === "links"
@@ -627,7 +632,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab("shop")}
+              onClick={() => startTransition(() => setActiveTab("shop"))}
               className={cn(
                 "flex-1 rounded-full py-1.5 transition",
                 activeTab === "shop"
@@ -644,11 +649,11 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
           </div>
 
           {activeTab === "links" ? (
-            <section className="mt-4 space-y-3">
+            <section className="mt-4 space-y-3" aria-busy={query !== deferredQuery}>
               {hasCreatorLinks ? (
                 <div
                   className={cn(
-                    "rounded-2xl border px-3 py-3 text-left shadow-none",
+                    "app-reveal rounded-2xl border px-3 py-3 text-left shadow-none",
                     isDarkMode ? "border-slate-700 bg-slate-900/85 text-slate-100" : "border-white/65 bg-white/90 text-slate-900",
                   )}
                 >
@@ -658,7 +663,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                   </p>
                 </div>
               ) : null}
-              {socialItems.map((item) => {
+              {socialItems.map((item, index) => {
                 const Icon = item.icon
                 return (
                   <a
@@ -667,9 +672,10 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                     target="_blank"
                     rel="noopener noreferrer"
                     className={cn(
-                      "flex items-center gap-3 rounded-2xl border px-3 py-2.5 shadow-none",
+                      "app-reveal app-surface flex items-center gap-3 rounded-2xl border px-3 py-2.5 shadow-none",
                       isDarkMode ? "border-slate-700 bg-slate-900/85 text-slate-100" : "border-white/65 bg-white/90 text-slate-900",
                     )}
+                    style={{ animationDelay: `${Math.min(index, 5) * 45}ms` }}
                   >
                     <div className={cn("grid h-10 w-10 place-items-center rounded-lg", isDarkMode ? "bg-slate-800" : "bg-slate-100")}>
                       <Icon className={cn("h-5 w-5", isDarkMode ? "text-slate-100" : "text-slate-700")} />
@@ -683,17 +689,20 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
               {renderShowcaseCard()}
             </section>
           ) : (
-            <section className="mt-4">
+            <section className="mt-4" aria-busy={query !== deferredQuery}>
               <div
                 className={cn(
-                  "flex items-center gap-2.5 rounded-full border px-3 py-2 shadow-none",
+                  "app-reveal flex items-center gap-2.5 rounded-full border px-3 py-2 shadow-none",
                   isDarkMode ? "border-slate-700 bg-slate-900 text-slate-100" : "border-white/65 bg-white text-slate-900",
                 )}
               >
                 <Search className={cn("h-4 w-4", isDarkMode ? "text-slate-400" : "text-slate-500")} />
                 <input
                   value={query}
-                  onChange={(event) => setQuery(event.target.value)}
+                  onChange={(event) => {
+                    const nextValue = event.target.value
+                    startTransition(() => setQuery(nextValue))
+                  }}
                   placeholder={`Search ${displayName}'s products`}
                   aria-label={`Search ${displayName}'s products`}
                   className={cn(
@@ -705,7 +714,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
 
               {mobileFilteredProducts.length > 0 ? (
                 <div className="mt-3 grid grid-cols-2 gap-2.5">
-                  {mobileFilteredProducts.map((product) => (
+                  {mobileFilteredProducts.map((product, index) => (
                     <a
                       key={product._id}
                       href={buildTrackHref(product._id)}
@@ -714,9 +723,10 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                       onClick={() => trackEvent("product_card_click", product._id)}
                       aria-label={`Open ${product.title} in a new tab`}
                       className={cn(
-                        "overflow-hidden rounded-xl border shadow-none",
+                        "app-reveal app-surface content-auto overflow-hidden rounded-xl border shadow-none",
                         isDarkMode ? "border-slate-700 bg-slate-900" : "border-white/65 bg-white",
                       )}
+                      style={{ animationDelay: `${Math.min(index, 7) * 40}ms` }}
                     >
                       <div className={cn("relative aspect-square overflow-hidden", isDarkMode ? "bg-slate-800" : "bg-slate-100")}>
                         <Image
@@ -785,10 +795,13 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
               <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
                 <div className="relative">
                   <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-                  <Input
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Search products"
+                    <Input
+                      value={query}
+                      onChange={(event) => {
+                        const nextValue = event.target.value
+                        startTransition(() => setQuery(nextValue))
+                      }}
+                      placeholder="Search products"
                     aria-label="Search products"
                     className={cn(
                       "h-8 w-32 pl-7 text-[11px] shadow-none focus-visible:ring-2 sm:h-9 sm:w-56 sm:pl-8 sm:text-xs md:w-72 md:text-sm",
@@ -818,7 +831,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
           </div>
         </header>
 
-        <main className="w-full space-y-3 px-2 pt-2 sm:space-y-4 sm:px-3 sm:pt-3 md:px-4 lg:px-5">
+        <main className="w-full space-y-3 px-2 pt-2 sm:space-y-4 sm:px-3 sm:pt-3 md:px-4 lg:px-5" aria-busy={query !== deferredQuery}>
           <section id="catalog">
             <div className="mb-3 flex items-center justify-between">
               <h2 className={cn("text-base font-bold tracking-tight sm:text-lg md:text-xl", isDarkMode ? "text-slate-100" : "text-slate-800")}>All Products</h2>
@@ -826,12 +839,12 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
 
             {groupedProducts.length > 0 ? (
               groupedProducts.map((section) => (
-                <div key={section.category} className="mb-4 last:mb-0">
+                <div key={section.category} className="content-auto mb-4 last:mb-0">
                   <div className="mb-2">
                     <h3 className={cn("text-[11px] font-semibold uppercase tracking-wide sm:text-xs", isDarkMode ? "text-slate-300" : "text-slate-500")}>{section.category}</h3>
                   </div>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-2.5 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-                    {section.products.map((product) => (
+                    {section.products.map((product, productIndex) => (
                       <a
                         key={product._id}
                         href={buildTrackHref(product._id)}
@@ -840,9 +853,10 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                         onClick={() => trackEvent("product_card_click", product._id)}
                         aria-label={`Open ${product.title} in a new tab`}
                         className={cn(
-                          "group relative overflow-hidden rounded-xl transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2",
+                          "app-reveal app-surface content-auto group relative overflow-hidden rounded-xl transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2",
                           isDarkMode ? "border-slate-700 bg-slate-900/80 focus-visible:ring-slate-500" : "border-white/65 bg-white/80 focus-visible:ring-white",
                         )}
+                        style={{ animationDelay: `${Math.min(productIndex, 9) * 30}ms` }}
                       >
                         <div className={cn("relative aspect-[4/5] overflow-hidden", isDarkMode ? "bg-slate-800/80" : "bg-slate-100/70")}>
                           <Image
@@ -954,7 +968,12 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
             <div className="space-y-5 p-4">
               <div>
                 <p className={cn("mb-2 text-xs font-medium uppercase tracking-wide", isDarkMode ? "text-slate-300" : "text-slate-500")}>Sort</p>
-                <Select value={sortBy} onValueChange={(value: "performance" | "latest" | "name") => setSortBy(value)}>
+                <Select
+                  value={sortBy}
+                  onValueChange={(value: "performance" | "latest" | "name") => {
+                    startTransition(() => setSortBy(value))
+                  }}
+                >
                   <SelectTrigger className={cn("w-full", isDarkMode ? "border-slate-700 bg-slate-800 text-slate-100" : "border-slate-300 bg-white")}>
                     <SelectValue />
                   </SelectTrigger>
