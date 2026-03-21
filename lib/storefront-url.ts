@@ -11,6 +11,33 @@ function normalizeBaseHostname(hostname: string) {
   return hostname.replace(/^www\./i, "")
 }
 
+type HeaderSource = Pick<Headers, "get">
+
+function shouldUsePathStorefront(hostname: string) {
+  const normalizedHostname = normalizeBaseHostname(hostname.toLowerCase())
+  return normalizedHostname === "vercel.app" || normalizedHostname.endsWith(".vercel.app")
+}
+
+export function getRequestOrigin(headers: HeaderSource) {
+  const hostHeader = headers.get("x-forwarded-host") || headers.get("host")
+  const host = hostHeader?.split(",")[0]?.trim()
+
+  if (!host) {
+    return getConfiguredAppUrl().origin
+  }
+
+  const forwardedProto = headers.get("x-forwarded-proto")?.split(",")[0]?.trim()
+  const normalizedHost = host.split(":")[0]?.trim().toLowerCase() || ""
+  const protocol =
+    forwardedProto || (normalizedHost === "localhost" || normalizedHost === "127.0.0.1" ? "http" : "https")
+
+  try {
+    return new URL(`${protocol}://${host}`).origin
+  } catch {
+    return getConfiguredAppUrl().origin
+  }
+}
+
 export function buildStorefrontUrl(username: string, baseUrl?: string) {
   const normalizedUsername = username.trim().replace(/^@+/, "").toLowerCase()
   if (!normalizedUsername) return ""
@@ -27,15 +54,21 @@ export function buildStorefrontUrl(username: string, baseUrl?: string) {
   const storefrontUrl = new URL(appUrl.toString())
   const hostname = normalizeBaseHostname(appUrl.hostname)
 
-  storefrontUrl.pathname = "/store"
   storefrontUrl.search = ""
   storefrontUrl.hash = ""
 
   if (hostname === "localhost" || hostname === "127.0.0.1") {
+    storefrontUrl.pathname = "/store"
     storefrontUrl.hostname = `${normalizedUsername}.localhost`
     return storefrontUrl.toString()
   }
 
+  if (shouldUsePathStorefront(hostname)) {
+    storefrontUrl.pathname = `/stores/${encodeURIComponent(normalizedUsername)}`
+    return storefrontUrl.toString()
+  }
+
+  storefrontUrl.pathname = "/store"
   storefrontUrl.hostname = `${normalizedUsername}.${hostname}`
   return storefrontUrl.toString()
 }

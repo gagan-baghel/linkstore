@@ -65,9 +65,11 @@ function MetricCard({
 export default function DashboardClientPage({
   session,
   initialData,
+  initialOrigin,
 }: {
   session: any
   initialData?: DashboardInitialData | null
+  initialOrigin: string
 }) {
   const [hasActiveSubscription, setHasActiveSubscription] = useState(Boolean(session?.user?.hasActiveSubscription))
   const [totalProducts, setTotalProducts] = useState(initialData?.totalProducts ?? 0)
@@ -77,11 +79,14 @@ export default function DashboardClientPage({
   const [linkHealth, setLinkHealth] = useState<DashboardInitialData["linkHealth"]>(initialData?.linkHealth)
   const [isLoading, setIsLoading] = useState(!initialData)
   const [error, setError] = useState<string | null>(null)
-  const [origin, setOrigin] = useState("")
+  const [origin, setOrigin] = useState(initialOrigin)
 
   useEffect(() => {
-    setOrigin(window.location.origin)
-  }, [])
+    const currentOrigin = window.location.origin
+    if (currentOrigin !== origin) {
+      setOrigin(currentOrigin)
+    }
+  }, [origin])
 
   useEffect(() => {
     let cancelled = false

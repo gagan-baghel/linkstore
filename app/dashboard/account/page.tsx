@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 
 import { getSafeServerSession } from "@/lib/auth"
@@ -8,6 +9,7 @@ import { SubscriptionStatusCard } from "@/components/subscription-status-card"
 import { convexQuery } from "@/lib/convex"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { sanitizeSubscriptionReturnPath } from "@/lib/subscription-routing"
+import { getRequestOrigin } from "@/lib/storefront-url"
 
 export const metadata: Metadata = {
   title: "Account - Linkstore",
@@ -35,6 +37,8 @@ export default async function AccountPage({
 }: {
   searchParams: Promise<{ upgrade?: string; from?: string }>
 }) {
+  const requestHeaders = await headers()
+  const requestOrigin = getRequestOrigin(requestHeaders)
   const session = await getSafeServerSession()
   if (!session?.user.id) {
     redirect("/auth/login")
@@ -82,6 +86,7 @@ export default async function AccountPage({
             name={user?.name || ""}
             email={user?.email || ""}
             username={user?.username || ""}
+            currentOrigin={requestOrigin}
           />
         </div>
       </div>

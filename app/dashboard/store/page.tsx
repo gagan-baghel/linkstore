@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 
 import { getSafeServerSession } from "@/lib/auth"
@@ -6,7 +7,7 @@ import { DashboardShell } from "@/components/dashboard-shell"
 import { StoreForm } from "@/components/store-form"
 import { convexQuery } from "@/lib/convex"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { buildStorefrontUrl } from "@/lib/storefront-url"
+import { buildStorefrontUrl, getRequestOrigin } from "@/lib/storefront-url"
 
 export const metadata: Metadata = {
   title: "Store Settings - Linkstore",
@@ -14,6 +15,8 @@ export const metadata: Metadata = {
 }
 
 export default async function StoreSettingsPage() {
+  const requestHeaders = await headers()
+  const requestOrigin = getRequestOrigin(requestHeaders)
   const session = await getSafeServerSession()
   if (!session?.user.id) {
     redirect("/auth/login")
@@ -43,7 +46,7 @@ export default async function StoreSettingsPage() {
             storeBio={user?.storeBio || ""}
             contactInfo={user?.contactInfo || ""}
             username={user?.username || ""}
-            storeUrl={buildStorefrontUrl(user?.username || "")}
+            storeUrl={buildStorefrontUrl(user?.username || "", requestOrigin)}
             storeLogo={user?.storeLogo || ""}
           />
         </div>

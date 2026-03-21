@@ -34,9 +34,10 @@ interface AccountFormProps {
   name: string
   email: string
   username: string
+  currentOrigin: string
 }
 
-export function AccountForm({ name, email, username }: AccountFormProps) {
+export function AccountForm({ name, email, username, currentOrigin }: AccountFormProps) {
   const router = useRouter()
   const [isEditing, setIsEditing] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -54,7 +55,7 @@ export function AccountForm({ name, email, username }: AccountFormProps) {
 
   const values = form.watch()
   const normalizedUsername = normalizeUsernameInput(values.username || username || "")
-  const storefrontUrl = buildStorefrontUrl(normalizedUsername)
+  const storefrontUrl = buildStorefrontUrl(normalizedUsername, currentOrigin)
 
   async function onSubmit(data: AccountFormValues) {
     setIsLoading(true)

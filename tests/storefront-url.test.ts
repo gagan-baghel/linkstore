@@ -1,7 +1,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 
-import { buildStorefrontUrl, extractStoreUsernameFromHostname } from "@/lib/storefront-url"
+import { buildStorefrontUrl, extractStoreUsernameFromHostname, getRequestOrigin } from "@/lib/storefront-url"
 
 test("buildStorefrontUrl uses subdomain storefront URLs on localhost", () => {
   assert.equal(buildStorefrontUrl("Demo", "http://localhost:3000"), "http://demo.localhost:3000/store")
@@ -12,7 +12,28 @@ test("buildStorefrontUrl keeps subdomain storefront URLs for non-local hosts", (
   assert.equal(buildStorefrontUrl("Demo", "https://linkstore.example"), "https://demo.linkstore.example/store")
 })
 
+test("buildStorefrontUrl uses path-based storefront URLs for vercel.app hosts", () => {
+  assert.equal(buildStorefrontUrl("Demo", "https://linkstore-tan.vercel.app"), "https://linkstore-tan.vercel.app/stores/demo")
+})
+
 test("extractStoreUsernameFromHostname still resolves subdomain storefront hosts", () => {
   assert.equal(extractStoreUsernameFromHostname("demo.localhost", "http://localhost:3000"), "demo")
   assert.equal(extractStoreUsernameFromHostname("demo.linkstore.example", "https://linkstore.example"), "demo")
+})
+
+test("getRequestOrigin prefers forwarded deployment host", () => {
+  const requestHeaders = new Headers({
+    "x-forwarded-host": "linkstore-tan.vercel.app",
+    "x-forwarded-proto": "https",
+  })
+
+  assert.equal(getRequestOrigin(requestHeaders), "https://linkstore-tan.vercel.app")
+})
+
+test("getRequestOrigin keeps localhost on local requests", () => {
+  const requestHeaders = new Headers({
+    host: "localhost:3000",
+  })
+
+  assert.equal(getRequestOrigin(requestHeaders), "http://localhost:3000")
 })

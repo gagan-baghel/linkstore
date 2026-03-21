@@ -1,8 +1,10 @@
 import type { Metadata } from "next"
+import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 
 import { getSafeServerSession } from "@/lib/auth"
 import { convexQuery } from "@/lib/convex"
+import { getRequestOrigin } from "@/lib/storefront-url"
 import DashboardClientPage from "./DashboardClientPage"
 
 export const metadata: Metadata = {
@@ -11,6 +13,8 @@ export const metadata: Metadata = {
 }
 
 export default async function DashboardPage() {
+  const requestHeaders = await headers()
+  const requestOrigin = getRequestOrigin(requestHeaders)
   const session = await getSafeServerSession()
 
   if (!session) {
@@ -45,5 +49,5 @@ export default async function DashboardPage() {
     console.error("Dashboard preload error:", error)
   }
 
-  return <DashboardClientPage session={session} initialData={initialData} />
+  return <DashboardClientPage session={session} initialData={initialData} initialOrigin={requestOrigin} />
 }
