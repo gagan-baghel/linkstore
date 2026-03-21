@@ -11,7 +11,6 @@ import {
   MoreVertical,
   Phone,
   Search,
-  ShieldCheck,
   ShoppingBag,
   Twitter,
   X,
@@ -555,7 +554,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
   return (
     <div className="min-h-screen">
       <div className={cn("relative min-h-screen overflow-x-hidden md:hidden", isDarkMode ? "bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-900")}>
-        <main className="relative z-10 mx-auto w-full max-w-md px-3 pb-6 pt-5">
+        <main className="relative z-10 mx-auto w-full max-w-md px-2 pb-6 pt-4">
           <section className="text-center">
             <div
               className={cn(
@@ -579,7 +578,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
             </div>
 
             <h1 className={cn("mt-2 text-[28px] font-extrabold tracking-tight", isDarkMode ? "text-slate-100" : "text-slate-900")}>{displayName}</h1>
-            <p className={cn("mx-auto mt-1 max-w-xs text-[12px] leading-[1.4]", isDarkMode ? "text-slate-300" : "text-slate-600")}>{bannerText}</p>
+            <p className={cn("mx-auto mt-1 max-w-sm text-[12px] leading-[1.4]", isDarkMode ? "text-slate-300" : "text-slate-600")}>{bannerText}</p>
 
             <div className="mt-3 flex items-center justify-center gap-3">
               {mobileSocialIcons.map((item) => {
@@ -602,20 +601,6 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
               })}
             </div>
 
-            <div
-              className={cn(
-                "mx-auto mt-3 max-w-sm rounded-2xl border px-3 py-2 text-left shadow-none",
-                isDarkMode ? "border-slate-700 bg-slate-900/90 text-slate-200" : "border-white/70 bg-white/92 text-slate-700",
-              )}
-            >
-              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em]">
-                <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-                Username
-              </p>
-              <p className={cn("mt-1 text-[11px] leading-5", isDarkMode ? "text-slate-300" : "text-slate-600")}>
-                {storeUsernameLabel}
-              </p>
-            </div>
           </section>
 
           <div
