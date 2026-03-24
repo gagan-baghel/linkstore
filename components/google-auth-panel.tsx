@@ -56,7 +56,7 @@ export function GoogleAuthPanel({
       <Link href={`/api/auth/google/start?next=${encodeURIComponent(nextPath)}`} className="block">
         <Button
           variant="outline"
-          className="h-12 w-full rounded-full border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-900 shadow-[0_16px_34px_rgba(15,23,42,0.08)] hover:bg-slate-50"
+          className="h-12 w-full rounded-full border border-[#6367FF] bg-white px-5 text-sm font-bold tracking-wider text-[#6367FF] shadow-none transition-colors hover:bg-[#8494FF] hover:text-white"
         >
           <GoogleMark />
           {ctaLabel}
@@ -64,7 +64,7 @@ export function GoogleAuthPanel({
       </Link>
 
       {description ? (
-        <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 px-4 py-3 text-sm text-slate-600">
+        <div className="rounded-2xl border border-[#C9BEFF] bg-[#FFDBFD] px-4 py-3 text-sm text-[#6367FF]">
           {description}
         </div>
       ) : null}
@@ -87,12 +87,12 @@ export function GoogleAuthPanel({
       ) : null}
 
       {alternateHref && alternateLabel && alternatePrompt ? (
-        <div className="border-t border-slate-200/50 pt-6 text-center dark:border-slate-800/80">
-          <p className="text-sm text-slate-600 dark:text-slate-400">
+        <div className="border-t border-[#C9BEFF] pt-6 text-center">
+          <p className="text-sm text-[#6367FF]">
             {alternatePrompt}{" "}
             <Link
               href={alternateHref}
-              className="font-semibold text-indigo-600 transition-colors hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+              className="font-semibold text-[#000000] transition-colors hover:text-[#6367FF]"
             >
               {alternateLabel}
             </Link>

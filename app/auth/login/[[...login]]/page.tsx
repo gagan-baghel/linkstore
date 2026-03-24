@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
-import { CheckCircle2, Rocket, Sparkles } from "lucide-react"
+import { CheckCircle2, Rocket, Sparkles, Star } from "lucide-react"
 
 import { GoogleAuthPanel } from "@/components/google-auth-panel"
 import { getSafeServerSession } from "@/lib/auth"
@@ -27,63 +27,65 @@ export default async function LoginPage({
   const showDevLogin = process.env.NODE_ENV !== "production"
 
   return (
-    <div className="grid w-full items-center gap-12 lg:grid-cols-[1fr_1fr] lg:gap-24 xl:gap-32">
-      {/* Left Column (Text & Features) - No Box */}
-      <div className="hidden flex-col justify-center space-y-12 lg:flex pl-4 lg:pl-8">
+    <div className="grid w-full items-start gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:gap-20">
+
+      {/* Left Column */}
+      <div className="space-y-10">
+
         <div className="space-y-6">
-          <div className="inline-flex items-center gap-2 text-sm font-semibold tracking-wide text-indigo-600 dark:text-indigo-400">
-            <Sparkles className="h-5 w-5" />
-            <span>Secure first-party access</span>
-          </div>
-          <h1 className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-5xl xl:text-6xl">
-            Your growth<br />dashboard is ready
+          <h1 className="font-display text-[42px] leading-none tracking-tight text-white sm:text-[64px]">
+            Login in to your
+            <br />
+            <span className="bg-[#FFDBFD] px-2 text-[#6367FF]">
+              creator
+            </span>
+            {" "}dashboard
           </h1>
-          <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-            <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-            <span>Log in to continue managing</span>
-          </div>
+
+          <p className="max-w-xl text-base text-white/90">
+            Manage your products, track clicks, and keep everything in one place.
+          </p>
+
         </div>
 
-        <div className="space-y-8">
-          <div className="space-y-3">
-            <div className="flex items-center gap-3 text-lg font-semibold text-slate-900 dark:text-white">
-              <Rocket className="h-6 w-6 text-indigo-500" />
-              Back to building momentum
+        {/* <div className="grid gap-4 sm:grid-cols-2">
+          <div className="rounded-2xl border border-[#C9BEFF] bg-[#FFDBFD] p-4">
+            <div className="flex items-center gap-3 text-lg font-semibold text-black">
+              <Rocket className="h-5 w-5 text-[#6367FF]" />
+              Quick setup
             </div>
-            <p className="text-base text-slate-600 dark:text-slate-400 max-w-md">
-              Focus on the actions that improve traffic quality and affiliate intent.
+            <p className="mt-2 text-sm text-[#6367FF]">
+              Get your storefront live in minutes.
             </p>
           </div>
-          <div className="space-y-3">
-            <div className="flex items-center gap-3 text-lg font-semibold text-slate-900 dark:text-white">
-              <CheckCircle2 className="h-6 w-6 text-indigo-500" />
-              Manage products
+
+          <div className="rounded-2xl border border-[#C9BEFF] bg-white p-4">
+            <div className="flex items-center gap-3 text-lg font-semibold text-black">
+              <Star className="h-5 w-5 text-[#6367FF]" />
+              Simple tracking
             </div>
-            <p className="text-base text-slate-600 dark:text-slate-400 max-w-md">
-              Jump back into product updates, link sharing, and conversion-focused decisions.
+            <p className="mt-2 text-sm text-[#6367FF]">
+              See what people click and explore.
             </p>
           </div>
-          <div className="space-y-3">
-            <div className="flex items-center gap-3 text-lg font-semibold text-slate-900 dark:text-white">
-              <CheckCircle2 className="h-6 w-6 text-indigo-500" />
-              Track 30-day clicks
-            </div>
-            <p className="text-base text-slate-600 dark:text-slate-400 max-w-md">
-              Receive detailed insights on all your numbers in real-time.
-            </p>
-          </div>
+        </div> */}
+
+        <div className="flex items-center gap-3 text-xs font-mono uppercase tracking-[0.25em] text-white/70">
+          built for creators
         </div>
       </div>
 
-      {/* Right Column (Glassmorphism Card) */}
-      <div className="w-full max-w-lg mx-auto">
-        <div className="relative overflow-hidden rounded-[2.5rem] border border-white/20 bg-white/40 p-8 shadow-2xl backdrop-blur-2xl dark:border-slate-700/50 dark:bg-[#131825]/60 sm:p-10">
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/40 to-transparent dark:from-white/5 dark:to-transparent" />
+      {/* Right Column */}
+      <div className="w-full max-w-lg lg:justify-self-end">
+        <div className="relative overflow-hidden rounded-3xl border border-[#C9BEFF] bg-[#FFDBFD] p-8 sm:p-10">
+          {/* <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/70 to-transparent" /> */}
 
           <div className="relative z-10">
             <div className="mb-10 text-center">
-              <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Welcome back</h2>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Use Google to continue managing your storefront.</p>
+
+              <h2 className="mt-3 font-display text-3xl leading-none text-black">
+                Sign in to continue
+              </h2>
             </div>
 
             <GoogleAuthPanel
@@ -95,6 +97,7 @@ export default async function LoginPage({
           </div>
         </div>
       </div>
+
     </div>
   )
 }

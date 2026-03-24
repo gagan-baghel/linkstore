@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { PublicNavbar } from "@/components/public-navbar"
+import { PublicHeader } from "@/components/public-header"
 import { PublicFooter } from "@/components/public-footer"
 
 export const metadata: Metadata = {
@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 export default function TermsPage() {
   return (
     <div className="relative flex min-h-screen flex-col bg-slate-50 dark:bg-[#0B0F19]">
-      <PublicNavbar />
+      <PublicHeader />
       <main className="relative z-10 flex-1 px-4 py-16 sm:px-8 lg:py-24 w-full">
         <article className="mx-auto w-full max-w-3xl space-y-10 text-slate-800 dark:text-slate-200">
           <header className="space-y-4 border-b border-slate-200/50 pb-8 dark:border-slate-800/80">
