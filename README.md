@@ -2,7 +2,7 @@
 
 > Personal storefronts for affiliate creators.
 
-Linkstore is a Next.js + Convex application for creators who want a public product storefront instead of a plain link list. Users authenticate with Google, manage products and store settings from a dashboard, publish a public store at `/stores/[username]`, and track storefront and outbound click analytics.
+Linkstore is a Next.js + Convex application for creators who want a public product storefront instead of a plain link list. Users authenticate with Google, manage products and store settings from a dashboard, publish a public store at `/[username]`, and track storefront and outbound click analytics.
 
 ## Features
 

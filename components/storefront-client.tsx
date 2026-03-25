@@ -6,6 +6,7 @@ import {
   Facebook,
   Globe,
   Instagram,
+  Link2,
   Mail,
   MessageCircle,
   MoreVertical,
@@ -15,6 +16,8 @@ import {
   Twitter,
   X,
   Youtube,
+  Sparkles,
+  Share2,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -34,6 +37,86 @@ interface StorefrontUser {
   storeBio?: string
   storeBannerText?: string
   contactInfo?: string
+  themeMode?: "light" | "dark"
+  themePrimaryColor?: string
+  themeAccentColor?: string
+  themeButtonStyle?: "pill" | "rounded" | "square"
+  themeCardStyle?: "soft" | "outline" | "solid"
+  themeFooterVisible?: boolean
+  themeBackgroundColor?: string
+  themeBackgroundPattern?:
+    | "solid"
+    | "gradient"
+    | "mesh"
+    | "confetti"
+    | "grid"
+    | "waves"
+    | "aurora"
+    | "sunset"
+    | "neon"
+    | "paper"
+    | "dots"
+    | "stripes"
+    | "topo"
+    | "noise"
+    | "zigzag"
+    | "halftone"
+    | "ripple"
+    | "petals"
+    | "diagonal"
+    | "stars"
+    | "gradient-radial"
+    | "glow"
+    | "checkers"
+    | "chevron"
+    | "blobs"
+    | "prism"
+    | "lava"
+    | "hologram"
+    | "blocks"
+    | "glyphs"
+    | "pixel"
+    | "tartan"
+    | "arches"
+    | "swoosh"
+    | "orbit"
+    | "ribbon"
+    | "bubble"
+    | "petal-arc"
+  themeNameColor?: string
+  themeBioColor?: string
+  themeNameFont?:
+    | "system"
+    | "serif"
+    | "grotesk"
+    | "rounded"
+    | "mono"
+    | "display"
+    | "condensed"
+    | "elegant"
+    | "handwritten"
+    | "modern"
+    | "soft"
+    | "editorial"
+    | "tech"
+    | "classic"
+    | "headline"
+  themeBioFont?:
+    | "system"
+    | "serif"
+    | "grotesk"
+    | "rounded"
+    | "mono"
+    | "display"
+    | "condensed"
+    | "elegant"
+    | "handwritten"
+    | "modern"
+    | "soft"
+    | "editorial"
+    | "tech"
+    | "classic"
+    | "headline"
   socialFacebook?: string
   socialTwitter?: string
   socialInstagram?: string
@@ -41,6 +124,7 @@ interface StorefrontUser {
   socialWebsite?: string
   socialWhatsapp?: string
   socialWhatsappMessage?: string
+  customLinks?: Array<{ label?: string; url: string }>
   leadCaptureChannel?: "email" | "whatsapp"
 }
 
@@ -63,6 +147,8 @@ interface StorefrontClientProps {
   products: StorefrontProduct[]
   recentProducts?: StorefrontProduct[]
   mostBoughtProducts?: StorefrontProduct[]
+  previewMode?: "mobile" | "desktop"
+  disableTracking?: boolean
 }
 
 interface SocialItem {
@@ -70,6 +156,17 @@ interface SocialItem {
   label: string
   href: string
   icon: ComponentType<{ className?: string }>
+}
+
+const SOCIAL_COLORS: Record<string, string> = {
+  facebook: "#1877F2",
+  twitter: "#1DA1F2",
+  instagram: "#E1306C",
+  youtube: "#FF0000",
+  whatsapp: "#25D366",
+  website: "#64748b",
+  "contact-email": "#64748b",
+  "contact-phone": "#64748b",
 }
 
 function normalizeCategory(category?: string) {
@@ -98,6 +195,35 @@ function ensureUrl(value: string) {
   if (!trimmed) return ""
   if (/^https?:\/\//i.test(trimmed)) return trimmed
   return `https://${trimmed}`
+}
+
+const FONT_FAMILIES: Record<string, string> = {
+  system: "system-ui, -apple-system, Segoe UI, sans-serif",
+  serif: "Georgia, 'Times New Roman', serif",
+  grotesk: "'Trebuchet MS', 'Segoe UI', sans-serif",
+  rounded: "'Arial Rounded MT Bold', 'Helvetica Rounded', Arial, sans-serif",
+  mono: "'Courier New', Courier, monospace",
+  display: "'Trebuchet MS', 'Segoe UI', sans-serif",
+  condensed: "'Arial Narrow', 'Trebuchet MS', sans-serif",
+  elegant: "Georgia, 'Times New Roman', serif",
+  handwritten: "'Comic Sans MS', 'Bradley Hand', cursive",
+  modern: "'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
+  soft: "'Arial Rounded MT Bold', 'Segoe UI', sans-serif",
+  editorial: "'Times New Roman', Georgia, serif",
+  tech: "'Segoe UI', 'Tahoma', sans-serif",
+  classic: "Georgia, 'Times New Roman', serif",
+  headline: "'Trebuchet MS', 'Segoe UI', sans-serif",
+}
+
+function getReadableTextColor(hexColor: string) {
+  const hex = hexColor.replace("#", "")
+  if (hex.length !== 3 && hex.length !== 6) return "#ffffff"
+  const normalized = hex.length === 3 ? hex.split("").map((c) => c + c).join("") : hex
+  const r = parseInt(normalized.slice(0, 2), 16)
+  const g = parseInt(normalized.slice(2, 4), 16)
+  const b = parseInt(normalized.slice(4, 6), 16)
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+  return luminance > 0.6 ? "#0f172a" : "#ffffff"
 }
 
 function createContactItem(contactInfo?: string): SocialItem | null {
@@ -185,6 +311,12 @@ function buildSocialItems(user: StorefrontUser): SocialItem[] {
       value: user.socialWebsite,
       icon: Globe,
     },
+    ...(user.customLinks || []).map((link, index) => ({
+      key: `custom-${index}`,
+      label: (link.label || "").trim() || "Link",
+      value: link.url,
+      icon: Link2,
+    })),
   ]
 
   const socialItems = raw
@@ -204,13 +336,23 @@ function buildSocialItems(user: StorefrontUser): SocialItem[] {
   })
 }
 
-export function StorefrontClient({ user, products }: StorefrontClientProps) {
+export function StorefrontClient({
+  user,
+  products,
+  recentProducts,
+  mostBoughtProducts,
+  previewMode,
+  disableTracking = false,
+}: StorefrontClientProps) {
   const [query, setQuery] = useState("")
   const [sortBy, setSortBy] = useState<"performance" | "latest" | "name">("performance")
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<"links" | "shop">("links")
   const [desktopMediaMenuOpen, setDesktopMediaMenuOpen] = useState(false)
+  const [isJoinOpen, setIsJoinOpen] = useState(false)
+  const [isShareOpen, setIsShareOpen] = useState(false)
+  const [shareUrl, setShareUrl] = useState("")
   const [source, setSource] = useState("storefront")
   const [medium, setMedium] = useState("")
   const [campaign, setCampaign] = useState("")
@@ -229,19 +371,164 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
   const trackStoreViewOnce = useRef(false)
   const desktopMediaMenuRef = useRef<HTMLDivElement | null>(null)
 
-  const brandColor = "#2563eb"
-  const buttonRadiusClass = "rounded-md"
-  const isDarkMode = false
+  const themeMode = user.themeMode || "light"
+  const isDarkMode = themeMode === "dark"
+  const primaryColor = user.themePrimaryColor || (isDarkMode ? "#e2e8f0" : "#0f172a")
+  const accentColor = user.themeAccentColor || "#6366f1"
+  const backgroundColor = user.themeBackgroundColor || (isDarkMode ? "#0b1120" : "#f8fafc")
+  const backgroundPattern = user.themeBackgroundPattern || "solid"
+  const nameColor = user.themeNameColor || (isDarkMode ? "#e2e8f0" : "#0f172a")
+  const bioColor = user.themeBioColor || (isDarkMode ? "#cbd5f5" : "#475569")
+  const nameFontKey = user.themeNameFont || "system"
+  const bioFontKey = user.themeBioFont || "system"
+  const nameFontFamily = FONT_FAMILIES[nameFontKey] || FONT_FAMILIES.system
+  const bioFontFamily = FONT_FAMILIES[bioFontKey] || FONT_FAMILIES.system
+  const buttonRadiusClass =
+    user.themeButtonStyle === "square" ? "rounded-lg" : user.themeButtonStyle === "rounded" ? "rounded-2xl" : "rounded-full"
+  const cardStyle = user.themeCardStyle || "soft"
+  const cardSurfaceClass =
+    cardStyle === "solid"
+      ? isDarkMode
+        ? "bg-slate-900 text-slate-100"
+        : "bg-white text-slate-900"
+      : cardStyle === "outline"
+        ? isDarkMode
+          ? "border border-slate-700 bg-transparent text-slate-100"
+          : "border border-slate-200 bg-transparent text-slate-900"
+        : isDarkMode
+          ? "border border-slate-700 bg-slate-900/85 text-slate-100"
+          : "border border-white/65 bg-white/90 text-slate-900"
+  const primaryTextColor = getReadableTextColor(primaryColor)
+  const footerVisible = user.themeFooterVisible !== false
+
+  const backgroundStyle = useMemo(() => {
+    const base: Record<string, string | number> = { backgroundColor }
+    if (backgroundPattern === "gradient") {
+      base.backgroundImage = "linear-gradient(140deg, rgba(59,130,246,0.18), rgba(16,185,129,0.18), rgba(14,165,233,0.12))"
+    } else if (backgroundPattern === "mesh") {
+      base.backgroundImage =
+        "radial-gradient(circle at 20% 20%, rgba(59,130,246,0.25), transparent 55%), radial-gradient(circle at 80% 30%, rgba(236,72,153,0.25), transparent 50%), radial-gradient(circle at 40% 80%, rgba(14,165,233,0.2), transparent 60%)"
+    } else if (backgroundPattern === "confetti") {
+      base.backgroundImage =
+        "radial-gradient(circle at 20% 20%, rgba(236,72,153,0.35) 0 10%, transparent 11%), radial-gradient(circle at 80% 30%, rgba(59,130,246,0.35) 0 8%, transparent 9%), radial-gradient(circle at 30% 80%, rgba(16,185,129,0.35) 0 9%, transparent 10%), radial-gradient(circle at 70% 70%, rgba(245,158,11,0.35) 0 8%, transparent 9%)"
+    } else if (backgroundPattern === "grid") {
+      base.backgroundImage = "linear-gradient(rgba(15,23,42,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,0.12) 1px, transparent 1px)"
+      base.backgroundSize = "22px 22px"
+    } else if (backgroundPattern === "waves") {
+      base.backgroundImage =
+        "radial-gradient(circle at 20% 10%, rgba(14,165,233,0.25), transparent 55%), radial-gradient(circle at 80% 30%, rgba(99,102,241,0.25), transparent 60%), radial-gradient(circle at 50% 80%, rgba(16,185,129,0.22), transparent 55%)"
+    } else if (backgroundPattern === "aurora") {
+      base.backgroundImage =
+        "linear-gradient(120deg, rgba(14,165,233,0.32), rgba(16,185,129,0.24), rgba(59,130,246,0.2)), radial-gradient(circle at 15% 20%, rgba(236,72,153,0.2), transparent 55%)"
+    } else if (backgroundPattern === "sunset") {
+      base.backgroundImage =
+        "linear-gradient(140deg, rgba(251,191,36,0.32), rgba(248,113,113,0.3), rgba(244,63,94,0.22))"
+    } else if (backgroundPattern === "neon") {
+      base.backgroundImage =
+        "radial-gradient(circle at 20% 20%, rgba(34,211,238,0.38), transparent 55%), radial-gradient(circle at 80% 30%, rgba(168,85,247,0.38), transparent 55%), radial-gradient(circle at 50% 80%, rgba(59,130,246,0.32), transparent 60%)"
+    } else if (backgroundPattern === "paper") {
+      base.backgroundImage = "linear-gradient(rgba(15,23,42,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,0.06) 1px, transparent 1px)"
+      base.backgroundSize = "18px 18px"
+    } else if (backgroundPattern === "dots") {
+      base.backgroundImage = "radial-gradient(rgba(15,23,42,0.18) 1px, transparent 1px)"
+      base.backgroundSize = "16px 16px"
+    } else if (backgroundPattern === "stripes") {
+      base.backgroundImage = "repeating-linear-gradient(45deg, rgba(15,23,42,0.12) 0 10px, transparent 10px 20px)"
+    } else if (backgroundPattern === "topo") {
+      base.backgroundImage = "repeating-radial-gradient(circle at 30% 30%, rgba(15,23,42,0.12) 0 2px, transparent 3px 10px)"
+    } else if (backgroundPattern === "noise") {
+      base.backgroundImage =
+        "repeating-linear-gradient(0deg, rgba(15,23,42,0.06) 0 1px, transparent 1px 2px), repeating-linear-gradient(90deg, rgba(15,23,42,0.06) 0 1px, transparent 1px 2px)"
+      base.backgroundSize = "12px 12px"
+    } else if (backgroundPattern === "zigzag") {
+      base.backgroundImage = "repeating-linear-gradient(135deg, rgba(15,23,42,0.14) 0 6px, transparent 6px 12px)"
+    } else if (backgroundPattern === "halftone") {
+      base.backgroundImage = "radial-gradient(rgba(15,23,42,0.22) 1px, transparent 2px)"
+      base.backgroundSize = "14px 14px"
+    } else if (backgroundPattern === "ripple") {
+      base.backgroundImage = "repeating-radial-gradient(circle at 50% 50%, rgba(15,23,42,0.12) 0 2px, transparent 3px 14px)"
+    } else if (backgroundPattern === "petals") {
+      base.backgroundImage =
+        "radial-gradient(circle at 20% 20%, rgba(236,72,153,0.25), transparent 55%), radial-gradient(circle at 80% 30%, rgba(14,165,233,0.25), transparent 55%), radial-gradient(circle at 40% 80%, rgba(16,185,129,0.25), transparent 60%)"
+    } else if (backgroundPattern === "diagonal") {
+      base.backgroundImage = "repeating-linear-gradient(135deg, rgba(15,23,42,0.1) 0 8px, transparent 8px 16px)"
+    } else if (backgroundPattern === "stars") {
+      base.backgroundImage = "radial-gradient(rgba(255,255,255,0.7) 1px, transparent 2px)"
+      base.backgroundSize = "18px 18px"
+    } else if (backgroundPattern === "gradient-radial") {
+      base.backgroundImage =
+        "radial-gradient(circle at 30% 30%, rgba(59,130,246,0.35), transparent 55%), radial-gradient(circle at 70% 70%, rgba(236,72,153,0.3), transparent 60%)"
+    } else if (backgroundPattern === "glow") {
+      base.backgroundImage =
+        "radial-gradient(circle at 50% 20%, rgba(99,102,241,0.35), transparent 60%), radial-gradient(circle at 20% 80%, rgba(16,185,129,0.25), transparent 55%)"
+    } else if (backgroundPattern === "checkers") {
+      base.backgroundImage =
+        "linear-gradient(45deg, rgba(15,23,42,0.08) 25%, transparent 25%), linear-gradient(-45deg, rgba(15,23,42,0.08) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(15,23,42,0.08) 75%), linear-gradient(-45deg, transparent 75%, rgba(15,23,42,0.08) 75%)"
+      base.backgroundSize = "20px 20px"
+    } else if (backgroundPattern === "chevron") {
+      base.backgroundImage = "repeating-linear-gradient(135deg, rgba(15,23,42,0.12) 0 6px, transparent 6px 12px), repeating-linear-gradient(45deg, rgba(15,23,42,0.08) 0 6px, transparent 6px 12px)"
+    } else if (backgroundPattern === "blobs") {
+      base.backgroundImage =
+        "radial-gradient(circle at 20% 30%, rgba(59,130,246,0.25), transparent 55%), radial-gradient(circle at 70% 20%, rgba(236,72,153,0.25), transparent 50%), radial-gradient(circle at 60% 80%, rgba(16,185,129,0.22), transparent 55%)"
+    } else if (backgroundPattern === "prism") {
+      base.backgroundImage =
+        "linear-gradient(120deg, rgba(14,165,233,0.3), rgba(99,102,241,0.25), rgba(236,72,153,0.22)), repeating-linear-gradient(45deg, rgba(15,23,42,0.08) 0 8px, transparent 8px 16px)"
+    } else if (backgroundPattern === "lava") {
+      base.backgroundImage =
+        "radial-gradient(circle at 20% 70%, rgba(249,115,22,0.4), transparent 55%), radial-gradient(circle at 70% 20%, rgba(244,63,94,0.35), transparent 50%), radial-gradient(circle at 80% 80%, rgba(234,179,8,0.3), transparent 55%)"
+    } else if (backgroundPattern === "hologram") {
+      base.backgroundImage =
+        "linear-gradient(135deg, rgba(14,165,233,0.28), rgba(168,85,247,0.26), rgba(34,211,238,0.22)), repeating-linear-gradient(90deg, rgba(255,255,255,0.12) 0 2px, transparent 2px 6px)"
+    } else if (backgroundPattern === "blocks") {
+      base.backgroundImage =
+        "linear-gradient(0deg, rgba(15,23,42,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,0.08) 1px, transparent 1px), linear-gradient(0deg, rgba(15,23,42,0.12) 12px, transparent 12px), linear-gradient(90deg, rgba(15,23,42,0.12) 12px, transparent 12px)"
+      base.backgroundSize = "96px 96px"
+    } else if (backgroundPattern === "glyphs") {
+      base.backgroundImage =
+        "radial-gradient(rgba(15,23,42,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,0.12) 2px, transparent 2px)"
+      base.backgroundSize = "48px 48px"
+    } else if (backgroundPattern === "pixel") {
+      base.backgroundImage =
+        "linear-gradient(0deg, rgba(15,23,42,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,0.1) 1px, transparent 1px)"
+      base.backgroundSize = "28px 28px"
+    } else if (backgroundPattern === "tartan") {
+      base.backgroundImage =
+        "linear-gradient(0deg, rgba(15,23,42,0.18) 2px, transparent 2px), linear-gradient(90deg, rgba(15,23,42,0.18) 2px, transparent 2px), linear-gradient(0deg, rgba(15,23,42,0.08) 10px, transparent 10px), linear-gradient(90deg, rgba(15,23,42,0.08) 10px, transparent 10px)"
+      base.backgroundSize = "80px 80px"
+    } else if (backgroundPattern === "arches") {
+      base.backgroundImage =
+        "radial-gradient(circle at 50% 0%, rgba(15,23,42,0.12) 0 18px, transparent 19px), radial-gradient(circle at 0% 50%, rgba(15,23,42,0.08) 0 18px, transparent 19px)"
+      base.backgroundSize = "96px 96px"
+    } else if (backgroundPattern === "swoosh") {
+      base.backgroundImage =
+        "radial-gradient(circle at 10% 20%, rgba(14,165,233,0.32), transparent 60%), radial-gradient(circle at 90% 10%, rgba(168,85,247,0.28), transparent 55%), linear-gradient(135deg, rgba(251,191,36,0.2), transparent 70%)"
+    } else if (backgroundPattern === "orbit") {
+      base.backgroundImage =
+        "radial-gradient(circle at 50% 50%, rgba(15,23,42,0.18) 0 2px, transparent 3px), radial-gradient(circle at 30% 30%, rgba(59,130,246,0.28), transparent 55%), radial-gradient(circle at 70% 60%, rgba(16,185,129,0.24), transparent 60%)"
+    } else if (backgroundPattern === "ribbon") {
+      base.backgroundImage =
+        "linear-gradient(160deg, rgba(59,130,246,0.3), transparent 60%), linear-gradient(20deg, rgba(236,72,153,0.28), transparent 65%)"
+    } else if (backgroundPattern === "bubble") {
+      base.backgroundImage =
+        "radial-gradient(circle at 15% 20%, rgba(59,130,246,0.25), transparent 55%), radial-gradient(circle at 80% 30%, rgba(236,72,153,0.22), transparent 55%), radial-gradient(circle at 60% 80%, rgba(16,185,129,0.2), transparent 60%)"
+    } else if (backgroundPattern === "petal-arc") {
+      base.backgroundImage =
+        "radial-gradient(circle at 50% 10%, rgba(236,72,153,0.22), transparent 60%), radial-gradient(circle at 0% 70%, rgba(14,165,233,0.18), transparent 60%), radial-gradient(circle at 100% 70%, rgba(59,130,246,0.2), transparent 60%)"
+    }
+    return base
+  }, [backgroundColor, backgroundPattern])
   const deferredQuery = useDeferredValue(query)
 
   const normalizedProducts = useMemo(
     () => products.map((product) => ({ ...product, category: normalizeCategory(product.category) })),
     [products],
   )
-  const latestProducts = useMemo(
-    () => [...normalizedProducts].sort((a, b) => b.createdAt - a.createdAt),
-    [normalizedProducts],
-  )
+  const latestProducts = useMemo(() => {
+    if (Array.isArray(recentProducts) && recentProducts.length > 0) {
+      return recentProducts.map((product) => ({ ...product, category: normalizeCategory(product.category) }))
+    }
+    return [...normalizedProducts].sort((a, b) => b.createdAt - a.createdAt)
+  }, [normalizedProducts, recentProducts])
 
   const socialItems = useMemo(() => buildSocialItems(user), [user])
   const featuredProducts = useMemo(() => latestProducts.slice(0, 6), [latestProducts])
@@ -350,6 +637,16 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
     })
   }, [socialItems])
   const showcaseProducts = useMemo(() => {
+    if (Array.isArray(mostBoughtProducts) && mostBoughtProducts.length > 0) {
+      return mostBoughtProducts.slice(0, 6).map((product) => ({
+        id: product._id,
+        image: getProductImage(product),
+        title: product.title,
+        href: buildTrackHref(product._id),
+        trackId: product._id,
+      }))
+    }
+
     const pool = ["/placeholder.jpg", "/placeholder.svg", "/placeholder-user.jpg"]
     const items = featuredProducts.map((product) => ({
       id: product._id,
@@ -396,6 +693,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
     setCollectionSlug((params.get("collection") || "").toLowerCase())
     setSessionId(createSessionId())
     setCurrentPath(window.location.pathname)
+    setShareUrl(window.location.href)
   }, [])
 
   useEffect(() => {
@@ -429,6 +727,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
   }, [desktopMediaMenuOpen])
 
   function trackEvent(eventType: "store_view" | "product_card_click", productId?: string) {
+    if (disableTracking) return
     const payload = {
       eventType,
       productId,
@@ -458,6 +757,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
   }
 
   useEffect(() => {
+    if (disableTracking) return
     if (trackStoreViewOnce.current) return
     if (!sessionId || !user._id) return
     trackStoreViewOnce.current = true
@@ -585,7 +885,12 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
               className="h-10 border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400"
             />
           )}
-          <Button type="submit" disabled={isLeadSubmitting} className="h-10 w-full px-4">
+          <Button
+            type="submit"
+            disabled={isLeadSubmitting}
+            className={cn("h-10 w-full px-4", buttonRadiusClass)}
+            style={{ backgroundColor: primaryColor, color: primaryTextColor }}
+          >
             {isLeadSubmitting ? "Joining..." : "Join now"}
           </Button>
           <label className="flex items-start gap-2 text-xs leading-5">
@@ -623,11 +928,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
   }
 
   function renderShowcaseCard() {
-    const cardTone = !hasCreatorLinks
-      ? "bg-black text-white"
-      : isDarkMode
-        ? "border border-slate-700 bg-slate-900/80 text-slate-100"
-        : "border border-white/65 bg-white/85 text-slate-900"
+    const cardTone = !hasCreatorLinks ? "bg-black text-white" : cardSurfaceClass
 
     const captionClass = !hasCreatorLinks ? "text-white/70" : isDarkMode ? "text-slate-400" : "text-slate-500"
 
@@ -707,19 +1008,72 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
             ),
           )}
         </div>
-        <button type="button" onClick={() => setActiveTab("shop")} className="mt-2.5 w-full rounded-xl py-1.5 text-center">
-          <p className="text-[20px] font-extrabold">See Full Shop</p>
-          <p className={cn("text-xs", captionClass)}>{latestProducts.length} products</p>
+        <button
+          type="button"
+          onClick={() => setActiveTab("shop")}
+          className={cn(
+            "mt-3 w-full rounded-2xl border px-4 py-3 text-left shadow-none",
+            isDarkMode ? "border-slate-700 bg-slate-900/85 text-slate-100" : "border-white/70 bg-white text-slate-900",
+          )}
+        >
+          <p className="text-[18px] font-extrabold">See Full Shop</p>
+          <p className={cn("mt-0.5 text-xs", captionClass)}>{latestProducts.length} products</p>
         </button>
       </div>
     )
   }
 
+  function renderStoreFooter() {
+    if (!footerVisible) return null
+
+    return (
+      <footer className={cn("mt-8 flex items-center justify-center pb-6 text-xs", isDarkMode ? "text-slate-400" : "text-slate-500")}>
+        <span className="mr-1">Powered by</span>
+        <a href="/" className="font-semibold" style={{ color: accentColor }}>
+          Linkstore
+        </a>
+      </footer>
+    )
+  }
+
   return (
     <div className="min-h-screen">
-      <div className={cn("relative min-h-screen overflow-x-hidden lg:hidden", isDarkMode ? "bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-900")}>
-        <main className="relative z-10 mx-auto w-full max-w-md px-2 pb-6 pt-4">
-          <section className="app-reveal text-center">
+      <div
+        className={cn(
+          "relative min-h-screen overflow-x-hidden",
+          previewMode === "mobile" ? "block" : "lg:hidden",
+          isDarkMode ? "text-slate-100" : "text-slate-900",
+        )}
+        style={backgroundStyle}
+      >
+        <div className="absolute left-3 top-3 z-20">
+          <button
+            type="button"
+            onClick={() => setIsJoinOpen(true)}
+            className={cn(
+              "app-surface grid h-9 w-9 place-items-center rounded-full border shadow-none",
+              isDarkMode ? "border-slate-700 bg-slate-900 text-slate-100" : "border-white/70 bg-white text-slate-700",
+            )}
+            aria-label="Join Linkstore"
+          >
+            <Sparkles className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="absolute right-3 top-3 z-20">
+          <button
+            type="button"
+            onClick={() => setIsShareOpen(true)}
+            className={cn(
+              "app-surface grid h-9 w-9 place-items-center rounded-full border shadow-none",
+              isDarkMode ? "border-slate-700 bg-slate-900 text-slate-100" : "border-white/70 bg-white text-slate-700",
+            )}
+            aria-label="Share store"
+          >
+            <Share2 className="h-4 w-4" />
+          </button>
+        </div>
+        <main className="relative z-10 mx-auto w-full max-w-md px-2 pb-6 pt-7">
+          <section className="app-reveal pt-2 text-center">
             <div
               className={cn(
                 "mx-auto h-20 w-20 overflow-hidden rounded-full border shadow-none",
@@ -741,12 +1095,20 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
               />
             </div>
 
-            <h1 className={cn("mt-2 text-[28px] font-extrabold tracking-tight", isDarkMode ? "text-slate-100" : "text-slate-900")}>{displayName}</h1>
-            <p className={cn("mx-auto mt-1 max-w-sm text-[12px] leading-[1.4]", isDarkMode ? "text-slate-300" : "text-slate-600")}>{bannerText}</p>
+            <h1
+              className={cn("mt-2 text-[28px] font-extrabold tracking-tight")}
+              style={{ color: nameColor, fontFamily: nameFontFamily }}
+            >
+              {displayName}
+            </h1>
+            <p className={cn("mx-auto mt-1 max-w-sm text-[12px] leading-[1.4]")} style={{ color: bioColor, fontFamily: bioFontFamily }}>
+              {bannerText}
+            </p>
 
             <div className="mt-3 flex items-center justify-center gap-3">
               {mobileSocialIcons.map((item) => {
                 const Icon = item.icon
+                const iconColor = SOCIAL_COLORS[item.key] || "#6366f1"
                 return (
                   <a
                     key={item.key}
@@ -759,7 +1121,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                     )}
                     aria-label={item.label}
                   >
-                    <Icon className="h-4 w-4" />
+                    <Icon className="h-4 w-4" style={{ color: iconColor }} />
                   </a>
                 )
               })}
@@ -777,15 +1139,15 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
               type="button"
               onClick={() => startTransition(() => setActiveTab("links"))}
               className={cn(
-                "flex-1 rounded-full py-1.5 transition",
+                "flex-1 py-1.5 transition",
+                buttonRadiusClass,
                 activeTab === "links"
-                  ? isDarkMode
-                    ? "bg-slate-100 text-slate-900"
-                    : "bg-slate-900 text-white"
+                  ? "shadow-none"
                   : isDarkMode
                     ? "text-slate-300"
                     : "text-slate-600",
               )}
+              style={activeTab === "links" ? { backgroundColor: primaryColor, color: primaryTextColor } : undefined}
             >
               Links
             </button>
@@ -793,15 +1155,15 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
               type="button"
               onClick={() => startTransition(() => setActiveTab("shop"))}
               className={cn(
-                "flex-1 rounded-full py-1.5 transition",
+                "flex-1 py-1.5 transition",
+                buttonRadiusClass,
                 activeTab === "shop"
-                  ? isDarkMode
-                    ? "bg-slate-100 text-slate-900"
-                    : "bg-slate-900 text-white"
+                  ? "shadow-none"
                   : isDarkMode
                     ? "text-slate-300"
                     : "text-slate-600",
               )}
+              style={activeTab === "shop" ? { backgroundColor: primaryColor, color: primaryTextColor } : undefined}
             >
               Shop
             </button>
@@ -809,7 +1171,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
 
           {activeTab === "links" ? (
             <section className="mt-4 space-y-3" aria-busy={query !== deferredQuery}>
-              {hasCreatorLinks ? (
+              {/* {hasCreatorLinks ? (
                 <div
                   className={cn(
                     "app-reveal rounded-2xl border px-3 py-3 text-left shadow-none",
@@ -821,9 +1183,10 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                     Use these direct creator channels if you want to confirm identity or see how products are used before opening retailer links.
                   </p>
                 </div>
-              ) : null}
+              ) : null} */}
               {socialItems.map((item, index) => {
                 const Icon = item.icon
+                const iconColor = SOCIAL_COLORS[item.key] || "#6366f1"
                 return (
                   <a
                     key={item.key}
@@ -831,29 +1194,29 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                     target="_blank"
                     rel="noopener noreferrer"
                     className={cn(
-                      "app-reveal app-surface flex items-center gap-3 rounded-2xl border px-3 py-2.5 shadow-none",
-                      isDarkMode ? "border-slate-700 bg-slate-900/85 text-slate-100" : "border-white/65 bg-white/90 text-slate-900",
+                      "app-reveal app-surface flex items-center gap-3 rounded-2xl px-3 py-2.5 shadow-none",
+                      cardSurfaceClass,
                     )}
                     style={{ animationDelay: `${Math.min(index, 5) * 45}ms` }}
                   >
                     <div className={cn("grid h-10 w-10 place-items-center rounded-lg", isDarkMode ? "bg-slate-800" : "bg-slate-100")}>
-                      <Icon className={cn("h-5 w-5", isDarkMode ? "text-slate-100" : "text-slate-700")} />
+                      <Icon className="h-5 w-5" style={{ color: iconColor }} />
                     </div>
                     <p className="flex-1 text-[14px] font-semibold tracking-tight">{item.label}</p>
                     <MoreVertical className={cn("h-4 w-4", isDarkMode ? "text-slate-400" : "text-slate-500")} />
                   </a>
                 )
               })}
+              {socialItems.length === 0 && (
+                <div className={cn("rounded-2xl border px-4 py-4 text-center text-xs", cardSurfaceClass)}>
+                  No social or custom links yet.
+                </div>
+              )}
               {renderShowcaseCard()}
             </section>
           ) : (
             <section className="mt-4" aria-busy={query !== deferredQuery}>
-              <div
-                className={cn(
-                  "app-reveal flex items-center gap-2.5 rounded-full border px-3 py-2 shadow-none",
-                  isDarkMode ? "border-slate-700 bg-slate-900 text-slate-100" : "border-white/65 bg-white text-slate-900",
-                )}
-              >
+              <div className={cn("app-reveal flex items-center gap-2.5 rounded-full border px-3 py-2 shadow-none", cardSurfaceClass)}>
                 <Search className={cn("h-4 w-4", isDarkMode ? "text-slate-400" : "text-slate-500")} />
                 <input
                   value={query}
@@ -920,9 +1283,88 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
             </section>
           )}
         </main>
+        {renderStoreFooter()}
+        <div className="fixed bottom-3 left-0 right-0 z-20 mx-auto w-[calc(100%-1.2rem)] max-w-md">
+          <div
+            className={cn(
+              "app-surface flex items-center justify-between gap-3 rounded-2xl border px-3 py-2 shadow-none",
+              isDarkMode ? "border-slate-700 bg-slate-900/95 text-slate-100" : "border-white/70 bg-white/95 text-slate-900",
+            )}
+          >
+            <div>
+              <p className="text-sm font-semibold">Join creators on Linkstore today</p>
+            </div>
+            <a
+              href="/"
+              className={cn("px-3 py-1.5 text-xs font-semibold", buttonRadiusClass)}
+              style={{ backgroundColor: primaryColor, color: primaryTextColor }}
+            >
+              Join
+            </a>
+          </div>
+        </div>
       </div>
 
-      <div className={cn("relative hidden min-h-screen overflow-x-hidden pb-8 lg:block", isDarkMode ? "bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-900")}>
+      <Dialog open={isJoinOpen} onOpenChange={setIsJoinOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Join Linkstore</DialogTitle>
+            <DialogDescription>Start your creator storefront in minutes.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <a
+              href="/"
+              className={cn("inline-flex w-full items-center justify-center px-4 py-2 text-sm font-semibold", buttonRadiusClass)}
+              style={{ backgroundColor: primaryColor, color: primaryTextColor }}
+            >
+              Join Linkstore
+            </a>
+            <p className="text-xs text-slate-500">Create, customize, and share your store in minutes.</p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isShareOpen} onOpenChange={setIsShareOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Share your store</DialogTitle>
+            <DialogDescription>Copy and share your Linkstore URL.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
+              {shareUrl}
+            </div>
+            <Button
+              type="button"
+              onClick={async () => {
+                if (!shareUrl) return
+                if (navigator.share) {
+                  try {
+                    await navigator.share({ title: displayName, url: shareUrl })
+                    return
+                  } catch { }
+                }
+                try {
+                  await navigator.clipboard.writeText(shareUrl)
+                } catch { }
+              }}
+              className={buttonRadiusClass}
+              style={{ backgroundColor: primaryColor, color: primaryTextColor }}
+            >
+              Copy link
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <div
+        className={cn(
+          "relative min-h-screen overflow-x-hidden pb-8",
+          previewMode === "mobile" ? "hidden" : "hidden lg:block",
+          isDarkMode ? "text-slate-100" : "text-slate-900",
+        )}
+        style={backgroundStyle}
+      >
         <header className={cn("sticky top-0 z-40", isDarkMode ? "border-b border-slate-700/80 bg-slate-900" : "border-b border-slate-200 bg-white")}>
           <div className="w-full px-2 sm:px-3 md:px-4 lg:px-5">
             <div className="flex items-center gap-1.5 py-1.5 sm:gap-2 sm:py-2">
@@ -941,10 +1383,16 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                   sizes="36px"
                 />
                 <div className="min-w-0">
-                  <p className={cn("truncate text-sm font-bold leading-tight sm:text-lg md:text-xl", isDarkMode ? "text-slate-100" : "text-slate-800")}>
+                  <p
+                    className={cn("truncate text-sm font-bold leading-tight sm:text-lg md:text-xl")}
+                    style={{ color: nameColor, fontFamily: nameFontFamily }}
+                  >
                     {storeTitle}
                   </p>
-                  <p className={cn("mt-0.5 hidden text-[11px] leading-5 md:block", isDarkMode ? "text-slate-400" : "text-slate-500")}>
+                  <p
+                    className={cn("mt-0.5 hidden text-[11px] leading-5 md:block")}
+                    style={{ color: bioColor, fontFamily: bioFontFamily }}
+                  >
                     {storeUsernameLabel}
                   </p>
                 </div>
@@ -953,13 +1401,13 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
               <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
                 <div className="relative">
                   <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-                    <Input
-                      value={query}
-                      onChange={(event) => {
-                        const nextValue = event.target.value
-                        startTransition(() => setQuery(nextValue))
-                      }}
-                      placeholder="Search products"
+                  <Input
+                    value={query}
+                    onChange={(event) => {
+                      const nextValue = event.target.value
+                      startTransition(() => setQuery(nextValue))
+                    }}
+                    placeholder="Search products"
                     aria-label="Search products"
                     className={cn(
                       "h-8 w-32 pl-7 text-[11px] shadow-none focus-visible:ring-2 sm:h-9 sm:w-56 sm:pl-8 sm:text-xs md:w-72 md:text-sm",
@@ -1049,6 +1497,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
             )}
           </section>
         </main>
+        {renderStoreFooter()}
 
         {hasCreatorLinks ? (
           <div className="pointer-events-none fixed bottom-6 right-6 z-50 hidden lg:block">
@@ -1107,7 +1556,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                   "absolute bottom-0 right-0 grid h-16 w-16 place-items-center rounded-full border text-white shadow-[0_18px_44px_rgba(15,23,42,0.3)] transition-transform duration-300 hover:scale-[1.03]",
                   desktopMediaMenuOpen ? "scale-[0.98]" : "scale-100",
                 )}
-                style={{ backgroundColor: brandColor, borderColor: brandColor }}
+                style={{ backgroundColor: primaryColor, borderColor: primaryColor }}
               >
                 <span className="sr-only">Media links</span>
                 {desktopMediaMenuOpen ? <X className="h-6 w-6" /> : <Globe className="h-6 w-6" />}
@@ -1161,7 +1610,7 @@ export function StorefrontClient({ user, products }: StorefrontClientProps) {
                               ? "border-slate-700 bg-slate-800 text-slate-100 hover:bg-slate-700"
                               : "border-slate-300 bg-white hover:bg-slate-50",
                         )}
-                        style={active ? { backgroundColor: brandColor } : undefined}
+                        style={active ? { backgroundColor: primaryColor } : undefined}
                       >
                         <span>{category.name}</span>
                         <span className={cn("text-xs", active ? "text-white/80" : isDarkMode ? "text-slate-400" : "text-slate-500")}>{category.count}</span>

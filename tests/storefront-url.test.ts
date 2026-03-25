@@ -3,17 +3,11 @@ import assert from "node:assert/strict"
 
 import { buildStorefrontUrl, extractStoreUsernameFromHostname, getRequestOrigin } from "@/lib/storefront-url"
 
-test("buildStorefrontUrl uses subdomain storefront URLs on localhost", () => {
-  assert.equal(buildStorefrontUrl("Demo", "http://localhost:3000"), "http://demo.localhost:3000/store")
-  assert.equal(buildStorefrontUrl("Demo", "http://127.0.0.1:3000"), "http://demo.localhost:3000/store")
-})
-
-test("buildStorefrontUrl keeps subdomain storefront URLs for non-local hosts", () => {
-  assert.equal(buildStorefrontUrl("Demo", "https://linkstore.example"), "https://demo.linkstore.example/store")
-})
-
-test("buildStorefrontUrl uses path-based storefront URLs for vercel.app hosts", () => {
-  assert.equal(buildStorefrontUrl("Demo", "https://linkstore-tan.vercel.app"), "https://linkstore-tan.vercel.app/stores/demo")
+test("buildStorefrontUrl uses path-based storefront URLs", () => {
+  assert.equal(buildStorefrontUrl("Demo", "http://localhost:3000"), "http://localhost:3000/demo")
+  assert.equal(buildStorefrontUrl("Demo", "http://127.0.0.1:3000"), "http://127.0.0.1:3000/demo")
+  assert.equal(buildStorefrontUrl("Demo", "https://linkstore.example"), "https://linkstore.example/demo")
+  assert.equal(buildStorefrontUrl("Demo", "https://linkstore-tan.vercel.app"), "https://linkstore-tan.vercel.app/demo")
 })
 
 test("extractStoreUsernameFromHostname still resolves subdomain storefront hosts", () => {

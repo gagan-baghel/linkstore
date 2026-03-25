@@ -68,7 +68,7 @@ async function revalidateStoreForUser(userId: string) {
   const user = await convexQuery<{ userId: string }, any | null>("users:getById", { userId }).catch(() => null)
   const username = user?.username?.trim().toLowerCase()
   if (!username) return
-  revalidateTag(getStoreCacheTag(username), "max")
+  revalidateTag(getStoreCacheTag(username))
 }
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

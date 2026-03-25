@@ -117,9 +117,8 @@ export function ImageUpload({ images, onChange, maxImages = 5 }: ImageUploadProp
         ))}
         {images.length < maxImages && (
           <Card
-            className={`flex items-center justify-center border border-dashed border-slate-300 bg-slate-50 ${
-              isSingleMode ? "h-44" : "h-28"
-            } ${isDragging ? "border-slate-500 bg-slate-100" : ""}`}
+            className={`flex items-center justify-center border border-dashed border-slate-300 bg-slate-50 ${isSingleMode ? "h-44" : "h-28"
+              } ${isDragging ? "border-slate-500 bg-slate-100" : ""}`}
             onDragOver={(e) => {
               e.preventDefault()
               if (!isDragging) setIsDragging(true)
@@ -149,7 +148,7 @@ export function ImageUpload({ images, onChange, maxImages = 5 }: ImageUploadProp
                 <Upload className="mr-2 h-4 w-4 text-slate-600" />
                 {isUploading ? "Uploading..." : "Upload / Drop Image"}
               </Button>
-              {isSingleMode && <p className="mt-2 text-center text-xs text-slate-500">Use one clear product image.</p>}
+              {/* {isSingleMode && <p className="mt-2 text-center text-xs text-slate-500">Use one clear product image.</p>} */}
             </CardContent>
           </Card>
         )}

@@ -91,7 +91,8 @@ export async function GET(req: NextRequest) {
     }
 
     const authVersion = typeof result.user.authVersion === "number" && result.user.authVersion > 0 ? result.user.authVersion : 1
-    const destination = new URL(nextPath, new URL(req.url).origin)
+    const requiresOnboarding = result.user?.onboardingCompleted === false
+    const destination = new URL(requiresOnboarding ? "/onboarding" : nextPath, new URL(req.url).origin)
     const response = NextResponse.redirect(destination)
     clearGoogleAuthCookies(response)
     await applySessionCookie(response, { userId: result.user._id, authVersion })

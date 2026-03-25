@@ -48,9 +48,9 @@ export default async function proxy(req: NextRequest) {
   const hostname = hostHeader.split(":")[0] || ""
   const storefrontUsername = extractStoreUsernameFromHostname(hostname)
 
-  if (storefrontUsername && pathname === "/store") {
+  if (storefrontUsername && (pathname === "/store" || pathname === "/")) {
     const rewrittenUrl = req.nextUrl.clone()
-    rewrittenUrl.pathname = `/stores/${storefrontUsername}`
+    rewrittenUrl.pathname = `/${storefrontUsername}`
     return NextResponse.rewrite(rewrittenUrl)
   }
 

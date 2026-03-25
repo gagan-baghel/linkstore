@@ -2,21 +2,18 @@
 
 import { useEffect, useMemo } from "react"
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { Ellipsis } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { isDashboardNavItemActive, resolveDashboardNavItems } from "@/components/dashboard-nav-items"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
-const MOBILE_OVERFLOW_HREFS = new Set([
-  "/dashboard/social-links",
-  "/dashboard/audience",
-  "/dashboard/analytics",
-])
+const MOBILE_OVERFLOW_HREFS = new Set(["/dashboard/audience", "/dashboard/analytics"])
 
 export function MobileDashboardNav({ canUseShopFeatures }: { canUseShopFeatures: boolean }) {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const router = useRouter()
   const resolvedItems = useMemo(
     () => resolveDashboardNavItems(canUseShopFeatures),
@@ -31,15 +28,19 @@ export function MobileDashboardNav({ canUseShopFeatures }: { canUseShopFeatures:
     }
   }, [pathname, resolvedItems, router])
 
-  const primaryItems = useMemo(
-    () => resolvedItems.filter((item) => !MOBILE_OVERFLOW_HREFS.has(item.href)),
+  const mobileItems = useMemo(
+    () => resolvedItems.filter((item) => item.showInMobile !== false),
     [resolvedItems],
+  )
+  const primaryItems = useMemo(
+    () => mobileItems.filter((item) => !MOBILE_OVERFLOW_HREFS.has(item.href)),
+    [mobileItems],
   )
   const overflowItems = useMemo(
-    () => resolvedItems.filter((item) => MOBILE_OVERFLOW_HREFS.has(item.href)),
-    [resolvedItems],
+    () => mobileItems.filter((item) => MOBILE_OVERFLOW_HREFS.has(item.href)),
+    [mobileItems],
   )
-  const isOverflowActive = overflowItems.some((item) => isDashboardNavItemActive(pathname, item.href))
+  const isOverflowActive = overflowItems.some((item) => isDashboardNavItemActive(pathname, item, searchParams))
 
   function navButtonClassName(isActive: boolean) {
     return cn(
@@ -55,7 +56,7 @@ export function MobileDashboardNav({ canUseShopFeatures }: { canUseShopFeatures:
       <ul className="grid grid-cols-5 gap-1">
         {primaryItems.map((item) => {
           const targetHref = item.targetHref
-          const isActive = isDashboardNavItemActive(pathname, item.href)
+          const isActive = isDashboardNavItemActive(pathname, item, searchParams)
           const Icon = item.icon
 
           return (
@@ -94,7 +95,7 @@ export function MobileDashboardNav({ canUseShopFeatures }: { canUseShopFeatures:
             >
               {overflowItems.map((item) => {
                 const Icon = item.icon
-                const isActive = isDashboardNavItemActive(pathname, item.href)
+                const isActive = isDashboardNavItemActive(pathname, item, searchParams)
 
                 return (
                   <DropdownMenuItem

@@ -3,9 +3,9 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
+import { useFieldArray, useForm } from "react-hook-form"
 import { z } from "zod"
-import { Facebook, Globe, Instagram, MessageCircle, Twitter, Youtube } from "lucide-react"
+import { Facebook, Globe, Instagram, MessageCircle, Twitter, Youtube, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
@@ -27,6 +27,14 @@ const socialLinksFormSchema = z.object({
     .or(z.literal(""))
     .refine((value) => !value || isValidWhatsAppNumber(value), "Please enter a valid WhatsApp number with country code"),
   socialWhatsappMessage: z.string().max(500, { message: "Message must be 500 characters or less" }).optional().or(z.literal("")),
+  customLinks: z
+    .array(
+      z.object({
+        label: z.string().max(40).optional().or(z.literal("")),
+        url: z.string().url({ message: "Please enter a valid URL" }),
+      }),
+    )
+    .optional(),
 })
 
 type SocialLinksFormValues = z.infer<typeof socialLinksFormSchema>
@@ -39,6 +47,7 @@ interface SocialLinksFormProps {
   socialWebsite?: string
   socialWhatsapp?: string
   socialWhatsappMessage?: string
+  customLinks?: Array<{ label?: string; url: string }>
 }
 
 export function SocialLinksForm({
@@ -49,6 +58,7 @@ export function SocialLinksForm({
   socialWebsite = "",
   socialWhatsapp = "",
   socialWhatsappMessage = "",
+  customLinks = [],
 }: SocialLinksFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
@@ -63,7 +73,13 @@ export function SocialLinksForm({
       socialWebsite,
       socialWhatsapp,
       socialWhatsappMessage: socialWhatsappMessage || DEFAULT_WHATSAPP_MESSAGE,
+      customLinks,
     },
+  })
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "customLinks",
   })
 
   const values = form.watch()
@@ -80,6 +96,13 @@ export function SocialLinksForm({
       secondary: resolveWhatsAppMessage(values.socialWhatsappMessage),
       icon: MessageCircle,
     },
+    ...((values.customLinks || [])
+      .filter((item) => item.url?.trim())
+      .map((item, index) => ({
+        name: item.label?.trim() || `Link ${index + 1}`,
+        value: item.url?.trim() || "",
+        icon: Globe,
+      }))),
   ]
     .map((item) => ({
       ...item,
@@ -92,16 +115,29 @@ export function SocialLinksForm({
     setIsLoading(true)
 
     try {
+      const normalizedCustomLinks =
+        data.customLinks
+          ?.map((item) => ({
+            label: item.label?.trim() || "",
+            url: item.url.trim(),
+          }))
+          .filter((item) => item.url.length > 0) ?? []
+
       const response = await fetch("/api/store/social-links", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, customLinks: normalizedCustomLinks }),
       })
 
       if (!response.ok) {
-        throw new Error("Failed to update social links")
+        const errorPayload = await response.json().catch(() => null)
+        const message =
+          errorPayload && typeof errorPayload === "object" && "message" in errorPayload
+            ? String(errorPayload.message)
+            : "Failed to update social links"
+        throw new Error(message)
       }
 
       toast({
@@ -123,26 +159,27 @@ export function SocialLinksForm({
   }
 
   return (
-    <div className="grid gap-3.5 lg:grid-cols-[1.1fr_0.9fr] lg:gap-4">
+    <div className="social-links-form grid gap-3.5 lg:gap-4">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="rounded-[1.2rem] border border-slate-200 bg-white p-3.5 shadow-[0_10px_28px_rgba(87,107,149,0.08)] sm:rounded-xl sm:p-5 sm:shadow-none">
-          <div className="mb-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="rounded-[1.2rem] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(87,107,149,0.08)] sm:rounded-xl sm:p-6 sm:shadow-none">
+          {/* <div className="mb-4">
             <h2 className="text-base font-semibold text-slate-900">Social Media Links</h2>
-            <p className="mt-1 text-sm leading-6 text-slate-600">Add the channels you want visitors to verify before opening product links.</p>
-          </div>
+          </div> */}
+          <h4 className="mb-2 text-base font-semibold text-slate-900">Social links</h4>
 
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="space-y-4">
             <FormField
               control={form.control}
               name="socialFacebook"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2 text-xs font-semibold text-slate-700">
-                    <Facebook className="h-4 w-4" /> Facebook
+                <FormItem className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4">
+                  <FormLabel className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                    <Facebook className="h-4 w-4 text-[#1877F2]" /> Facebook
                   </FormLabel>
                   <FormControl>
-                    <Input className="h-10 border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400" placeholder="https://facebook.com/yourusername" {...field} />
+                    <Input className="mt-2 h-11 border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400" placeholder="https://facebook.com/yourusername" {...field} />
                   </FormControl>
+                  <FormDescription className="text-xs text-slate-500">Use the public URL to your profile.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -152,13 +189,14 @@ export function SocialLinksForm({
               control={form.control}
               name="socialTwitter"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2 text-xs font-semibold text-slate-700">
-                    <Twitter className="h-4 w-4" /> Twitter
+                <FormItem className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4">
+                  <FormLabel className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                    <Twitter className="h-4 w-4 text-[#1DA1F2]" /> Twitter
                   </FormLabel>
                   <FormControl>
-                    <Input className="h-10 border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400" placeholder="https://twitter.com/yourusername" {...field} />
+                    <Input className="mt-2 h-11 border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400" placeholder="https://twitter.com/yourusername" {...field} />
                   </FormControl>
+                  <FormDescription className="text-xs text-slate-500">Add your latest account URL.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -168,13 +206,14 @@ export function SocialLinksForm({
               control={form.control}
               name="socialInstagram"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2 text-xs font-semibold text-slate-700">
-                    <Instagram className="h-4 w-4" /> Instagram
+                <FormItem className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4">
+                  <FormLabel className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                    <Instagram className="h-4 w-4 text-[#E1306C]" /> Instagram
                   </FormLabel>
                   <FormControl>
-                    <Input className="h-10 border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400" placeholder="https://instagram.com/yourusername" {...field} />
+                    <Input className="mt-2 h-11 border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400" placeholder="https://instagram.com/yourusername" {...field} />
                   </FormControl>
+                  <FormDescription className="text-xs text-slate-500">Most creators drive the most traffic here.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -184,13 +223,14 @@ export function SocialLinksForm({
               control={form.control}
               name="socialYoutube"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2 text-xs font-semibold text-slate-700">
-                    <Youtube className="h-4 w-4" /> YouTube
+                <FormItem className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4">
+                  <FormLabel className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                    <Youtube className="h-4 w-4 text-[#FF0000]" /> YouTube
                   </FormLabel>
                   <FormControl>
-                    <Input className="h-10 border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400" placeholder="https://youtube.com/c/yourchannel" {...field} />
+                    <Input className="mt-2 h-11 border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400" placeholder="https://youtube.com/@yourchannel" {...field} />
                   </FormControl>
+                  <FormDescription className="text-xs text-slate-500">Paste your channel link or handle.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -200,14 +240,14 @@ export function SocialLinksForm({
               control={form.control}
               name="socialWebsite"
               render={({ field }) => (
-                <FormItem className="md:col-span-2">
-                  <FormLabel className="flex items-center gap-2 text-xs font-semibold text-slate-700">
-                    <Globe className="h-4 w-4" /> Personal Website
+                <FormItem className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4">
+                  <FormLabel className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                    <Globe className="h-4 w-4 text-slate-500" /> Personal Website
                   </FormLabel>
                   <FormControl>
-                    <Input className="h-10 border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400" placeholder="https://yourdomain.com" {...field} />
+                    <Input className="mt-2 h-11 border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400" placeholder="https://yourdomain.com" {...field} />
                   </FormControl>
-                  <FormDescription className="text-xs">Optional homepage, portfolio, newsletter, or creator website.</FormDescription>
+                  <FormDescription className="text-xs text-slate-500">Your homepage or portfolio.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -217,80 +257,121 @@ export function SocialLinksForm({
               control={form.control}
               name="socialWhatsapp"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2 text-xs font-semibold text-slate-700">
-                    <MessageCircle className="h-4 w-4" /> WhatsApp
+                <FormItem className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4">
+                  <FormLabel className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                    <MessageCircle className="h-4 w-4 text-[#25D366]" /> WhatsApp
                   </FormLabel>
                   <FormControl>
-                    <Input className="h-10 border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400" placeholder="+91 98765 43210" {...field} />
+                    <Input className="mt-2 h-11 border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400" placeholder="+91 98765 43210" {...field} />
                   </FormControl>
-                  <FormDescription className="text-xs">Use the full international number with country code. Any country code is supported.</FormDescription>
+                  <FormDescription className="text-xs text-slate-500">Use the full international number with country code.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="socialWhatsappMessage"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2 text-xs font-semibold text-slate-700">
-                    <MessageCircle className="h-4 w-4" /> WhatsApp Prefilled Message
-                  </FormLabel>
-                  <FormControl>
-                    <Textarea
-                      className="min-h-24 border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400"
-                      placeholder={DEFAULT_WHATSAPP_MESSAGE}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription className="text-xs">Visitors will see this message prefilled when WhatsApp opens. Leave your wording or keep the default.</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <details className="rounded-2xl border border-slate-200/80 bg-white p-4">
+              <summary className="cursor-pointer text-sm font-semibold text-slate-800">Edit WhatsApp message</summary>
+              <div className="mt-3">
+                <FormField
+                  control={form.control}
+                  name="socialWhatsappMessage"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                        <MessageCircle className="h-4 w-4 text-[#25D366]" /> Prefilled Message
+                      </FormLabel>
+                      <FormControl>
+                        <Textarea
+                          className="mt-2 min-h-24 border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400"
+                          placeholder={DEFAULT_WHATSAPP_MESSAGE}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription className="text-xs text-slate-500">This message opens in WhatsApp.</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </details>
           </div>
 
-          <Button type="submit" className="mt-4 h-10 w-full border border-slate-900 bg-slate-900 px-4 text-sm text-white shadow-none hover:bg-slate-800 sm:mt-5 sm:w-auto" disabled={isLoading}>
-            {isLoading ? "Saving..." : "Save Social Links"}
+          <div className="mt-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="mb-2 text-base font-semibold text-slate-900">Custom links</h4>
+                {/* <p className="text-xs text-slate-500">Add any other link you want to show.</p> */}
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-9 border-slate-300 bg-white text-slate-800"
+                onClick={() => append({ label: "", url: "" })}
+              >
+                + Add link
+              </Button>
+            </div>
+
+            <div className="grid gap-3">
+              {fields.length === 0 && (
+                <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500">
+                  No custom links added yet.
+                </div>
+              )}
+              {fields.map((field, index) => (
+                <div key={field.id} className="grid gap-2 rounded-xl border border-slate-200 bg-white p-3 sm:grid-cols-[1fr_1.4fr_auto] sm:items-center">
+                  <FormField
+                    control={form.control}
+                    name={`customLinks.${index}.label`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-semibold text-slate-700">Label</FormLabel>
+                        <FormControl>
+                          <Input
+                            className="h-9 border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400"
+                            placeholder="e.g. TikTok"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name={`customLinks.${index}.url`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-semibold text-slate-700">URL</FormLabel>
+                        <FormControl>
+                          <Input
+                            className="h-9 border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400"
+                            placeholder="https://"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-9 text-slate-500 hover:text-slate-900"
+                    onClick={() => remove(index)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+          <Button type="submit" className="mt-4 h-11 w-full rounded-2xl bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-500 px-6 text-white shadow-[0_16px_30px_rgba(14,165,233,0.3)] hover:from-cyan-500 hover:via-sky-500 hover:to-blue-500 sm:w-auto" disabled={isLoading}>
+            {isLoading ? "Saving..." : "Save Links"}
           </Button>
         </form>
       </Form>
-
-      <section className="rounded-[1.2rem] border border-slate-200 bg-white p-3.5 shadow-[0_10px_28px_rgba(87,107,149,0.08)] sm:rounded-xl sm:p-5 sm:shadow-none">
-        <h2 className="text-base font-semibold text-slate-900">Current Links</h2>
-        <p className="mt-1 text-sm leading-6 text-slate-600">These links show up on the public storefront as creator verification channels.</p>
-
-        {activeLinks.length > 0 ? (
-          <div className="mt-4 grid gap-2">
-            {activeLinks.map((item) => {
-              const Icon = item.icon
-              return (
-                <a
-                  key={item.name}
-                  href={item.href}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700 hover:border-slate-300 hover:text-slate-900"
-                >
-                  <div className="grid h-9 w-9 place-items-center rounded-lg bg-white text-slate-700">
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-medium text-slate-900">{item.name}</p>
-                    <p className="truncate text-xs text-slate-500">{item.secondary}</p>
-                  </div>
-                </a>
-              )
-            })}
-          </div>
-        ) : (
-          <div className="mt-4 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-600">
-            No social links added yet.
-          </div>
-        )}
-      </section>
     </div>
   )
 }
