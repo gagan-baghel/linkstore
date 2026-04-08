@@ -73,11 +73,11 @@ export async function PUT(req: Request) {
     }
 
     if (previousUsername) {
-      revalidateTag(getStoreCacheTag(previousUsername), "max")
+      revalidateTag(getStoreCacheTag(previousUsername))
     }
     const nextUsername = result.user?.username?.trim().toLowerCase() || normalizedUsername
     if (nextUsername && nextUsername !== previousUsername) {
-      revalidateTag(getStoreCacheTag(nextUsername), "max")
+      revalidateTag(getStoreCacheTag(nextUsername))
     }
 
     return NextResponse.json({

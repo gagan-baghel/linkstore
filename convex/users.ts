@@ -55,6 +55,7 @@ function buildUserDefaults(input: {
     socialWhatsapp: "",
     socialWhatsappMessage: "",
     leadCaptureChannel: "email" as const,
+    onboardingCompleted: false,
     createdAt: input.now,
     updatedAt: input.now,
   }
@@ -320,6 +321,18 @@ export const updateStore = mutationGeneric({
     socialWhatsapp: v.optional(v.string()),
     socialWhatsappMessage: v.optional(v.string()),
     leadCaptureChannel: v.optional(v.union(v.literal("email"), v.literal("whatsapp"))),
+    themeMode: v.optional(v.union(v.literal("light"), v.literal("dark"))),
+    themePrimaryColor: v.optional(v.string()),
+    themeAccentColor: v.optional(v.string()),
+    themeButtonStyle: v.optional(v.union(v.literal("pill"), v.literal("rounded"), v.literal("square"))),
+    themeCardStyle: v.optional(v.union(v.literal("soft"), v.literal("outline"), v.literal("solid"))),
+    themeFooterVisible: v.optional(v.boolean()),
+    themeBackgroundColor: v.optional(v.string()),
+    themeBackgroundPattern: v.optional(v.string()),
+    themeNameColor: v.optional(v.string()),
+    themeBioColor: v.optional(v.string()),
+    themeNameFont: v.optional(v.string()),
+    themeBioFont: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId)
@@ -328,7 +341,8 @@ export const updateStore = mutationGeneric({
     }
 
     const hasPremiumAccess = await hasActiveSubscription(ctx, args.userId)
-    if (!hasPremiumAccess) {
+    const onboardingInProgress = user.onboardingCompleted === false
+    if (!hasPremiumAccess && !onboardingInProgress) {
       return { ok: false, message: "Active subscription required for store updates" as const, code: "SUBSCRIPTION_REQUIRED" as const }
     }
 
@@ -345,6 +359,18 @@ export const updateStore = mutationGeneric({
       socialWhatsapp: args.socialWhatsapp || "",
       socialWhatsappMessage: args.socialWhatsappMessage || "",
       leadCaptureChannel: args.leadCaptureChannel || "email",
+      themeMode: args.themeMode || user.themeMode || "light",
+      themePrimaryColor: args.themePrimaryColor ?? user.themePrimaryColor ?? "",
+      themeAccentColor: args.themeAccentColor ?? user.themeAccentColor ?? "",
+      themeButtonStyle: args.themeButtonStyle || user.themeButtonStyle || "pill",
+      themeCardStyle: args.themeCardStyle || user.themeCardStyle || "soft",
+      themeFooterVisible: args.themeFooterVisible ?? user.themeFooterVisible ?? true,
+      themeBackgroundColor: args.themeBackgroundColor ?? user.themeBackgroundColor ?? "",
+      themeBackgroundPattern: args.themeBackgroundPattern ?? user.themeBackgroundPattern ?? "solid",
+      themeNameColor: args.themeNameColor ?? user.themeNameColor ?? "",
+      themeBioColor: args.themeBioColor ?? user.themeBioColor ?? "",
+      themeNameFont: args.themeNameFont ?? user.themeNameFont ?? "system",
+      themeBioFont: args.themeBioFont ?? user.themeBioFont ?? "system",
       updatedAt: Date.now(),
     })
 
@@ -362,6 +388,14 @@ export const updateSocialLinks = mutationGeneric({
     socialWebsite: v.optional(v.string()),
     socialWhatsapp: v.optional(v.string()),
     socialWhatsappMessage: v.optional(v.string()),
+    customLinks: v.optional(
+      v.array(
+        v.object({
+          label: v.optional(v.string()),
+          url: v.string(),
+        }),
+      ),
+    ),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId)
@@ -370,7 +404,8 @@ export const updateSocialLinks = mutationGeneric({
     }
 
     const hasPremiumAccess = await hasActiveSubscription(ctx, args.userId)
-    if (!hasPremiumAccess) {
+    const onboardingInProgress = user.onboardingCompleted === false
+    if (!hasPremiumAccess && !onboardingInProgress) {
       return { ok: false, message: "Active subscription required for social link changes" as const, code: "SUBSCRIPTION_REQUIRED" as const }
     }
 
@@ -382,6 +417,26 @@ export const updateSocialLinks = mutationGeneric({
       socialWebsite: args.socialWebsite || "",
       socialWhatsapp: args.socialWhatsapp || "",
       socialWhatsappMessage: args.socialWhatsappMessage || "",
+      customLinks: args.customLinks || [],
+      updatedAt: Date.now(),
+    })
+
+    return { ok: true }
+  },
+})
+
+export const completeOnboarding = mutationGeneric({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId)
+    if (!user) {
+      return { ok: false, message: "User not found" as const }
+    }
+
+    await ctx.db.patch(args.userId, {
+      onboardingCompleted: true,
       updatedAt: Date.now(),
     })
 

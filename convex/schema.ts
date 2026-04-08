@@ -25,6 +25,13 @@ export default defineSchema({
     themeButtonStyle: v.optional(v.string()),
     themeCardStyle: v.optional(v.string()),
     themeMode: v.optional(v.string()),
+    themeFooterVisible: v.optional(v.boolean()),
+    themeBackgroundColor: v.optional(v.string()),
+    themeBackgroundPattern: v.optional(v.string()),
+    themeNameColor: v.optional(v.string()),
+    themeBioColor: v.optional(v.string()),
+    themeNameFont: v.optional(v.string()),
+    themeBioFont: v.optional(v.string()),
     socialFacebook: v.string(),
     socialTwitter: v.string(),
     socialInstagram: v.string(),
@@ -32,7 +39,16 @@ export default defineSchema({
     socialWebsite: v.string(),
     socialWhatsapp: v.optional(v.string()),
     socialWhatsappMessage: v.optional(v.string()),
+    customLinks: v.optional(
+      v.array(
+        v.object({
+          label: v.optional(v.string()),
+          url: v.string(),
+        }),
+      ),
+    ),
     leadCaptureChannel: v.optional(v.union(v.literal("email"), v.literal("whatsapp"))),
+    onboardingCompleted: v.optional(v.boolean()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })

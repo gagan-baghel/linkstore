@@ -59,6 +59,14 @@ const socialLinksSchema = z.object({
     .or(z.literal(""))
     .refine((value) => !value || isValidWhatsAppNumber(value), "Invalid WhatsApp number"),
   socialWhatsappMessage: z.string().trim().max(500).optional().or(z.literal("")),
+  customLinks: z
+    .array(
+      z.object({
+        label: z.string().trim().max(40).optional().or(z.literal("")),
+        url: z.string().trim().url().max(500),
+      }),
+    )
+    .optional(),
 })
 
 export async function PUT(req: Request) {
@@ -77,14 +85,31 @@ export async function PUT(req: Request) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
 
-    const access = await requireActiveSubscription(session.user.id, "update_store_settings")
-    if (!access.ok) return access.response
+    const user = await convexQuery<{ userId: string }, any | null>("users:getById", { userId: session.user.id }).catch(() => null)
+    const onboardingInProgress = user?.onboardingCompleted === false
+    if (!onboardingInProgress) {
+      const access = await requireActiveSubscription(session.user.id, "update_store_settings")
+      if (!access.ok) return access.response
+    }
 
     const body = await req.json()
-    const { socialFacebook, socialTwitter, socialInstagram, socialYoutube, socialWebsite, socialWhatsapp, socialWhatsappMessage } =
-      socialLinksSchema.parse(body)
-
-    const user = await convexQuery<{ userId: string }, any | null>("users:getById", { userId: session.user.id }).catch(() => null)
+    const {
+      socialFacebook,
+      socialTwitter,
+      socialInstagram,
+      socialYoutube,
+      socialWebsite,
+      socialWhatsapp,
+      socialWhatsappMessage,
+      customLinks,
+    } = socialLinksSchema.parse(body)
+    const sanitizedCustomLinks =
+      customLinks
+        ?.map((item) => ({
+          label: item.label?.trim() || "",
+          url: item.url.trim(),
+        }))
+        .filter((item) => item.url.length > 0) ?? []
     const username = user?.username?.trim().toLowerCase() || ""
 
     const result = await convexMutation<
@@ -97,6 +122,7 @@ export async function PUT(req: Request) {
         socialWebsite?: string
         socialWhatsapp?: string
         socialWhatsappMessage?: string
+        customLinks?: Array<{ label?: string; url: string }>
       },
       { ok: boolean; message?: string; code?: string }
     >("users:updateSocialLinks", {
@@ -108,6 +134,7 @@ export async function PUT(req: Request) {
       socialWebsite: socialWebsite || "",
       socialWhatsapp: socialWhatsapp || "",
       socialWhatsappMessage: socialWhatsappMessage || "",
+      customLinks: sanitizedCustomLinks,
     })
 
     if (!result.ok) {
@@ -116,7 +143,7 @@ export async function PUT(req: Request) {
     }
 
     if (username) {
-      revalidateTag(getStoreCacheTag(username), "max")
+      revalidateTag(getStoreCacheTag(username))
     }
 
     return NextResponse.json({ message: "Social links updated successfully" }, { status: 200 })
@@ -125,6 +152,7 @@ export async function PUT(req: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ message: "Invalid data", errors: error.errors }, { status: 400 })
     }
-    return NextResponse.json({ message: "Internal server error" }, { status: 500 })
+    const message = error instanceof Error && error.message ? error.message : "Internal server error"
+    return NextResponse.json({ message }, { status: 500 })
   }
 }

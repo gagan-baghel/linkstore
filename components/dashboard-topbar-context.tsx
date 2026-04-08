@@ -1,6 +1,6 @@
 "use client"
 
-import { usePathname } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 
 type TopbarContext = {
   heading: string
@@ -13,20 +13,6 @@ const CONTEXT_BY_PREFIX: Array<{ prefix: string; context: TopbarContext }> = [
     context: {
       heading: "Products",
       text: "Manage your affiliate products.",
-    },
-  },
-  {
-    prefix: "/dashboard/social-links",
-    context: {
-      heading: "Social Links",
-      text: "Manage creator profile links shown on your storefront.",
-    },
-  },
-  {
-    prefix: "/dashboard/store",
-    context: {
-      heading: "Store Settings",
-      text: "Manage your store appearance and information.",
     },
   },
   {
@@ -61,14 +47,46 @@ const CONTEXT_BY_PREFIX: Array<{ prefix: string; context: TopbarContext }> = [
 
 export function DashboardTopbarContext() {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const panel = searchParams.get("panel")
+
+  if (pathname === "/dashboard" && panel) {
+    const panelContext =
+      panel === "links"
+        ? {
+            heading: "Social Links",
+            text: "Manage creator profile links shown on your storefront.",
+          }
+        : panel === "design"
+          ? {
+              heading: "Store Design",
+              text: "Update your banner, bio, and branding.",
+            }
+          : panel === "theme"
+            ? {
+                heading: "Theme & Design",
+                text: "Refine colors, visuals, and storefront style.",
+              }
+          : null
+
+    if (panelContext) {
+      return (
+        <div className="min-w-0">
+          <p className="truncate text-[13px] font-semibold tracking-tight text-black sm:text-sm">{panelContext.heading}</p>
+          <p className="truncate text-[10px] text-[#6367FF] sm:text-xs">{panelContext.text}</p>
+        </div>
+      )
+    }
+  }
+
   const matched = CONTEXT_BY_PREFIX.find((item) => pathname === item.prefix || pathname.startsWith(`${item.prefix}/`))
 
   if (!matched) return null
 
   return (
     <div className="min-w-0">
-      <p className="truncate text-[13px] font-semibold tracking-tight text-[#162033] sm:text-sm">{matched.context.heading}</p>
-      <p className="truncate text-[10px] text-[#5f6b7e] sm:text-xs">{matched.context.text}</p>
+      <p className="truncate text-[13px] font-semibold tracking-tight text-black sm:text-sm">{matched.context.heading}</p>
+      <p className="truncate text-[10px] text-[#6367FF] sm:text-xs">{matched.context.text}</p>
     </div>
   )
 }

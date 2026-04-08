@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { PlusCircle, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
@@ -34,13 +33,6 @@ const productFormSchema = z.object({
 })
 
 type ProductFormValues = z.infer<typeof productFormSchema>
-type QueuedProduct = {
-  id: string
-  title: string
-  category: string
-  affiliateUrl: string
-  images: string[]
-}
 
 interface ProductFormProps {
   initialData?: {
@@ -51,9 +43,16 @@ interface ProductFormProps {
     images: string[]
   }
   isEditing?: boolean
+  redirectTo?: string | null
+  onProductsCreated?: (count: number) => void
 }
 
-export function ProductForm({ initialData, isEditing = false }: ProductFormProps = {}) {
+export function ProductForm({
+  initialData,
+  isEditing = false,
+  redirectTo = "/dashboard/products",
+  onProductsCreated,
+}: ProductFormProps = {}) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [isFetchingMetadata, setIsFetchingMetadata] = useState(false)
@@ -62,7 +61,7 @@ export function ProductForm({ initialData, isEditing = false }: ProductFormProps
   const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES)
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false)
   const [affiliateFetchNote, setAffiliateFetchNote] = useState<string | null>(null)
-  const [queuedProducts, setQueuedProducts] = useState<QueuedProduct[]>([])
+  // single-add only
 
   useEffect(() => {
     try {
@@ -189,44 +188,38 @@ export function ProductForm({ initialData, isEditing = false }: ProductFormProps
           title: "Success",
           description: "Your product has been updated.",
         })
-        router.push("/dashboard/products")
-        router.refresh()
+        onProductsCreated?.(1)
+        if (redirectTo) {
+          router.push(redirectTo)
+        } else {
+          router.refresh()
+        }
         return
       }
-
-      const toCreate: ProductFormValues[] = queuedProducts.map((item) => ({
-        title: item.title,
-        category: item.category,
-        affiliateUrl: item.affiliateUrl,
-        images: item.images,
-      }))
 
       const currentDraft = getCurrentDraft()
       if (currentDraft?.error) {
         await form.trigger()
         throw new Error(currentDraft.error)
       }
-      if (currentDraft?.data) {
-        toCreate.push(currentDraft.data)
+      if (!currentDraft?.data) {
+        throw new Error("Add a product first.")
       }
 
-      if (toCreate.length === 0) {
-        throw new Error("Add at least one product first.")
-      }
-
-      for (const payload of toCreate) {
-        await createProduct(payload)
-      }
+      await createProduct(currentDraft.data)
 
       toast({
         title: "Success",
-        description: `${toCreate.length} product${toCreate.length > 1 ? "s" : ""} created successfully.`,
+        description: "Product created successfully.",
       })
 
-      setQueuedProducts([])
       clearForm()
-      router.push("/dashboard/products")
-      router.refresh()
+      onProductsCreated?.(1)
+      if (redirectTo) {
+        router.push(redirectTo)
+      } else {
+        router.refresh()
+      }
     } catch (error) {
       console.error(error)
       setError(error instanceof Error ? error.message : "Something went wrong. Please try again.")
@@ -303,37 +296,20 @@ export function ProductForm({ initialData, isEditing = false }: ProductFormProps
     await fetchFromAffiliateLink(normalized)
   }
 
-  async function addAnotherToQueue() {
-    setError(null)
-    const parsed = productFormSchema.safeParse(form.getValues())
-    if (!parsed.success) {
-      await form.trigger()
-      setError("Please fill required fields before adding another.")
-      return
-    }
-
-    const draft: QueuedProduct = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      title: parsed.data.title.trim(),
-      category: parsed.data.category.trim(),
-      affiliateUrl: normalizeAffiliateUrl(parsed.data.affiliateUrl),
-      images: parsed.data.images.slice(0, 1),
-    }
-
-    setQueuedProducts((prev) => [...prev, draft])
-    clearForm()
-  }
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(() => onSubmit())} className="min-w-0 w-full space-y-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:space-y-5 sm:p-6">
+      <form onSubmit={form.handleSubmit(() => onSubmit())} className="min-w-0 w-full space-y-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_14px_36px_rgba(15,23,42,0.06)] sm:space-y-6 sm:p-6">
         {error && (
           <Alert variant="destructive">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold text-slate-900">Product Details</p>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="text-sm font-semibold text-slate-900">Add product</p>
+            <p className="text-xs text-slate-500">Paste a link, we’ll fill the rest.</p>
+          </div>
           <Button
             type="button"
             variant="outline"
@@ -343,22 +319,73 @@ export function ProductForm({ initialData, isEditing = false }: ProductFormProps
             Create Category
           </Button>
         </div>
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <div className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-semibold text-slate-800">Title</FormLabel>
-                    <FormControl>
-                      <Input className="h-10 border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400" placeholder="Enter product title" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+        <div className="space-y-4">
+          <FormField
+            control={form.control}
+            name="affiliateUrl"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm font-semibold text-slate-800">Product link</FormLabel>
+                <FormControl>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <Input
+                      className="h-11 border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400"
+                      placeholder="Paste product URL"
+                      {...field}
+                      onPaste={async (e) => {
+                        await handleAffiliateUrlPaste(e)
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={isFetchingMetadata}
+                      onClick={() => fetchFromAffiliateLink()}
+                      className="h-11 border-slate-300 bg-white text-sm text-slate-800"
+                    >
+                      {isFetchingMetadata ? "Fetching..." : "Auto-fill"}
+                    </Button>
+                  </div>
+                </FormControl>
+                <p className="text-xs text-slate-500">Paste any link. We’ll auto‑fill title and image.</p>
+                {affiliateFetchNote && <p className="text-xs text-slate-500">{affiliateFetchNote}</p>}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="title"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm font-semibold text-slate-800">Title</FormLabel>
+                <FormControl>
+                  <Input className="h-11 border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400" placeholder="Enter product title" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="images"
+            render={({ field }) => (
+              <FormItem className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                <FormLabel className="text-sm font-semibold text-slate-800">Product image</FormLabel>
+                <FormControl>
+                  <ImageUpload images={field.value} onChange={(images) => field.onChange(images)} maxImages={1} />
+                </FormControl>
+                <p className="mt-2 text-xs text-slate-500">One clean image works best.</p>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <details className="rounded-2xl border border-slate-200 bg-white p-3">
+            <summary className="cursor-pointer text-sm font-semibold text-slate-800">More options</summary>
+            <div className="mt-3">
               <FormField
                 control={form.control}
                 name="category"
@@ -367,7 +394,7 @@ export function ProductForm({ initialData, isEditing = false }: ProductFormProps
                     <FormLabel className="text-sm font-semibold text-slate-800">Category</FormLabel>
                     <FormControl>
                       <Select value={field.value} onValueChange={(value) => field.onChange(value)}>
-                        <SelectTrigger className="h-10 border-slate-300 bg-white text-sm text-slate-900">
+                        <SelectTrigger className="h-11 border-slate-200 bg-white text-sm text-slate-900">
                           <SelectValue placeholder="Select category" />
                         </SelectTrigger>
                         <SelectContent>
@@ -384,96 +411,22 @@ export function ProductForm({ initialData, isEditing = false }: ProductFormProps
                 )}
               />
             </div>
-            <FormField
-              control={form.control}
-              name="affiliateUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-semibold text-slate-800">Affiliate URL</FormLabel>
-                  <FormControl>
-                    <Input
-                      className="h-10 border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400"
-                      placeholder="https://example.com/product?ref=yourid"
-                      {...field}
-                      onPaste={async (e) => {
-                        await handleAffiliateUrlPaste(e)
-                      }}
-                    />
-                  </FormControl>
-                  {affiliateFetchNote && <p className="text-xs text-slate-500">{affiliateFetchNote}</p>}
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <Button type="submit" disabled={isLoading} className="h-10 w-full rounded-md border border-slate-900 bg-slate-900 px-4 text-sm text-white hover:bg-slate-800 sm:w-auto sm:px-6">
-                {isLoading
-                  ? isEditing
-                    ? "Updating..."
-                    : "Creating..."
-                  : isEditing
-                    ? "Update Product"
-                    : `Create Product${queuedProducts.length > 0 ? ` (${queuedProducts.length + 1})` : ""}`}
-              </Button>
-              {!isEditing && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={isLoading}
-                  onClick={addAnotherToQueue}
-                  className="h-10 w-full border-slate-300 bg-white px-4 text-sm text-slate-800 hover:bg-slate-100 sm:w-auto"
-                >
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Add Another
-                </Button>
-              )}
-            </div>
-          </div>
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-            <FormField
-              control={form.control}
-              name="images"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-semibold text-slate-800">Product Image</FormLabel>
-                  <FormControl>
-                    <ImageUpload images={field.value} onChange={(images) => field.onChange(images)} maxImages={1} />
-                  </FormControl>
-                  <p className="mt-1 text-xs text-slate-500">Upload one clear product image.</p>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          </details>
+
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <Button type="submit" disabled={isLoading} className="h-10 w-full rounded-md border border-slate-900 bg-slate-900 px-4 text-sm text-white hover:bg-slate-800 sm:w-auto sm:px-6">
+              {isLoading
+                ? isEditing
+                  ? "Updating..."
+                  : "Creating..."
+                : isEditing
+                  ? "Update Product"
+                  : "Create Product"}
+            </Button>
           </div>
         </div>
 
-        {!isEditing && queuedProducts.length > 0 && (
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-            <p className="mb-2 text-sm font-semibold text-slate-800">Queued Products ({queuedProducts.length})</p>
-            <div className="space-y-2">
-              {queuedProducts.map((item, index) => (
-                <div key={item.id} className="flex min-w-0 items-center justify-between gap-3 overflow-hidden rounded-md border border-slate-200 bg-white px-3 py-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-slate-900">
-                      {index + 1}. {item.title}
-                    </p>
-                    <p className="line-clamp-2 break-all text-xs text-slate-600">
-                      {item.category} • {item.affiliateUrl}
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-8 shrink-0 border-rose-200 bg-white px-2 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-                    onClick={() => setQueuedProducts((prev) => prev.filter((product) => product.id !== item.id))}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* single add only */}
 
         <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
           <DialogContent>

@@ -11,7 +11,7 @@ import { requireActiveSubscription } from "@/lib/subscription-access"
 import { isValidWhatsAppNumber } from "@/lib/whatsapp"
 
 const storeSchema = z.object({
-  storeBannerText: z.string().trim().min(2).max(120),
+  storeBannerText: z.string().trim().min(2).max(120).optional(),
   storeBio: z.string().trim().max(500).optional().or(z.literal("")),
   contactInfo: z.string().trim().max(200).optional().or(z.literal("")),
   storeLogo: z
@@ -69,7 +69,121 @@ const storeSchema = z.object({
     .or(z.literal(""))
     .refine((value) => !value || isValidWhatsAppNumber(value), "Invalid WhatsApp number"),
   socialWhatsappMessage: z.string().trim().max(500).optional().or(z.literal("")),
-  leadCaptureChannel: z.enum(["email", "whatsapp"]).optional().default("email"),
+  leadCaptureChannel: z.enum(["email", "whatsapp"]).optional(),
+  themeMode: z.enum(["light", "dark"]).optional(),
+  themePrimaryColor: z
+    .string()
+    .trim()
+    .optional()
+    .or(z.literal(""))
+    .refine((value) => !value || /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value), "Invalid primary color"),
+  themeAccentColor: z
+    .string()
+    .trim()
+    .optional()
+    .or(z.literal(""))
+    .refine((value) => !value || /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value), "Invalid accent color"),
+  themeButtonStyle: z.enum(["pill", "rounded", "square"]).optional(),
+  themeCardStyle: z.enum(["soft", "outline", "solid"]).optional(),
+  themeFooterVisible: z.boolean().optional(),
+  themeBackgroundColor: z
+    .string()
+    .trim()
+    .optional()
+    .or(z.literal(""))
+    .refine((value) => !value || /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value), "Invalid background color"),
+  themeBackgroundPattern: z
+    .enum([
+      "solid",
+      "gradient",
+      "mesh",
+      "confetti",
+      "grid",
+      "waves",
+      "aurora",
+      "sunset",
+      "neon",
+      "paper",
+      "dots",
+      "stripes",
+      "topo",
+      "noise",
+      "zigzag",
+      "halftone",
+      "ripple",
+      "petals",
+      "diagonal",
+      "stars",
+      "gradient-radial",
+      "glow",
+      "checkers",
+      "chevron",
+      "blobs",
+      "prism",
+      "lava",
+      "hologram",
+      "blocks",
+      "glyphs",
+      "pixel",
+      "tartan",
+      "arches",
+      "swoosh",
+      "orbit",
+      "ribbon",
+      "bubble",
+      "petal-arc",
+    ])
+    .optional(),
+  themeNameColor: z
+    .string()
+    .trim()
+    .optional()
+    .or(z.literal(""))
+    .refine((value) => !value || /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value), "Invalid name color"),
+  themeBioColor: z
+    .string()
+    .trim()
+    .optional()
+    .or(z.literal(""))
+    .refine((value) => !value || /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value), "Invalid bio color"),
+  themeNameFont: z
+    .enum([
+      "system",
+      "serif",
+      "grotesk",
+      "rounded",
+      "mono",
+      "display",
+      "condensed",
+      "elegant",
+      "handwritten",
+      "modern",
+      "soft",
+      "editorial",
+      "tech",
+      "classic",
+      "headline",
+    ])
+    .optional(),
+  themeBioFont: z
+    .enum([
+      "system",
+      "serif",
+      "grotesk",
+      "rounded",
+      "mono",
+      "display",
+      "condensed",
+      "elegant",
+      "handwritten",
+      "modern",
+      "soft",
+      "editorial",
+      "tech",
+      "classic",
+      "headline",
+    ])
+    .optional(),
 })
 
 export async function PUT(req: Request) {
@@ -89,8 +203,14 @@ export async function PUT(req: Request) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
 
-    const access = await requireActiveSubscription(session.user.id, "update_store_settings")
-    if (!access.ok) return access.response
+    const user = await convexQuery<{ userId: string }, any | null>("users:getById", { userId: session.user.id }).catch(
+      () => null,
+    )
+    const onboardingInProgress = user?.onboardingCompleted === false
+    if (!onboardingInProgress) {
+      const access = await requireActiveSubscription(session.user.id, "update_store_settings")
+      if (!access.ok) return access.response
+    }
 
     const body = await req.json()
     const {
@@ -106,10 +226,19 @@ export async function PUT(req: Request) {
       socialWhatsapp,
       socialWhatsappMessage,
       leadCaptureChannel,
+      themeMode,
+      themePrimaryColor,
+      themeAccentColor,
+      themeButtonStyle,
+      themeCardStyle,
+      themeFooterVisible,
+      themeBackgroundColor,
+      themeBackgroundPattern,
+      themeNameColor,
+      themeBioColor,
+      themeNameFont,
+      themeBioFont,
     } = storeSchema.parse(body)
-    const user = await convexQuery<{ userId: string }, any | null>("users:getById", { userId: session.user.id }).catch(
-      () => null,
-    )
     const username = user?.username?.trim().toLowerCase() || ""
 
     const result = await convexMutation<
@@ -127,22 +256,114 @@ export async function PUT(req: Request) {
         socialWhatsapp?: string
         socialWhatsappMessage?: string
         leadCaptureChannel?: "email" | "whatsapp"
+        themeMode?: "light" | "dark"
+        themePrimaryColor?: string
+        themeAccentColor?: string
+        themeButtonStyle?: "pill" | "rounded" | "square"
+        themeCardStyle?: "soft" | "outline" | "solid"
+        themeFooterVisible?: boolean
+        themeBackgroundColor?: string
+        themeBackgroundPattern?:
+          | "solid"
+          | "gradient"
+          | "mesh"
+          | "confetti"
+          | "grid"
+          | "waves"
+          | "aurora"
+          | "sunset"
+          | "neon"
+          | "paper"
+          | "dots"
+          | "stripes"
+          | "topo"
+          | "noise"
+          | "zigzag"
+          | "halftone"
+          | "ripple"
+          | "petals"
+          | "diagonal"
+          | "stars"
+          | "gradient-radial"
+          | "glow"
+          | "checkers"
+          | "chevron"
+          | "blobs"
+          | "prism"
+          | "lava"
+          | "hologram"
+          | "blocks"
+          | "glyphs"
+          | "pixel"
+          | "tartan"
+          | "arches"
+          | "swoosh"
+          | "orbit"
+          | "ribbon"
+          | "bubble"
+          | "petal-arc"
+        themeNameColor?: string
+        themeBioColor?: string
+        themeNameFont?:
+          | "system"
+          | "serif"
+          | "grotesk"
+          | "rounded"
+          | "mono"
+          | "display"
+          | "condensed"
+          | "elegant"
+          | "handwritten"
+          | "modern"
+          | "soft"
+          | "editorial"
+          | "tech"
+          | "classic"
+          | "headline"
+        themeBioFont?:
+          | "system"
+          | "serif"
+          | "grotesk"
+          | "rounded"
+          | "mono"
+          | "display"
+          | "condensed"
+          | "elegant"
+          | "handwritten"
+          | "modern"
+          | "soft"
+          | "editorial"
+          | "tech"
+          | "classic"
+          | "headline"
       },
       { ok: boolean; message?: string; code?: string }
     >("users:updateStore", {
       userId: session.user.id,
-      storeBannerText,
-      storeBio: storeBio || "",
-      contactInfo: contactInfo || "",
-      storeLogo: storeLogo || "",
-      socialFacebook: socialFacebook || "",
-      socialTwitter: socialTwitter || "",
-      socialInstagram: socialInstagram || "",
-      socialYoutube: socialYoutube || "",
-      socialWebsite: socialWebsite || "",
-      socialWhatsapp: socialWhatsapp || "",
-      socialWhatsappMessage: socialWhatsappMessage || "",
-      leadCaptureChannel,
+      storeBannerText: storeBannerText ?? user?.storeBannerText ?? "Store",
+      storeBio: storeBio ?? user?.storeBio ?? "",
+      contactInfo: contactInfo ?? user?.contactInfo ?? "",
+      storeLogo: storeLogo ?? user?.storeLogo ?? "",
+      socialFacebook: socialFacebook ?? user?.socialFacebook ?? "",
+      socialTwitter: socialTwitter ?? user?.socialTwitter ?? "",
+      socialInstagram: socialInstagram ?? user?.socialInstagram ?? "",
+      socialYoutube: socialYoutube ?? user?.socialYoutube ?? "",
+      socialWebsite: socialWebsite ?? user?.socialWebsite ?? "",
+      socialWhatsapp: socialWhatsapp ?? user?.socialWhatsapp ?? "",
+      socialWhatsappMessage: socialWhatsappMessage ?? user?.socialWhatsappMessage ?? "",
+      leadCaptureChannel: leadCaptureChannel ?? user?.leadCaptureChannel ?? "email",
+      themeMode: themeMode ?? user?.themeMode ?? "light",
+      themePrimaryColor: themePrimaryColor ?? user?.themePrimaryColor ?? "",
+      themeAccentColor: themeAccentColor ?? user?.themeAccentColor ?? "",
+      themeButtonStyle: themeButtonStyle ?? user?.themeButtonStyle ?? "pill",
+      themeCardStyle: themeCardStyle ?? user?.themeCardStyle ?? "soft",
+      themeFooterVisible: themeFooterVisible ?? user?.themeFooterVisible ?? true,
+      themeBackgroundColor: themeBackgroundColor ?? user?.themeBackgroundColor ?? "",
+      themeBackgroundPattern: themeBackgroundPattern ?? user?.themeBackgroundPattern ?? "solid",
+      themeNameColor: themeNameColor ?? user?.themeNameColor ?? "",
+      themeBioColor: themeBioColor ?? user?.themeBioColor ?? "",
+      themeNameFont: themeNameFont ?? user?.themeNameFont ?? "system",
+      themeBioFont: themeBioFont ?? user?.themeBioFont ?? "system",
     })
 
     if (!result.ok) {
@@ -151,7 +372,7 @@ export async function PUT(req: Request) {
     }
 
     if (username) {
-      revalidateTag(getStoreCacheTag(username), "max")
+      revalidateTag(getStoreCacheTag(username))
     }
 
     return NextResponse.json({ message: "Store settings updated successfully" }, { status: 200 })
