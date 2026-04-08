@@ -11,6 +11,8 @@ import { checkRateLimitAsync, enforceSameOrigin, getClientIp, tooManyRequests } 
 import { getStoreCacheTag } from "@/lib/store-cache"
 import { requireActiveSubscription } from "@/lib/subscription-access"
 
+const STORE_REVALIDATION_PROFILE = "max" as const
+
 const imageUrlSchema = z
   .string()
   .trim()
@@ -57,7 +59,7 @@ async function revalidateStoreForUser(userId: string) {
   const user = await convexQuery<{ userId: string }, any | null>("users:getById", { userId }).catch(() => null)
   const username = user?.username?.trim().toLowerCase()
   if (!username) return
-  revalidateTag(getStoreCacheTag(username))
+  revalidateTag(getStoreCacheTag(username), STORE_REVALIDATION_PROFILE)
 }
 
 export async function POST(req: Request) {

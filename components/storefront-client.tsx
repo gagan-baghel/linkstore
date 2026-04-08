@@ -1,6 +1,16 @@
 "use client"
 
-import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState, type ComponentType, type FormEvent } from "react"
+import {
+  startTransition,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentType,
+  type CSSProperties,
+  type FormEvent,
+} from "react"
 import Image from "next/image"
 import {
   Facebook,
@@ -155,7 +165,7 @@ interface SocialItem {
   key: string
   label: string
   href: string
-  icon: ComponentType<{ className?: string }>
+  icon: ComponentType<{ className?: string; style?: CSSProperties }>
 }
 
 const SOCIAL_COLORS: Record<string, string> = {

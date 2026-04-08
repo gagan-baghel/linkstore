@@ -24,6 +24,7 @@ import { SUBSCRIPTION_UPGRADE_BASE_PATH } from "@/lib/subscription-routing"
 interface DashboardInitialData {
   user: any
   totalProducts?: number
+  recentProducts?: any[]
 }
 
 interface SetupStep {
@@ -128,7 +129,7 @@ export default function DashboardClientPage({
   const [hasActiveSubscription, setHasActiveSubscription] = useState(Boolean(session?.user?.hasActiveSubscription))
   const [user, setUser] = useState<any>(initialData?.user ?? null)
   const [previewStoreData, setPreviewStoreData] = useState<any | null>(null)
-  const [totalProducts, setTotalProducts] = useState(initialData?.totalProducts ?? user?.productCount ?? 0)
+  const [totalProducts, setTotalProducts] = useState<number>(initialData?.totalProducts ?? user?.productCount ?? 0)
   const [isLoading, setIsLoading] = useState(!initialData)
   const [error, setError] = useState<string | null>(null)
   const [origin, setOrigin] = useState(initialOrigin)
@@ -276,11 +277,12 @@ export default function DashboardClientPage({
   const subscriptionRedirectBase = SUBSCRIPTION_UPGRADE_BASE_PATH
   const storeUrl = isStorePublic ? buildStorefrontUrl(user.username, baseUrl) : ""
   const previewStoreUrl = user?.username ? buildStorefrontUrl(user.username, baseUrl) : ""
-  const previewProductsFallback = Array.isArray(initialData?.recentProducts) ? initialData?.recentProducts : []
+  const initialRecentProducts = Array.isArray(initialData?.recentProducts) ? (initialData?.recentProducts ?? []) : []
+  const previewProductsFallback = initialRecentProducts
   const previewUser = previewStoreData?.user ?? user
   const previewProducts = previewStoreData?.products ?? previewProductsFallback
-  const previewRecentProducts = previewStoreData?.recentProducts ?? initialData?.recentProducts
-  const previewMostBought = previewStoreData?.trending ?? initialData?.recentProducts
+  const previewRecentProducts = previewStoreData?.recentProducts ?? initialRecentProducts
+  const previewMostBought = previewStoreData?.trending ?? initialRecentProducts
 
   const productsHref = canUseShopActions
     ? "/dashboard/products"
@@ -437,11 +439,11 @@ export default function DashboardClientPage({
                   <Link href="/dashboard/products">View all products</Link>
                 </Button>
               </div>
-              {Array.isArray(initialData?.recentProducts) && initialData?.recentProducts?.length > 0 && (
+              {initialRecentProducts.length > 0 && (
                 <div className="rounded-2xl border border-slate-200/80 bg-white p-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Recent products</p>
                   <div className="mt-3 space-y-2">
-                    {initialData.recentProducts.slice(0, 3).map((product: any) => (
+                    {initialRecentProducts.slice(0, 3).map((product: any) => (
                       <div key={product._id} className="flex items-center justify-between gap-3">
                         <div className="flex min-w-0 items-center gap-3">
                           <div className="relative h-10 w-10 overflow-hidden rounded-xl border border-slate-200 bg-slate-100">

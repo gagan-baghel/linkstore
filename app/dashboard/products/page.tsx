@@ -43,7 +43,7 @@ export default async function ProductsPage() {
     ])
 
     // Convert Mongoose documents to plain JavaScript objects
-    const products = JSON.parse(
+    const products: any[] = JSON.parse(
       JSON.stringify(
         productsData.map((product) => ({
           _id: product._id,

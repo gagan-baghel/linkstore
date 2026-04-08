@@ -9,6 +9,8 @@ import { checkRateLimitAsync, enforceSameOrigin, getClientIp, tooManyRequests } 
 import { getStoreCacheTag } from "@/lib/store-cache"
 import { getUsernameValidationMessage, isValidUsername, normalizeUsernameInput } from "@/lib/username"
 
+const STORE_REVALIDATION_PROFILE = "max" as const
+
 const accountSchema = z.object({
   name: z.string().trim().min(2).max(80),
   username: z.string().trim().min(3).max(30),
@@ -73,11 +75,11 @@ export async function PUT(req: Request) {
     }
 
     if (previousUsername) {
-      revalidateTag(getStoreCacheTag(previousUsername))
+      revalidateTag(getStoreCacheTag(previousUsername), STORE_REVALIDATION_PROFILE)
     }
     const nextUsername = result.user?.username?.trim().toLowerCase() || normalizedUsername
     if (nextUsername && nextUsername !== previousUsername) {
-      revalidateTag(getStoreCacheTag(nextUsername))
+      revalidateTag(getStoreCacheTag(nextUsername), STORE_REVALIDATION_PROFILE)
     }
 
     return NextResponse.json({

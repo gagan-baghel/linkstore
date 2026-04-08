@@ -10,6 +10,8 @@ import { getStoreCacheTag } from "@/lib/store-cache"
 import { requireActiveSubscription } from "@/lib/subscription-access"
 import { isValidWhatsAppNumber } from "@/lib/whatsapp"
 
+const STORE_REVALIDATION_PROFILE = "max" as const
+
 const storeSchema = z.object({
   storeBannerText: z.string().trim().min(2).max(120).optional(),
   storeBio: z.string().trim().max(500).optional().or(z.literal("")),
@@ -372,7 +374,7 @@ export async function PUT(req: Request) {
     }
 
     if (username) {
-      revalidateTag(getStoreCacheTag(username))
+      revalidateTag(getStoreCacheTag(username), STORE_REVALIDATION_PROFILE)
     }
 
     return NextResponse.json({ message: "Store settings updated successfully" }, { status: 200 })
