@@ -158,28 +158,29 @@ export function SocialLinksForm({
     }
   }
 
+  const fieldGroupClassName = "space-y-2 rounded-xl"
+
   return (
     <div className="social-links-form grid gap-3.5 lg:gap-4">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="rounded-[1.2rem] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(87,107,149,0.08)] sm:rounded-xl sm:p-6 sm:shadow-none">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="rounded-[1.4rem] border border-slate-200/90 bg-white p-5 shadow-[0_12px_30px_rgba(87,107,149,0.08)] sm:p-6">
           {/* <div className="mb-4">
             <h2 className="text-base font-semibold text-slate-900">Social Media Links</h2>
           </div> */}
-          <h4 className="mb-2 text-base font-semibold text-slate-900">Social links</h4>
+          <h4 className="mb-3 text-base font-semibold text-slate-900">Social links</h4>
 
           <div className="space-y-4">
             <FormField
               control={form.control}
               name="socialFacebook"
               render={({ field }) => (
-                <FormItem className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4">
+                <FormItem className={fieldGroupClassName}>
                   <FormLabel className="flex items-center gap-2 text-sm font-semibold text-slate-800">
                     <Facebook className="h-4 w-4 text-[#1877F2]" /> Facebook
                   </FormLabel>
                   <FormControl>
-                    <Input className="mt-2 h-11 border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400" placeholder="https://facebook.com/yourusername" {...field} />
+                    <Input className="h-11 border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400" placeholder="https://facebook.com/yourusername" {...field} />
                   </FormControl>
-                  <FormDescription className="text-xs text-slate-500">Use the public URL to your profile.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -189,14 +190,13 @@ export function SocialLinksForm({
               control={form.control}
               name="socialTwitter"
               render={({ field }) => (
-                <FormItem className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4">
+                <FormItem className={fieldGroupClassName}>
                   <FormLabel className="flex items-center gap-2 text-sm font-semibold text-slate-800">
                     <Twitter className="h-4 w-4 text-[#1DA1F2]" /> Twitter
                   </FormLabel>
                   <FormControl>
-                    <Input className="mt-2 h-11 border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400" placeholder="https://twitter.com/yourusername" {...field} />
+                    <Input className="h-11 border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400" placeholder="https://twitter.com/yourusername" {...field} />
                   </FormControl>
-                  <FormDescription className="text-xs text-slate-500">Add your latest account URL.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -206,14 +206,13 @@ export function SocialLinksForm({
               control={form.control}
               name="socialInstagram"
               render={({ field }) => (
-                <FormItem className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4">
+                <FormItem className={fieldGroupClassName}>
                   <FormLabel className="flex items-center gap-2 text-sm font-semibold text-slate-800">
                     <Instagram className="h-4 w-4 text-[#E1306C]" /> Instagram
                   </FormLabel>
                   <FormControl>
-                    <Input className="mt-2 h-11 border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400" placeholder="https://instagram.com/yourusername" {...field} />
+                    <Input className="h-11 border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400" placeholder="https://instagram.com/yourusername" {...field} />
                   </FormControl>
-                  <FormDescription className="text-xs text-slate-500">Most creators drive the most traffic here.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -223,14 +222,13 @@ export function SocialLinksForm({
               control={form.control}
               name="socialYoutube"
               render={({ field }) => (
-                <FormItem className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4">
+                <FormItem className={fieldGroupClassName}>
                   <FormLabel className="flex items-center gap-2 text-sm font-semibold text-slate-800">
                     <Youtube className="h-4 w-4 text-[#FF0000]" /> YouTube
                   </FormLabel>
                   <FormControl>
-                    <Input className="mt-2 h-11 border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400" placeholder="https://youtube.com/@yourchannel" {...field} />
+                    <Input className="h-11 border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400" placeholder="https://youtube.com/@yourchannel" {...field} />
                   </FormControl>
-                  <FormDescription className="text-xs text-slate-500">Paste your channel link or handle.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -240,14 +238,13 @@ export function SocialLinksForm({
               control={form.control}
               name="socialWebsite"
               render={({ field }) => (
-                <FormItem className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4">
+                <FormItem className={fieldGroupClassName}>
                   <FormLabel className="flex items-center gap-2 text-sm font-semibold text-slate-800">
                     <Globe className="h-4 w-4 text-slate-500" /> Personal Website
                   </FormLabel>
                   <FormControl>
-                    <Input className="mt-2 h-11 border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400" placeholder="https://yourdomain.com" {...field} />
+                    <Input className="h-11 border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400" placeholder="https://yourdomain.com" {...field} />
                   </FormControl>
-                  <FormDescription className="text-xs text-slate-500">Your homepage or portfolio.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -257,20 +254,19 @@ export function SocialLinksForm({
               control={form.control}
               name="socialWhatsapp"
               render={({ field }) => (
-                <FormItem className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4">
+                <FormItem className={fieldGroupClassName}>
                   <FormLabel className="flex items-center gap-2 text-sm font-semibold text-slate-800">
                     <MessageCircle className="h-4 w-4 text-[#25D366]" /> WhatsApp
                   </FormLabel>
                   <FormControl>
-                    <Input className="mt-2 h-11 border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400" placeholder="+91 98765 43210" {...field} />
+                    <Input className="h-11 border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400" placeholder="+91 98765 43210" {...field} />
                   </FormControl>
-                  <FormDescription className="text-xs text-slate-500">Use the full international number with country code.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <details className="rounded-2xl border border-slate-200/80 bg-white p-4">
+            <details className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
               <summary className="cursor-pointer text-sm font-semibold text-slate-800">Edit WhatsApp message</summary>
               <div className="mt-3">
                 <FormField
@@ -297,10 +293,10 @@ export function SocialLinksForm({
             </details>
           </div>
 
-          <div className="mt-4 space-y-3">
+          <div className="mt-6 space-y-3 border-t border-slate-100 pt-5">
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="mb-2 text-base font-semibold text-slate-900">Custom links</h4>
+                <h4 className="text-base font-semibold text-slate-900">Custom links</h4>
                 {/* <p className="text-xs text-slate-500">Add any other link you want to show.</p> */}
               </div>
               <Button
@@ -367,9 +363,11 @@ export function SocialLinksForm({
               ))}
             </div>
           </div>
-          <Button type="submit" className="mt-4 h-11 w-full rounded-2xl bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-500 px-6 text-white shadow-[0_16px_30px_rgba(14,165,233,0.3)] hover:from-cyan-500 hover:via-sky-500 hover:to-blue-500 sm:w-auto" disabled={isLoading}>
+          <div className="mt-6 flex items-center justify-start">
+            <Button type="submit" className="h-11 w-full rounded-2xl bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-500 px-6 text-white shadow-[0_16px_30px_rgba(14,165,233,0.3)] hover:from-cyan-500 hover:via-sky-500 hover:to-blue-500 sm:w-auto" disabled={isLoading}>
             {isLoading ? "Saving..." : "Save Links"}
-          </Button>
+            </Button>
+          </div>
         </form>
       </Form>
     </div>

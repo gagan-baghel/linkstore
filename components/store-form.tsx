@@ -11,12 +11,10 @@ import { Copy, ExternalLink, Upload } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/components/ui/use-toast"
-
-const CATEGORY_STORAGE_KEY = "linkstore_product_categories"
 
 const storeFormSchema = z.object({
   storeBannerText: z.string().min(2, {
@@ -47,7 +45,6 @@ export function StoreForm({
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
-  const [newCategory, setNewCategory] = useState("")
 
   const defaultValues: StoreFormValues = {
     storeBannerText: storeBannerText || "",
@@ -62,41 +59,6 @@ export function StoreForm({
   })
 
   const normalizedStoreUrl = storeUrl.trim()
-
-  function handleAddCategory() {
-    const normalized = newCategory.trim()
-    if (normalized.length < 2) {
-      toast({
-        title: "Category is too short",
-        description: "Use at least 2 characters.",
-        variant: "destructive",
-      })
-      return
-    }
-    try {
-      const raw = localStorage.getItem(CATEGORY_STORAGE_KEY)
-      let existing: string[] = []
-      if (raw) {
-        const parsed = JSON.parse(raw)
-        if (Array.isArray(parsed)) {
-          existing = parsed.filter((item) => typeof item === "string")
-        }
-      }
-      const merged = Array.from(new Set([...existing, normalized])).slice(0, 30)
-      localStorage.setItem(CATEGORY_STORAGE_KEY, JSON.stringify(merged))
-      setNewCategory("")
-      toast({
-        title: "Category added",
-        description: `"${normalized}" is now available in Product form.`,
-      })
-    } catch {
-      toast({
-        title: "Could not save category",
-        description: "Please try again.",
-        variant: "destructive",
-      })
-    }
-  }
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -157,7 +119,6 @@ export function StoreForm({
         description: "Your store settings have been updated.",
       })
 
-      setIsEditing(false)
       router.refresh()
     } catch (error) {
       console.error(error)
@@ -192,7 +153,7 @@ export function StoreForm({
 
   return (
     <div className="w-full">
-      <section className="mb-4 rounded-[1.2rem] border border-slate-200 bg-white p-3.5 shadow-[0_10px_28px_rgba(87,107,149,0.08)] sm:rounded-xl sm:p-5 sm:shadow-none">
+      <div className="mb-4 rounded-[1.2rem] border border-slate-200 bg-white p-3.5 shadow-[0_10px_28px_rgba(87,107,149,0.08)] sm:rounded-xl sm:p-5 sm:shadow-none">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <h3 className="text-sm font-semibold text-slate-900">Storefront URL</h3>
@@ -220,16 +181,15 @@ export function StoreForm({
             </Button>
           </div>
         </div>
-      </section>
+      </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className=" items-start gap-6 p-2">
-          <div className="space-y-5">
-            <section className="space-y-4 p-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="rounded-[1.4rem] border border-slate-200/90 bg-white p-5 shadow-[0_12px_30px_rgba(87,107,149,0.08)] sm:p-6">
+          <div className="space-y-6">
+            <div className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h3 className="text-sm font-semibold text-slate-900">Store Identity</h3>
-                  <p className="mt-1 text-xs text-slate-500">Make changes anytime, then hit save.</p>
                 </div>
                 <button
                   type="button"
@@ -248,7 +208,6 @@ export function StoreForm({
                     <FormControl>
                       <Input className="h-10 border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400" placeholder="Your Store Name" {...field} />
                     </FormControl>
-                    <FormDescription className="text-xs">Displayed as the main heading on your store page.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -266,14 +225,13 @@ export function StoreForm({
                         {...field}
                       />
                     </FormControl>
-                    <FormDescription className="text-xs">Optional short intro shown on your public store page.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            </section>
+            </div>
 
-            <section className="space-y-4 border-t border-slate-200 pt-5 p-4">
+            <div className="space-y-4 border-t border-slate-100 pt-5">
               <h3 className="text-sm font-semibold text-slate-900">Contact</h3>
               <FormField
                 control={form.control}
@@ -291,18 +249,13 @@ export function StoreForm({
                         <option value="whatsapp">WhatsApp</option>
                       </select>
                     </FormControl>
-                    <FormDescription className="text-xs">
-                      Choose whether shoppers join with Email or WhatsApp. Email is the default.
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            </section>
-          </div>
+            </div>
 
-          <aside className="lg:col-span-4">
-            <div className="lg:sticky lg:top-20 p-4">
+            <div className="space-y-4 border-t border-slate-100 pt-5">
               <h3 className="mb-4 text-sm font-semibold text-slate-900">Branding</h3>
               <FormField
                 control={form.control}
@@ -352,22 +305,23 @@ export function StoreForm({
                         )}
                       </div>
                     </div>
-                    <FormDescription className="mt-2 text-center text-xs">Displayed in your store header.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+            </div>
 
+            <div className="flex items-center justify-start border-t border-slate-100 pt-5">
               <Button
                 type="submit"
                 size="sm"
-                className="mt-5 h-10 w-full rounded-md border border-slate-900 bg-slate-900 px-3 text-sm text-white shadow-none hover:bg-slate-800"
+                className="h-10 w-full rounded-md border border-slate-900 bg-slate-900 px-3 text-sm text-white shadow-none hover:bg-slate-800 sm:w-auto"
                 disabled={isLoading}
               >
                 {isLoading ? "Saving..." : "Save Changes"}
               </Button>
             </div>
-          </aside>
+          </div>
         </form>
       </Form>
     </div>

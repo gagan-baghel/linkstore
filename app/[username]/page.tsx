@@ -10,14 +10,10 @@ interface StorePageProps {
   params: Promise<{
     username: string
   }>
-  searchParams?: Promise<{
-    preview?: string
-  }>
 }
 
-export default async function StorePage({ params, searchParams }: StorePageProps) {
+export default async function StorePage({ params }: StorePageProps) {
   const { username } = await params
-  const { preview } = (await searchParams) || {}
 
   const publicUser = await convexQuery<{ username: string }, { _id: string; username: string } | null>(
     "users:getPublicByUsername",
@@ -49,37 +45,12 @@ export default async function StorePage({ params, searchParams }: StorePageProps
     notFound()
   }
 
-  if (preview === "1") {
-    return (
-      <StorefrontClient
-        user={storeData.user}
-        products={storeData.products || []}
-        recentProducts={storeData.recentProducts || []}
-        mostBoughtProducts={storeData.trending || []}
-      />
-    )
-  }
-
   return (
-    <>
-      <div className="storefront-preview-only">
-        <div className="storefront-phone-frame">
-          <div className="storefront-phone-notch" />
-          <iframe
-            title="Mobile store preview"
-            src={`/${username}?preview=1`}
-            className="storefront-phone-iframe"
-          />
-        </div>
-      </div>
-      <div className="storefront-preview-mobile">
-        <StorefrontClient
-          user={storeData.user}
-          products={storeData.products || []}
-          recentProducts={storeData.recentProducts || []}
-          mostBoughtProducts={storeData.trending || []}
-        />
-      </div>
-    </>
+    <StorefrontClient
+      user={storeData.user}
+      products={storeData.products || []}
+      recentProducts={storeData.recentProducts || []}
+      mostBoughtProducts={storeData.trending || []}
+    />
   )
 }

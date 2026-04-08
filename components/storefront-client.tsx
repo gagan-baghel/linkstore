@@ -396,8 +396,11 @@ export function StorefrontClient({
           ? "border border-slate-700 bg-transparent text-slate-100"
           : "border border-slate-200 bg-transparent text-slate-900"
         : isDarkMode
-          ? "border border-slate-700 bg-slate-900/85 text-slate-100"
-          : "border border-white/65 bg-white/90 text-slate-900"
+        ? "border border-slate-700 bg-slate-900/85 text-slate-100"
+        : "border border-white/65 bg-white/90 text-slate-900"
+  const mobileLinkCardClass = isDarkMode
+    ? cardSurfaceClass
+    : "border border-slate-200/90 bg-white/96 text-slate-900 backdrop-blur-sm"
   const primaryTextColor = getReadableTextColor(primaryColor)
   const footerVisible = user.themeFooterVisible !== false
 
@@ -928,7 +931,7 @@ export function StorefrontClient({
   }
 
   function renderShowcaseCard() {
-    const cardTone = !hasCreatorLinks ? "bg-black text-white" : cardSurfaceClass
+    const cardTone = !hasCreatorLinks ? "bg-black text-white" : mobileLinkCardClass
 
     const captionClass = !hasCreatorLinks ? "text-white/70" : isDarkMode ? "text-slate-400" : "text-slate-500"
 
@@ -1195,7 +1198,7 @@ export function StorefrontClient({
                     rel="noopener noreferrer"
                     className={cn(
                       "app-reveal app-surface flex items-center gap-3 rounded-2xl px-3 py-2.5 shadow-none",
-                      cardSurfaceClass,
+                      mobileLinkCardClass,
                     )}
                     style={{ animationDelay: `${Math.min(index, 5) * 45}ms` }}
                   >
@@ -1208,7 +1211,7 @@ export function StorefrontClient({
                 )
               })}
               {socialItems.length === 0 && (
-                <div className={cn("rounded-2xl border px-4 py-4 text-center text-xs", cardSurfaceClass)}>
+                <div className={cn("rounded-2xl border px-4 py-4 text-center text-xs", mobileLinkCardClass)}>
                   No social or custom links yet.
                 </div>
               )}
@@ -1216,7 +1219,7 @@ export function StorefrontClient({
             </section>
           ) : (
             <section className="mt-4" aria-busy={query !== deferredQuery}>
-              <div className={cn("app-reveal flex items-center gap-2.5 rounded-full border px-3 py-2 shadow-none", cardSurfaceClass)}>
+              <div className={cn("app-reveal flex items-center gap-2.5 rounded-full border px-3 py-2 shadow-none", mobileLinkCardClass)}>
                 <Search className={cn("h-4 w-4", isDarkMode ? "text-slate-400" : "text-slate-500")} />
                 <input
                   value={query}
