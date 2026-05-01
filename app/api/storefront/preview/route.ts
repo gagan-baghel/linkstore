@@ -35,11 +35,28 @@ export async function POST(req: Request) {
     }
 
     const storeData = await getCachedStoreData(user.username)
-    if (!storeData) {
+    if (storeData) {
+      return NextResponse.json({ store: storeData, isPubliclyReachable: true })
+    }
+
+    const dashboardData = await convexQuery<{ userId: string }, any>("analytics:getDashboardData", {
+      userId: session.user.id,
+    }).catch(() => null)
+
+    if (!dashboardData?.ok || !dashboardData.user) {
       return NextResponse.json({ message: "Store not found" }, { status: 404 })
     }
 
-    return NextResponse.json({ store: storeData })
+    return NextResponse.json({
+      store: {
+        user: dashboardData.user,
+        products: Array.isArray(dashboardData.recentProducts) ? dashboardData.recentProducts : [],
+        recentProducts: Array.isArray(dashboardData.recentProducts) ? dashboardData.recentProducts : [],
+        trending: Array.isArray(dashboardData.recentProducts) ? dashboardData.recentProducts : [],
+        topPicks: Array.isArray(dashboardData.recentProducts) ? dashboardData.recentProducts : [],
+      },
+      isPubliclyReachable: false,
+    })
   } catch (error) {
     console.error("Storefront preview error:", error)
     return NextResponse.json({ message: "Internal server error" }, { status: 500 })

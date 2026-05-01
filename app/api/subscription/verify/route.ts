@@ -1,3 +1,4 @@
+import { revalidateTag } from "next/cache"
 import { NextResponse } from "next/server"
 import { z } from "zod"
 
@@ -9,6 +10,9 @@ import { checkRateLimitAsync, enforceSameOrigin, getClientIp, tooManyRequests } 
 import { encryptSensitive, hashSensitive } from "@/lib/secure-data"
 import { resolveBillingTimestamp } from "@/lib/subscription-billing"
 import { SUBSCRIPTION_CURRENCY, SUBSCRIPTION_PRICE_PAISE } from "@/lib/subscription"
+import { getStoreCacheTag } from "@/lib/store-cache"
+
+const STORE_REVALIDATION_PROFILE = "max" as const
 
 const verifySchema = z.object({
   razorpay_payment_id: z.string().trim().min(6).max(128),
@@ -145,6 +149,10 @@ export async function POST(req: Request) {
       userAgent,
       details: JSON.stringify({ expiresAt: result.access?.expiresAt || null }),
     })
+
+    if (session.user.username) {
+      revalidateTag(getStoreCacheTag(session.user.username), STORE_REVALIDATION_PROFILE)
+    }
 
     return NextResponse.json({
       ok: true,

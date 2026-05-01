@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { PlusCircle } from "lucide-react"
 
@@ -29,12 +29,7 @@ export function AddProductModal({
   const pathname = usePathname()
 
   const hasAddParam = useMemo(() => searchParams.get("add") === "1", [searchParams])
-
-  useEffect(() => {
-    if (openOnLoad && hasAddParam) {
-      setOpen(true)
-    }
-  }, [openOnLoad, hasAddParam])
+  const isOpen = open || (openOnLoad && hasAddParam)
 
   function clearAddParam() {
     if (!hasAddParam) return
@@ -52,7 +47,7 @@ export function AddProductModal({
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <Button variant={triggerVariant} className={triggerClassName} onClick={() => setOpen(true)}>
         <PlusCircle className="mr-2 h-4 w-4" />
         {triggerLabel}

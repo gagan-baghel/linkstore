@@ -1,3 +1,4 @@
+import { revalidateTag } from "next/cache"
 import { NextResponse } from "next/server"
 import { z } from "zod"
 
@@ -6,6 +7,9 @@ import { writeAuditLog } from "@/lib/audit"
 import { convexMutation } from "@/lib/convex"
 import { checkRateLimitAsync, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
 import { normalizeSubscriptionCouponCode, validateSubscriptionCoupon } from "@/lib/subscription-coupon"
+import { getStoreCacheTag } from "@/lib/store-cache"
+
+const STORE_REVALIDATION_PROFILE = "max" as const
 
 const couponSchema = z.object({
   couponCode: z.string().trim().min(1).max(64),
@@ -107,6 +111,10 @@ export async function POST(req: Request) {
       userAgent,
       details: JSON.stringify({ expiresAt: result.access?.expiresAt || null }),
     })
+
+    if (session.user.username) {
+      revalidateTag(getStoreCacheTag(session.user.username), STORE_REVALIDATION_PROFILE)
+    }
 
     return NextResponse.json({
       ok: true,

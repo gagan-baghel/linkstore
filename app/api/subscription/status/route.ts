@@ -1,3 +1,4 @@
+import { revalidateTag } from "next/cache"
 import { NextResponse } from "next/server"
 
 import { getSafeServerSession } from "@/lib/auth"
@@ -7,6 +8,9 @@ import { checkRateLimitAsync, getClientIp, tooManyRequests } from "@/lib/securit
 import { encryptSensitive, hashSensitive } from "@/lib/secure-data"
 import { resolveBillingTimestamp } from "@/lib/subscription-billing"
 import { SUBSCRIPTION_PLAN_CODE, SUBSCRIPTION_PLAN_NAME, SUBSCRIPTION_PRICE_PAISE, SUBSCRIPTION_CURRENCY, SUBSCRIPTION_PRODUCT_LIMIT } from "@/lib/subscription"
+import { getStoreCacheTag } from "@/lib/store-cache"
+
+const STORE_REVALIDATION_PROFILE = "max" as const
 
 export async function GET(req: Request) {
   try {
@@ -79,6 +83,10 @@ export async function GET(req: Request) {
             source: "verify",
             eventKey: `status-reconcile:${paymentIdHash}`,
           }).catch(() => null)
+
+          if (session.user.username) {
+            revalidateTag(getStoreCacheTag(session.user.username), STORE_REVALIDATION_PROFILE)
+          }
 
           state = await convexQuery<{ userId: string }, any>("subscriptions:getAccessState", {
             userId: session.user.id,

@@ -1,10 +1,14 @@
+import { revalidateTag } from "next/cache"
 import { NextResponse } from "next/server"
 import { z } from "zod"
 
 import { getSafeServerSession } from "@/lib/auth"
-import { convexMutation } from "@/lib/convex"
+import { convexMutation, convexQuery } from "@/lib/convex"
 import { writeAuditLog } from "@/lib/audit"
 import { checkRateLimitAsync, enforceSameOrigin, getClientIp, tooManyRequests } from "@/lib/security"
+import { getStoreCacheTag } from "@/lib/store-cache"
+
+const STORE_REVALIDATION_PROFILE = "max" as const
 
 const overrideSchema = z.object({
   targetUserId: z.string().trim().min(1).max(128).regex(/^[a-zA-Z0-9_-]+$/),
@@ -63,6 +67,14 @@ export async function PUT(req: Request) {
 
     if (!result.ok) {
       return NextResponse.json({ message: result.message || "Override failed" }, { status: 400 })
+    }
+
+    const targetUser = await convexQuery<{ userId: string }, { username?: string } | null>("users:getById", {
+      userId: payload.targetUserId,
+    }).catch(() => null)
+
+    if (targetUser?.username) {
+      revalidateTag(getStoreCacheTag(targetUser.username), STORE_REVALIDATION_PROFILE)
     }
 
     await writeAuditLog({

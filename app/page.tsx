@@ -1,7 +1,8 @@
-/* eslint-disable react/no-unescaped-entities */
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
 import { Bebas_Neue, Space_Grotesk, Cutive_Mono } from 'next/font/google';
 import {
   ShoppingBag, Palette, Calendar, Lock, Smartphone,
@@ -14,8 +15,6 @@ import {
   Camera,
   Menu
 } from 'lucide-react';
-import { PublicHeader } from '@/components/public-header';
-import { PublicFooter } from '@/components/public-footer';
 // ─────────────────────────────────────────────
 // SECTION 1 — WALL OF LOVE
 // ─────────────────────────────────────────────
@@ -151,7 +150,16 @@ const TweetCard = ({ tweet }: { tweet: typeof tweets[0] }) => (
     {/* Header */}
     <div className="flex items-start justify-between mb-3">
       <div className="flex items-center gap-2.5">
-        <img src={tweet.avatar} alt={tweet.name} className="w-9 h-9 object-cover border flex-shrink-0" style={{ borderColor: tweet.accent + '30' }} />
+        <Image
+          src={tweet.avatar}
+          alt={tweet.name}
+          width={36}
+          height={36}
+          unoptimized
+          sizes="36px"
+          className="w-9 h-9 object-cover border flex-shrink-0"
+          style={{ borderColor: tweet.accent + '30' }}
+        />
         <div>
           <div className="flex items-center gap-1.5">
             <span className="text-[13px] font-bold leading-none">{tweet.name}</span>
@@ -557,9 +565,9 @@ export const FomoFeed = () => {
 
   return (
     <div className="fixed bottom-5 left-5 z-[200] pointer-events-none hidden md:block" style={{ maxWidth: '280px' }}>
-      {notifications.map((notif, i) => (
+      {notifications.map((notif) => (
         <div
-          key={`${notif.handle}-${indexRef.current}`}
+          key={`${notif.handle}-${notif.time}`}
           className="pointer-events-auto border border-[#C9BEFF] bg-white p-3 flex items-center gap-3 rounded-2xl"
           style={{
             opacity: visible ? 1 : 0,
@@ -619,12 +627,10 @@ const LinkstoreLanding = () => {
   const [scrolled, setScrolled] = useState(false);
   const [builderOpen, setBuilderOpen] = useState(false);
 
-  const sectionRefs = {
-    how: useRef<HTMLDivElement>(null),
-    features: useRef<HTMLDivElement>(null),
-    proof: useRef<HTMLDivElement>(null),
-    cta: useRef<HTMLDivElement>(null),
-  };
+  const howSectionRef = useRef<HTMLElement>(null);
+  const featuresSectionRef = useRef<HTMLElement>(null);
+  const proofSectionRef = useRef<HTMLElement>(null);
+  const ctaSectionRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -634,8 +640,13 @@ const LinkstoreLanding = () => {
 
   useEffect(() => {
     const observers: IntersectionObserver[] = [];
-    Object.entries(sectionRefs).forEach(([key, ref]) => {
-      if (!ref.current) return;
+    [
+      { key: 'how', node: howSectionRef.current },
+      { key: 'features', node: featuresSectionRef.current },
+      { key: 'proof', node: proofSectionRef.current },
+      { key: 'cta', node: ctaSectionRef.current },
+    ].forEach(({ key, node }) => {
+      if (!node) return;
       const observer = new IntersectionObserver(
         ([entry]) => {
           if (entry.isIntersecting) {
@@ -645,7 +656,7 @@ const LinkstoreLanding = () => {
         },
         { threshold: 0.05 }
       );
-      observer.observe(ref.current);
+      observer.observe(node);
       observers.push(observer);
     });
     return () => observers.forEach((o) => o.disconnect());
@@ -700,10 +711,10 @@ const LinkstoreLanding = () => {
           </ul>
 
           <div className="hidden md:flex items-center gap-3">
-            <a href="/dashboard" className="px-5 py-2.5 border border-[#C9BEFF] text-sm font-semibold text-[#8494FF] hover:text-[#000000] hover:bg-[#FFDBFD] transition-colors rounded-full">Log in</a>
-            <a href="/dashboard" className="px-5 py-2.5 bg-[#6367FF] text-[#FFFFFF] text-sm font-bold tracking-wider hover:bg-[#8494FF] transition-colors rounded-full">
+            <Link href="/dashboard" className="px-5 py-2.5 border border-[#C9BEFF] text-sm font-semibold text-[#8494FF] hover:text-[#000000] hover:bg-[#FFDBFD] transition-colors rounded-full">Log in</Link>
+            <Link href="/dashboard" className="px-5 py-2.5 bg-[#6367FF] text-[#FFFFFF] text-sm font-bold tracking-wider hover:bg-[#8494FF] transition-colors rounded-full">
               Get started →
-            </a>
+            </Link>
           </div>
 
           <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden p-2">
@@ -720,9 +731,9 @@ const LinkstoreLanding = () => {
                 </li>
               ))}
             </ul>
-            <a href="/dashboard" className="block bg-[#6367FF] text-[#FFFFFF] px-5 py-3 font-bold tracking-wider text-center rounded-full">
+            <Link href="/dashboard" className="block bg-[#6367FF] text-[#FFFFFF] px-5 py-3 font-bold tracking-wider text-center rounded-full">
               Get started →
-            </a>
+            </Link>
           </div>
         )}
       </nav>
@@ -749,10 +760,10 @@ const LinkstoreLanding = () => {
               </p>
 
               <div className="flex flex-wrap gap-3 mb-8">
-                <a href="/dashboard" className="inline-flex items-center gap-2.5 px-8 py-4 bg-[#fff] text-[#6367FF] font-bold tracking-wider text-sm hover:bg-[#8494FF] transition-colors border border-[#6367FF] rounded-full">
+                <Link href="/dashboard" className="inline-flex items-center gap-2.5 px-8 py-4 bg-[#fff] text-[#6367FF] font-bold tracking-wider text-sm hover:bg-[#8494FF] transition-colors border border-[#6367FF] rounded-full">
                   <Rocket className="w-4 h-4" />
                   Start free
-                </a>
+                </Link>
                 <button
                   onClick={() => setBuilderOpen(true)}
                   className="inline-flex items-center gap-2.5 px-8 py-4 bg-transparent text-[#fff] font-bold tracking-wider text-sm border border-[#C9BEFF] hover:bg-[#FFDBFD] transition-colors rounded-full"
@@ -770,7 +781,16 @@ const LinkstoreLanding = () => {
                     'https://images.pexels.com/photos/12174416/pexels-photo-12174416.jpeg?cs=srgb&dl=pexels-frank-chamba-82252857-12174416.jpg&fm=jpg',
                     'https://images.pexels.com/photos/12871449/pexels-photo-12871449.jpeg?cs=srgb&dl=pexels-skildring-12871449.jpg&fm=jpg',
                   ].map((src, i) => (
-                    <img key={i} src={src} className="w-9 h-9 rounded-full object-cover border-2 border-[#FFFFFF]" alt="creator" />
+                    <Image
+                      key={i}
+                      src={src}
+                      alt="creator"
+                      width={36}
+                      height={36}
+                      unoptimized
+                      sizes="36px"
+                      className="w-9 h-9 rounded-full object-cover border-2 border-[#FFFFFF]"
+                    />
                   ))}
                 </div>
                 <div>
@@ -796,7 +816,15 @@ const LinkstoreLanding = () => {
                   <div className="bg-white px-5 pt-4 pb-6">
                     <div className="flex flex-col items-center mb-4">
                       <div className="border border-[#C9BEFF] mb-3">
-                        <img src="https://images.pexels.com/photos/12871449/pexels-photo-12871449.jpeg?cs=srgb&dl=pexels-skildring-12871449.jpg&fm=jpg" className="w-14 h-14 object-cover" alt="creator" />
+                        <Image
+                          src="https://images.pexels.com/photos/12871449/pexels-photo-12871449.jpeg?cs=srgb&dl=pexels-skildring-12871449.jpg&fm=jpg"
+                          alt="creator"
+                          width={56}
+                          height={56}
+                          unoptimized
+                          sizes="56px"
+                          className="w-14 h-14 object-cover"
+                        />
                       </div>
                       <h3 className="text-sm font-bold text-[#000000]">Marco Travels</h3>
                       <p className="text-[9px] text-[#8494FF] mt-0.5 font-mono tracking-wider">✈️ 2.1M followers</p>
@@ -871,7 +899,7 @@ const LinkstoreLanding = () => {
         {/* ── HOW IT WORKS — soft neutral ── */}
         <section
           id="howitworks"
-          ref={sectionRefs.how}
+          ref={howSectionRef}
           className={`bg-[#FFDBFD] relative overflow-hidden transition-all duration-700 scroll-mt-24 ${visibleSections.has('how') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
         >
           <div className="absolute right-0 top-0 font-display text-[22vw] leading-none text-[#000000]/[0.03] select-none pointer-events-none">02</div>
@@ -900,7 +928,7 @@ const LinkstoreLanding = () => {
         {/* ── FEATURES — light ── */}
         <section
           id="features"
-          ref={sectionRefs.features}
+          ref={featuresSectionRef}
           className={`bg-[#6367FF] relative overflow-hidden transition-all duration-700 scroll-mt-24 ${visibleSections.has('features') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
         >
           <div className="absolute left-0 bottom-0 font-display text-[22vw] leading-none text-[#000000]/[0.03] select-none pointer-events-none">03</div>
@@ -979,7 +1007,7 @@ const LinkstoreLanding = () => {
         {/* ── CREATORS — soft neutral ── */}
         <section
           id="creators"
-          ref={sectionRefs.proof}
+          ref={proofSectionRef}
           className={`bg-[#FFDBFD] py-20 overflow-hidden relative transition-all duration-700 scroll-mt-24 ${visibleSections.has('proof') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
         >
           <div className="absolute right-0 top-0 font-display text-[22vw] leading-none text-[#000000]/[0.03] select-none pointer-events-none">04</div>
@@ -994,7 +1022,14 @@ const LinkstoreLanding = () => {
                 <div key={idx} className="flex-shrink-0 w-[220px] snap-start">
                   <div className="border border-[#C9BEFF] overflow-hidden group hover:-translate-y-1 transition-transform duration-200 rounded-xl" style={{ background: '#FFFFFF' }}>
                     <div className="h-24 relative overflow-hidden border-b border-[#C9BEFF]">
-                      <img src={creator.imageUrl} alt={creator.name} className="w-full h-full object-cover" />
+                      <Image
+                        src={creator.imageUrl}
+                        alt={creator.name}
+                        fill
+                        unoptimized
+                        sizes="220px"
+                        className="object-cover"
+                      />
                       <div className="absolute top-2 right-2">
                         <span className="font-mono text-[8px] tracking-widest px-2 py-1 bg-[#6367FF] text-[#FFFFFF]">{creator.niche}</span>
                       </div>
@@ -1002,7 +1037,15 @@ const LinkstoreLanding = () => {
 
                     <div className="px-3.5 py-3.5" style={{ color: creator.text, background: creator.bg }}>
                       <div className="flex items-center gap-2 mb-0.5">
-                        <img src={creator.imageUrl} alt={creator.name} className="w-7 h-7 object-cover border border-current/20" />
+                        <Image
+                          src={creator.imageUrl}
+                          alt={creator.name}
+                          width={28}
+                          height={28}
+                          unoptimized
+                          sizes="28px"
+                          className="w-7 h-7 object-cover border border-current/20"
+                        />
                         <div>
                           <h3 className="text-[12px] font-bold leading-tight">{creator.name}</h3>
                           <p className="text-[9px] font-mono opacity-60 tracking-wider">{creator.followers}</p>
@@ -1033,7 +1076,7 @@ const LinkstoreLanding = () => {
         {/* ── CTA — soft contrast ── */}
         <section
           id="cta"
-          ref={sectionRefs.cta}
+          ref={ctaSectionRef}
           className={`bg-[#6367FF] relative overflow-hidden transition-all duration-700 scroll-mt-24 ${visibleSections.has('cta') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
         >
           <div className="absolute right-0 bottom-0 font-display text-[22vw] leading-none text-[#000000]/[0.03] select-none pointer-events-none">05</div>
@@ -1052,10 +1095,10 @@ const LinkstoreLanding = () => {
               </div>
 
               <div className="flex flex-col gap-3 shrink-0">
-                <a href="/dashboard" className="inline-flex items-center justify-center gap-2.5 px-10 py-4 bg-[#FFDBFD] text-[#6367FF] font-bold tracking-wider text-sm hover:bg-[#8494FF] transition-colors border border-[#6367FF] rounded-full">
+                <Link href="/dashboard" className="inline-flex items-center justify-center gap-2.5 px-10 py-4 bg-[#FFDBFD] text-[#6367FF] font-bold tracking-wider text-sm hover:bg-[#8494FF] transition-colors border border-[#6367FF] rounded-full">
                   <Rocket className="w-4 h-4" />
                   Create your linkstore
-                </a>
+                </Link>
                 <a href="#creators" className="inline-flex items-center justify-center gap-2.5 px-10 py-4 bg-transparent text-[#FFDBFD] font-bold tracking-wider text-sm border border-[#C9BEFF] hover:bg-[#FFDBFD] transition-colors rounded-full">
                   See live examples <ArrowRight className="w-4 h-4" />
                 </a>
@@ -1107,9 +1150,14 @@ const LinkstoreLanding = () => {
           </div>
 
           <ul className="flex gap-0 border border-[#333] bg-[#333]">
-            {['privacy', 'terms', 'blog', 'contact'].map((item, i) => (
-              <li key={item} className={i > 0 ? 'border-l border-[#333]' : ''}>
-                <a href="#" className="block text-[11px] text-[#fff] hover:text-[#000000] px-4 py-2.5 font-mono tracking-wider transition-colors">{item}</a>
+            {[
+              { label: 'privacy', href: '/privacy' },
+              { label: 'terms', href: '/terms' },
+              { label: 'refunds', href: '/refunds' },
+              { label: 'contact', href: '/contact' },
+            ].map((item, i) => (
+              <li key={item.label} className={i > 0 ? 'border-l border-[#333]' : ''}>
+                <Link href={item.href} className="block text-[11px] text-[#fff] hover:text-[#000000] px-4 py-2.5 font-mono tracking-wider transition-colors">{item.label}</Link>
               </li>
             ))}
           </ul>

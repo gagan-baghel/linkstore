@@ -12,6 +12,7 @@ import {
   type FormEvent,
 } from "react"
 import Image from "next/image"
+import Link from "next/link"
 import {
   Facebook,
   Globe,
@@ -1042,9 +1043,9 @@ export function StorefrontClient({
     return (
       <footer className={cn("mt-8 flex items-center justify-center pb-6 text-xs", isDarkMode ? "text-slate-400" : "text-slate-500")}>
         <span className="mr-1">Powered by</span>
-        <a href="/" className="font-semibold" style={{ color: accentColor }}>
+        <Link href="/" className="font-semibold" style={{ color: accentColor }}>
           Linkstore
-        </a>
+        </Link>
       </footer>
     )
   }
@@ -1307,13 +1308,13 @@ export function StorefrontClient({
             <div>
               <p className="text-sm font-semibold">Join creators on Linkstore today</p>
             </div>
-            <a
+            <Link
               href="/"
               className={cn("px-3 py-1.5 text-xs font-semibold", buttonRadiusClass)}
               style={{ backgroundColor: primaryColor, color: primaryTextColor }}
             >
               Join
-            </a>
+            </Link>
           </div>
         </div>
       </div>
@@ -1325,13 +1326,13 @@ export function StorefrontClient({
             <DialogDescription>Start your creator storefront in minutes.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <a
+            <Link
               href="/"
               className={cn("inline-flex w-full items-center justify-center px-4 py-2 text-sm font-semibold", buttonRadiusClass)}
               style={{ backgroundColor: primaryColor, color: primaryTextColor }}
             >
               Join Linkstore
-            </a>
+            </Link>
             <p className="text-xs text-slate-500">Create, customize, and share your store in minutes.</p>
           </div>
         </DialogContent>

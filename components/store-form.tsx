@@ -163,12 +163,19 @@ export function StoreForm({
             </div>
           </div>
           <div className="flex flex-col gap-2 sm:w-auto sm:min-w-36">
-            <Button asChild className="h-10 bg-slate-900 text-sm text-white hover:bg-slate-800" disabled={!normalizedStoreUrl}>
-              <a href={normalizedStoreUrl || "#"} target="_blank" rel="noreferrer noopener">
+            {normalizedStoreUrl ? (
+              <Button asChild className="h-10 bg-slate-900 text-sm text-white hover:bg-slate-800">
+                <a href={normalizedStoreUrl} target="_blank" rel="noreferrer noopener">
+                  Open Store
+                  <ExternalLink className="ml-2 h-4 w-4" />
+                </a>
+              </Button>
+            ) : (
+              <Button type="button" className="h-10 bg-slate-900 text-sm text-white hover:bg-slate-800" disabled>
                 Open Store
                 <ExternalLink className="ml-2 h-4 w-4" />
-              </a>
-            </Button>
+              </Button>
+            )}
             <Button
               type="button"
               variant="outline"

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server"
 
+import { convexMutation } from "@/lib/convex"
+
 type RateLimitEntry = {
   count: number
   resetAt: number
@@ -15,10 +17,6 @@ type RateLimitResult = {
   allowed: boolean
   remaining: number
   retryAfterSec: number
-}
-
-type RateLimitStore = {
-  check: (options: RateLimitOptions) => Promise<RateLimitResult> | RateLimitResult
 }
 
 declare global {
@@ -41,38 +39,38 @@ function maybeCleanupExpiredEntries(store: Map<string, RateLimitEntry>, now: num
   }
 }
 
-function getRateLimitBackend(): RateLimitStore {
-  return {
-    check: (options) => {
-      const now = Date.now()
-      const store = getRateLimitStore()
-      maybeCleanupExpiredEntries(store, now)
+function checkInMemoryRateLimit(options: RateLimitOptions): RateLimitResult {
+  const now = Date.now()
+  const store = getRateLimitStore()
+  maybeCleanupExpiredEntries(store, now)
 
-      const current = store.get(options.key)
+  const current = store.get(options.key)
 
-      if (!current || current.resetAt <= now) {
-        store.set(options.key, {
-          count: 1,
-          resetAt: now + options.windowMs,
-        })
+  if (!current || current.resetAt <= now) {
+    store.set(options.key, {
+      count: 1,
+      resetAt: now + options.windowMs,
+    })
 
-        return {
-          allowed: true,
-          remaining: Math.max(options.max - 1, 0),
-          retryAfterSec: Math.ceil(options.windowMs / 1000),
-        }
-      }
-
-      current.count += 1
-      store.set(options.key, current)
-
-      const allowed = current.count <= options.max
-      const remaining = Math.max(options.max - current.count, 0)
-      const retryAfterSec = Math.max(Math.ceil((current.resetAt - now) / 1000), 1)
-
-      return { allowed, remaining, retryAfterSec }
-    },
+    return {
+      allowed: true,
+      remaining: Math.max(options.max - 1, 0),
+      retryAfterSec: Math.ceil(options.windowMs / 1000),
+    }
   }
+
+  current.count += 1
+  store.set(options.key, current)
+
+  const allowed = current.count <= options.max
+  const remaining = Math.max(options.max - current.count, 0)
+  const retryAfterSec = Math.max(Math.ceil((current.resetAt - now) / 1000), 1)
+
+  return { allowed, remaining, retryAfterSec }
+}
+
+function canUseDurableRateLimit() {
+  return Boolean(process.env.CONVEX_URL?.trim())
 }
 
 export function getClientIp(headers: Headers): string {
@@ -89,17 +87,31 @@ export function getClientIp(headers: Headers): string {
 }
 
 export function checkRateLimit(options: RateLimitOptions): RateLimitResult {
-  const backend = getRateLimitBackend()
-  const result = backend.check(options)
-  if (result instanceof Promise) {
-    throw new Error("Async rate limit backend not supported in sync path.")
-  }
-  return result
+  return checkInMemoryRateLimit(options)
 }
 
 export async function checkRateLimitAsync(options: RateLimitOptions): Promise<RateLimitResult> {
-  const backend = getRateLimitBackend()
-  return await backend.check(options)
+  if (!canUseDurableRateLimit()) {
+    return checkInMemoryRateLimit(options)
+  }
+
+  try {
+    return await convexMutation<
+      {
+        key: string
+        windowMs: number
+        max: number
+      },
+      RateLimitResult
+    >("auditLogs:consumeRateLimit", {
+      key: options.key,
+      windowMs: options.windowMs,
+      max: options.max,
+    })
+  } catch (error) {
+    console.error("Durable rate limit backend failed; falling back to in-memory limiter:", error)
+    return checkInMemoryRateLimit(options)
+  }
 }
 
 export function tooManyRequests(retryAfterSec: number) {

@@ -17,7 +17,7 @@ export function DashboardNav({ canUseShopFeatures }: { canUseShopFeatures: boole
     () => resolveDashboardNavItems(canUseShopFeatures),
     [canUseShopFeatures],
   )
-  const [isExpanded, setIsExpanded] = useState(false)
+  const [isExpandedOverride, setIsExpandedOverride] = useState(false)
 
   useEffect(() => {
     for (const item of resolvedNavItems) {
@@ -27,17 +27,10 @@ export function DashboardNav({ canUseShopFeatures }: { canUseShopFeatures: boole
     }
   }, [pathname, resolvedNavItems, router])
 
-  useEffect(() => {
-    const hasActiveSubItem = resolvedNavItems.some(
-      (item) => item.isSubItem && isDashboardNavItemActive(pathname, item, searchParams),
-    )
-    if (hasActiveSubItem) {
-      setIsExpanded(true)
-    }
-  }, [pathname, resolvedNavItems, searchParams])
-
   const mainItems = resolvedNavItems.filter((item) => !item.isSubItem)
   const subItems = resolvedNavItems.filter((item) => item.isSubItem)
+  const hasActiveSubItem = subItems.some((item) => isDashboardNavItemActive(pathname, item, searchParams))
+  const isExpanded = hasActiveSubItem || isExpandedOverride
 
   return (
     <nav className="grid gap-1.5">
@@ -80,7 +73,7 @@ export function DashboardNav({ canUseShopFeatures }: { canUseShopFeatures: boole
               {isHome && (
                 <button
                   type="button"
-                  onClick={() => setIsExpanded((prev) => !prev)}
+                  onClick={() => setIsExpandedOverride((prev) => !prev)}
                   aria-expanded={isExpanded}
                   className="ml-2 flex h-7 w-7 items-center justify-center rounded-full text-slate-400 transition hover:bg-white hover:text-slate-700"
                 >

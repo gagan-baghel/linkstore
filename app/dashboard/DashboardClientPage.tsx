@@ -129,6 +129,7 @@ export default function DashboardClientPage({
   const [hasActiveSubscription, setHasActiveSubscription] = useState(Boolean(session?.user?.hasActiveSubscription))
   const [user, setUser] = useState<any>(initialData?.user ?? null)
   const [previewStoreData, setPreviewStoreData] = useState<any | null>(null)
+  const [isPreviewStorePubliclyReachable, setIsPreviewStorePubliclyReachable] = useState(false)
   const [totalProducts, setTotalProducts] = useState<number>(initialData?.totalProducts ?? user?.productCount ?? 0)
   const [isLoading, setIsLoading] = useState(!initialData)
   const [error, setError] = useState<string | null>(null)
@@ -172,13 +173,24 @@ export default function DashboardClientPage({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username: user.username }),
         })
-        if (!response.ok) return
+        if (!response.ok) {
+          if (!cancelled) {
+            setPreviewStoreData(null)
+            setIsPreviewStorePubliclyReachable(false)
+          }
+          return
+        }
         const payload = await response.json().catch(() => null)
         if (!cancelled && payload?.store) {
           setPreviewStoreData(payload.store)
+          setIsPreviewStorePubliclyReachable(payload.isPubliclyReachable === true)
         }
       } catch (error) {
         console.error("Failed to load preview store data:", error)
+        if (!cancelled) {
+          setPreviewStoreData(null)
+          setIsPreviewStorePubliclyReachable(false)
+        }
       }
     }
 
@@ -272,11 +284,14 @@ export default function DashboardClientPage({
   }, [initialData, session.user.id])
 
   const baseUrl = origin || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-  const isStorePublic = Boolean(hasActiveSubscription && user?.username && user?.storeEnabled === true)
+  const publicStoreUsername =
+    typeof previewStoreData?.user?.username === "string" ? previewStoreData.user.username.trim().toLowerCase() : ""
+  const hasReachableStorefront = isPreviewStorePubliclyReachable && publicStoreUsername.length > 0
+  const isStorePublic = Boolean(hasActiveSubscription && user?.storeEnabled === true && hasReachableStorefront)
   const canUseShopActions = hasActiveSubscription
   const subscriptionRedirectBase = SUBSCRIPTION_UPGRADE_BASE_PATH
-  const storeUrl = isStorePublic ? buildStorefrontUrl(user.username, baseUrl) : ""
-  const previewStoreUrl = user?.username ? buildStorefrontUrl(user.username, baseUrl) : ""
+  const storeUrl = isStorePublic ? buildStorefrontUrl(publicStoreUsername, baseUrl) : ""
+  const previewStoreUrl = hasReachableStorefront ? buildStorefrontUrl(publicStoreUsername, baseUrl) : ""
   const initialRecentProducts = Array.isArray(initialData?.recentProducts) ? (initialData?.recentProducts ?? []) : []
   const previewProductsFallback = initialRecentProducts
   const previewUser = previewStoreData?.user ?? user

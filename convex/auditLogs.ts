@@ -60,18 +60,15 @@ export const consumeRateLimit = mutationGeneric({
   },
   handler: async (ctx, args) => {
     const now = Date.now()
-    const windowStart = now - Math.max(args.windowMs, 1000)
+    const effectiveWindowMs = Math.max(args.windowMs, 1000)
+    const windowStart = now - effectiveWindowMs
     const attempts = await ctx.db
       .query("auditLogs")
       .withIndex("by_action_createdAt", (q) => q.eq("action", `ratelimit:${args.key}`))
+      .filter((q) => q.gte(q.field("createdAt"), windowStart))
       .collect()
 
-    let recentCount = 0
-    for (const attempt of attempts) {
-      if (attempt.createdAt >= windowStart) {
-        recentCount += 1
-      }
-    }
+    const recentCount = attempts.length
 
     const allowed = recentCount < args.max
     await ctx.db.insert("auditLogs", {
@@ -87,7 +84,11 @@ export const consumeRateLimit = mutationGeneric({
       createdAt: now,
     })
 
-    const retryAfterSec = Math.max(Math.ceil(args.windowMs / 1000), 1)
+    const oldestAttempt = attempts[0]
+    const retryAfterSec = allowed
+      ? Math.max(Math.ceil(effectiveWindowMs / 1000), 1)
+      : Math.max(Math.ceil(((oldestAttempt?.createdAt ?? now) + effectiveWindowMs - now) / 1000), 1)
+
     return {
       allowed,
       remaining: Math.max(args.max - (recentCount + 1), 0),
