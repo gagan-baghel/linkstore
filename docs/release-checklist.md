@@ -7,6 +7,12 @@
   - `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`
   - `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET`
   - `RAZORPAY_WEBHOOK_SECRET`
+  - `SERVER_SHARED_SECRET` — required in TWO places with the same value:
+    the Next.js server env AND the Convex deployment
+    (`npx convex env set SERVER_SHARED_SECRET <value>`). All Convex functions
+    fail closed without it. Set it on the deployment BEFORE `convex deploy`
+    (crons bake the value at push time), and remove any
+    `DISABLE_CONVEX_GUARD` flag once both sides carry the secret.
 - In Google Cloud Console, register the callback URL:
   - `https://your-domain.com/api/auth/google/callback`
 - Optional:
