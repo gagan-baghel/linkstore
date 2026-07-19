@@ -1,6 +1,7 @@
 "use node"
 
-import { actionGeneric, makeFunctionReference } from "convex/server"
+import { makeFunctionReference } from "convex/server"
+import { actionGeneric } from "../lib/convex-guard"
 import { v } from "convex/values"
 
 type HealthResult = {
@@ -83,7 +84,9 @@ export const runScheduledHealthCheck = actionGeneric({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const listCandidatesRef = makeFunctionReference<"query", { limit?: number }, any[]>("products:listHealthCheckCandidates")
+    const listCandidatesRef = makeFunctionReference<"query", { limit?: number; _serverSecret?: string }, any[]>(
+      "products:listHealthCheckCandidates",
+    )
     const setLinkHealthRef = makeFunctionReference<
       "mutation",
       {
@@ -92,11 +95,13 @@ export const runScheduledHealthCheck = actionGeneric({
         status?: number
         error?: string
         checkedAt?: number
+        _serverSecret?: string
       },
       { ok: boolean; message?: string }
     >("products:setLinkHealthById")
 
-    const candidates = await ctx.runQuery(listCandidatesRef, { limit: args.limit ?? 120 })
+    const _serverSecret = process.env.SERVER_SHARED_SECRET
+    const candidates = await ctx.runQuery(listCandidatesRef, { limit: args.limit ?? 120, _serverSecret })
 
     let checked = 0
     let healthy = 0
@@ -110,6 +115,7 @@ export const runScheduledHealthCheck = actionGeneric({
         status: result.status,
         error: result.error || "",
         checkedAt: Date.now(),
+        _serverSecret,
       })
 
       checked += 1

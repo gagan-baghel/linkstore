@@ -1,4 +1,4 @@
-import { mutationGeneric, queryGeneric } from "convex/server"
+import { mutationGeneric, queryGeneric } from "../lib/convex-guard"
 import { v } from "convex/values"
 
 import { getEffectiveSubscriptionStatus, pickCanonicalSubscription } from "../lib/subscription-billing"

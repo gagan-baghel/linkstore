@@ -17,10 +17,9 @@ export default async function OnboardingPage() {
   }
 
   const user = await convexQuery<{ userId: string }, any | null>("users:getById", { userId: session.user.id }).catch(() => null)
-
-  // if (!user || user.onboardingCompleted !== false) {
-  //   redirect("/dashboard")
-  // }
+  if (!user) {
+    redirect("/auth/login")
+  }
 
   return (
     <div className="min-h-screen bg-[#f3f6ff] px-4 py-10 sm:px-8">

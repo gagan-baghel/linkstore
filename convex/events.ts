@@ -1,4 +1,4 @@
-import { mutationGeneric } from "convex/server"
+import { mutationGeneric } from "../lib/convex-guard"
 import { v } from "convex/values"
 
 export const trackEvent = mutationGeneric({

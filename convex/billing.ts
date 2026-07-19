@@ -1,6 +1,7 @@
 "use node"
 
-import { actionGeneric, makeFunctionReference } from "convex/server"
+import { makeFunctionReference } from "convex/server"
+import { actionGeneric } from "../lib/convex-guard"
 import { v } from "convex/values"
 
 import { encryptSensitive, hashSensitive } from "../lib/secure-data"
@@ -139,8 +140,15 @@ export const runBillingReconciliation = actionGeneric({
       { ok: boolean }
     >("subscriptions:recordBillingReconciliationRun")
 
+    // Internal calls must carry the server secret so guarded functions accept them.
+    const _serverSecret = process.env.SERVER_SHARED_SECRET
+    const _rq = ctx.runQuery.bind(ctx)
+    const _rm = ctx.runMutation.bind(ctx)
+    const runQuery = (ref: any, a: any = {}) => _rq(ref, { ...a, _serverSecret })
+    const runMutation = (ref: any, a: any = {}) => _rm(ref, { ...a, _serverSecret })
+
     const now = Date.now()
-    const orders = await ctx.runQuery(getOrdersRef, {
+    const orders = await runQuery(getOrdersRef, {
       limit: args.limit ?? 200,
       lookbackMs: args.lookbackMs ?? 7 * 24 * 60 * 60 * 1000,
     })
@@ -155,17 +163,17 @@ export const runBillingReconciliation = actionGeneric({
       const baseAlertKey = `${order.userId}:${order.razorpayOrderId}`
 
       if (order.status === "pending" && order.expiresAt <= now) {
-        await ctx.runMutation(expirePendingOrderRef, { orderId: order._id })
+        await runMutation(expirePendingOrderRef, { orderId: order._id })
       }
 
       let payments: RazorpayPayment[] = []
       try {
         payments = await fetchRazorpayPaymentsForOrder(order.razorpayOrderId)
-        await ctx.runMutation(resolveBillingAlertRef, { dedupeKey: `gateway-unreachable:${baseAlertKey}` })
+        await runMutation(resolveBillingAlertRef, { dedupeKey: `gateway-unreachable:${baseAlertKey}` })
       } catch (error) {
         flaggedCount += 1
         notes.push(`gateway:${order.razorpayOrderId}`)
-        await ctx.runMutation(recordBillingAlertRef, {
+        await runMutation(recordBillingAlertRef, {
           dedupeKey: `gateway-unreachable:${baseAlertKey}`,
           category: "gateway_reconciliation",
           severity: "critical",
@@ -194,7 +202,7 @@ export const runBillingReconciliation = actionGeneric({
 
       if (order.status === "pending" && capturedPayment) {
         const paymentIdHash = hashSensitive(capturedPayment.id)
-        const result = await ctx.runMutation(confirmPaymentRef, {
+        const result = await runMutation(confirmPaymentRef, {
           userId: order.userId,
           razorpayOrderId: order.razorpayOrderId,
           paymentIdEncrypted: encryptSensitive(capturedPayment.id),
@@ -209,10 +217,10 @@ export const runBillingReconciliation = actionGeneric({
 
         if (result.ok) {
           reconciledCount += 1
-          await ctx.runMutation(resolveBillingAlertRef, { dedupeKey: `captured-no-entitlement:${baseAlertKey}` })
+          await runMutation(resolveBillingAlertRef, { dedupeKey: `captured-no-entitlement:${baseAlertKey}` })
         } else {
           flaggedCount += 1
-          await ctx.runMutation(recordBillingAlertRef, {
+          await runMutation(recordBillingAlertRef, {
             dedupeKey: `captured-no-entitlement:${baseAlertKey}`,
             category: "payment_entitlement_gap",
             severity: "critical",
@@ -227,7 +235,7 @@ export const runBillingReconciliation = actionGeneric({
 
       if (order.status === "paid" && !capturedPayment && refundedPayments.length === 0) {
         flaggedCount += 1
-        await ctx.runMutation(recordBillingAlertRef, {
+        await runMutation(recordBillingAlertRef, {
           dedupeKey: `paid-no-provider-capture:${baseAlertKey}`,
           category: "provider_state_mismatch",
           severity: "critical",
@@ -238,12 +246,12 @@ export const runBillingReconciliation = actionGeneric({
           details: JSON.stringify({ providerPaymentStatus: order.providerPaymentStatus || "" }),
         })
       } else {
-        await ctx.runMutation(resolveBillingAlertRef, { dedupeKey: `paid-no-provider-capture:${baseAlertKey}` })
+        await runMutation(resolveBillingAlertRef, { dedupeKey: `paid-no-provider-capture:${baseAlertKey}` })
       }
 
       if (refundedPayments.length > 0 && order.status !== "refunded" && order.status !== "chargeback") {
         flaggedCount += 1
-        await ctx.runMutation(recordBillingAlertRef, {
+        await runMutation(recordBillingAlertRef, {
           dedupeKey: `refund-mismatch:${baseAlertKey}`,
           category: "refund_state_mismatch",
           severity: "high",
@@ -261,12 +269,12 @@ export const runBillingReconciliation = actionGeneric({
           ),
         })
       } else {
-        await ctx.runMutation(resolveBillingAlertRef, { dedupeKey: `refund-mismatch:${baseAlertKey}` })
+        await runMutation(resolveBillingAlertRef, { dedupeKey: `refund-mismatch:${baseAlertKey}` })
       }
     }
 
     const finalStatus = flaggedCount > 0 ? "warning" : "ok"
-    await ctx.runMutation(recordRunRef, {
+    await runMutation(recordRunRef, {
       scope: "scheduled",
       status: finalStatus,
       checkedCount,

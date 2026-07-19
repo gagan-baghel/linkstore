@@ -1,4 +1,4 @@
-import { queryGeneric } from "convex/server"
+import { queryGeneric } from "../lib/convex-guard"
 import { v } from "convex/values"
 
 function withoutPassword(user: any) {

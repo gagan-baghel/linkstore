@@ -29,6 +29,8 @@ function loadEnvFile(filePath: string) {
 
 loadEnvFile(path.join(process.cwd(), ".env.local"))
 
+const baseURL = process.env.E2E_BASE_URL || "http://localhost:3000"
+
 export default defineConfig({
   testDir: "./tests/e2e",
   timeout: 60_000,
@@ -39,14 +41,14 @@ export default defineConfig({
   retries: 0,
   reporter: "list",
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL,
     browserName: "chromium",
     channel: "chrome",
     headless: true,
   },
   webServer: {
     command: "npm run dev",
-    url: "http://localhost:3000/auth/login",
+    url: `${baseURL}/auth/login`,
     reuseExistingServer: true,
     timeout: 180_000,
   },

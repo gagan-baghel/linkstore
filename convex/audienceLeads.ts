@@ -1,4 +1,4 @@
-import { mutationGeneric, queryGeneric } from "convex/server"
+import { mutationGeneric, queryGeneric } from "../lib/convex-guard"
 import { v } from "convex/values"
 
 export const createLead = mutationGeneric({

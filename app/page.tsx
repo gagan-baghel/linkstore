@@ -196,7 +196,7 @@ const TweetCard = ({ tweet }: { tweet: typeof tweets[0] }) => (
   </div>
 );
 
-export const WallOfLove = () => {
+const WallOfLove = () => {
   const col1 = tweets.filter((_, i) => i % 3 === 0);
   const col2 = tweets.filter((_, i) => i % 3 === 1);
   const col3 = tweets.filter((_, i) => i % 3 === 2);
@@ -275,7 +275,7 @@ const NICHES = [
   { label: 'Fashion', icon: ShoppingBag, emoji: '👗' },
 ];
 
-export const LivePreviewBuilder = ({ inModal = false }: { inModal?: boolean }) => {
+const LivePreviewBuilder = ({ inModal = false }: { inModal?: boolean }) => {
   const [name, setName] = useState('Your Name');
   const [handle, setHandle] = useState('@yourhandle');
   const [accentColor, setAccentColor] = useState('#6367FF');
@@ -532,7 +532,7 @@ const FOMO_EVENTS = [
   { handle: '@djnightowl', niche: 'Music', action: 'dropped a new link', time: '2m ago', emoji: '🎵', color: '#6367FF' },
 ];
 
-export const FomoFeed = () => {
+const FomoFeed = () => {
   const [notifications, setNotifications] = useState<typeof FOMO_EVENTS>([]);
   const [visible, setVisible] = useState(false);
   const indexRef = useRef(0);

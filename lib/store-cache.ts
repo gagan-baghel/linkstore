@@ -1,4 +1,5 @@
 import { unstable_cache } from "next/cache"
+import { cache } from "react"
 
 import { convexQuery } from "@/lib/convex"
 
@@ -29,7 +30,8 @@ function getStoreDataByUsername(username: string) {
   )
 }
 
-export async function getCachedStoreData(username: string) {
+// React.cache dedupes the lookup between generateMetadata and the page render.
+export const getCachedStoreData = cache(async (username: string) => {
   const cachedStoreData = await getStoreDataByUsername(username)()
   if (cachedStoreData) {
     return cachedStoreData
@@ -37,4 +39,4 @@ export async function getCachedStoreData(username: string) {
 
   // Avoid serving a stale cached miss right after subscription/store access changes.
   return fetchStoreDataByUsername(username)
-}
+})
