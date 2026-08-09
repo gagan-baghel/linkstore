@@ -155,7 +155,6 @@ const TweetCard = ({ tweet }: { tweet: typeof tweets[0] }) => (
           alt={tweet.name}
           width={36}
           height={36}
-          unoptimized
           sizes="36px"
           className="w-9 h-9 object-cover border flex-shrink-0"
           style={{ borderColor: tweet.accent + '30' }}
@@ -429,7 +428,7 @@ const LivePreviewBuilder = ({ inModal = false }: { inModal?: boolean }) => {
               <div className="absolute top-3 left-3 w-full h-full border border-[#C9BEFF]" style={{ background: accentColor + '15' }} />
 
               {/* Phone */}
-              <div className="relative w-[240px] border border-[#C9BEFF] overflow-hidden transition-all duration-300" style={{ background: bgTheme.bg }}>
+              <div aria-hidden="true" className="relative w-[240px] border border-[#C9BEFF] overflow-hidden transition-all duration-300" style={{ background: bgTheme.bg }}>
                 {/* Status bar */}
                 <div className="flex items-center justify-between px-4 pt-3 pb-1.5" style={{ background: bgTheme.bg }}>
                   <span className="text-[9px] font-mono" style={{ color: textColor + '70' }}>9:41</span>
@@ -787,7 +786,6 @@ const LinkstoreLanding = () => {
                       alt="creator"
                       width={36}
                       height={36}
-                      unoptimized
                       sizes="36px"
                       className="w-9 h-9 rounded-full object-cover border-2 border-[#FFFFFF]"
                     />
@@ -821,7 +819,6 @@ const LinkstoreLanding = () => {
                           alt="creator"
                           width={56}
                           height={56}
-                          unoptimized
                           sizes="56px"
                           className="w-14 h-14 object-cover"
                         />
@@ -1026,7 +1023,6 @@ const LinkstoreLanding = () => {
                         src={creator.imageUrl}
                         alt={creator.name}
                         fill
-                        unoptimized
                         sizes="220px"
                         className="object-cover"
                       />
@@ -1042,7 +1038,6 @@ const LinkstoreLanding = () => {
                           alt={creator.name}
                           width={28}
                           height={28}
-                          unoptimized
                           sizes="28px"
                           className="w-7 h-7 object-cover border border-current/20"
                         />
