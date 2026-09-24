@@ -2,24 +2,85 @@ import { queryGeneric } from "../lib/convex-guard"
 import { v } from "convex/values"
 
 import { getEffectiveSubscriptionStatus, pickCanonicalSubscription, resolveStoreEnabled } from "../lib/subscription-billing"
+import { getEffectiveProductNumbers } from "../lib/product-number"
 
-function withoutPassword(user: any) {
+// Everything returned here is serialized into public storefront HTML, so only
+// whitelisted display fields may leave (never email, googleSub, role, etc).
+const PUBLIC_USER_FIELDS = [
+  "_id",
+  "name",
+  "username",
+  "storeLogo",
+  "storeBio",
+  "storeBannerText",
+  "contactInfo",
+  "themeMode",
+  "themePrimaryColor",
+  "themeAccentColor",
+  "themeBannerStyle",
+  "themeButtonStyle",
+  "themeCardStyle",
+  "themeFooterVisible",
+  "themeBackgroundColor",
+  "themeBackgroundPattern",
+  "themeNameColor",
+  "themeBioColor",
+  "themeNameFont",
+  "themeBioFont",
+  "socialFacebook",
+  "socialTwitter",
+  "socialInstagram",
+  "socialYoutube",
+  "socialWebsite",
+  "socialWhatsapp",
+  "socialWhatsappMessage",
+  "customLinks",
+  "leadCaptureChannel",
+] as const
+
+function toPublicUser(user: any) {
+  return Object.fromEntries(PUBLIC_USER_FIELDS.filter((key) => user[key] !== undefined).map((key) => [key, user[key]]))
+}
+
+async function findEnabledStoreOwner(ctx: any, username: string) {
+  const normalizedUsername = normalizeUsernameInput(username)
+  if (!normalizedUsername) return null
+
+  const user = await ctx.db
+    .query("users")
+    .withIndex("by_username", (q: any) => q.eq("username", normalizedUsername))
+    .first()
   if (!user) return null
-  const { passwordHash, ...rest } = user
-  return rest
+
+  const subscriptions = await ctx.db
+    .query("subscriptions")
+    .withIndex("by_userId", (q: any) => q.eq("userId", user._id))
+    .collect()
+
+  const subscription = pickCanonicalSubscription(subscriptions, Date.now())
+  const hasActiveSubscription = getEffectiveSubscriptionStatus(subscription, Date.now()) === "active"
+  if (!resolveStoreEnabled({ userStoreEnabled: user.storeEnabled, hasActiveSubscription })) {
+    return null
+  }
+  return user
 }
 
 function normalizeUsernameInput(input: string) {
   return input.trim().replace(/^@+/, "").toLowerCase()
 }
 
-function toProductView(product: any, performance: any) {
-  const { description, videoUrl, ...rest } = product
+function toProductView(product: any, performance: any, productNumber?: number) {
   return {
-    ...rest,
-    category: rest.category || "General",
-    isArchived: rest.isArchived === true,
-    isLinkHealthy: rest.isLinkHealthy !== false,
+    _id: product._id,
+    title: product.title,
+    affiliateUrl: product.affiliateUrl,
+    images: product.images,
+    description: product.description,
+    price: product.price,
+    productNumber,
+    isPinned: product.isPinned === true,
+    createdAt: product.createdAt,
+    category: product.category || "General",
     ctr7d: performance.ctr7d,
     ctr30d: performance.ctr30d,
     clicks7d: performance.clicks7d,
@@ -36,26 +97,8 @@ export const getByUsername = queryGeneric({
     username: v.string(),
   },
   handler: async (ctx, args) => {
-    const normalizedUsername = normalizeUsernameInput(args.username)
-    if (!normalizedUsername) return null
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_username", (q) => q.eq("username", normalizedUsername))
-      .first()
-
+    const user = await findEnabledStoreOwner(ctx, args.username)
     if (!user) {
-      return null
-    }
-
-    const subscriptions = await ctx.db
-      .query("subscriptions")
-      .withIndex("by_userId", (q: any) => q.eq("userId", user._id))
-      .collect()
-
-    const subscription = pickCanonicalSubscription(subscriptions, Date.now())
-    const hasActiveSubscription = getEffectiveSubscriptionStatus(subscription, Date.now()) === "active"
-    if (!resolveStoreEnabled({ userStoreEnabled: user.storeEnabled, hasActiveSubscription })) {
       return null
     }
 
@@ -83,6 +126,7 @@ export const getByUsername = queryGeneric({
         .collect(),
     ])
 
+    const productNumbers = getEffectiveProductNumbers(allProducts)
     const products = allProducts.filter((product) => product.isArchived !== true && product.isLinkHealthy !== false)
     const storeViews7 = relevantEvents.filter((event) => event.eventType === "store_view" && event.createdAt >= last7Days).length
     const storeViews30 = relevantEvents.filter((event) => event.eventType === "store_view").length
@@ -143,7 +187,9 @@ export const getByUsername = queryGeneric({
       })
     }
 
+    const pinnedFirst = (a: any, b: any) => Number(b.isPinned === true) - Number(a.isPinned === true)
     const rankedProducts = [...products].sort((a, b) => {
+      if (pinnedFirst(a, b) !== 0) return pinnedFirst(a, b)
       const aMetrics = performanceMap.get(a._id) ?? {
         ctr7d: 0,
         ctr30d: 0,
@@ -169,7 +215,7 @@ export const getByUsername = queryGeneric({
       return b.createdAt - a.createdAt
     })
 
-    const recentProducts = [...products].sort((a, b) => b.createdAt - a.createdAt)
+    const recentProducts = [...products].sort((a, b) => pinnedFirst(a, b) || b.createdAt - a.createdAt)
 
     const topPicks = rankedProducts
       .slice(0, 6)
@@ -185,6 +231,7 @@ export const getByUsername = queryGeneric({
             outbound30d: 0,
             performanceScore: 0,
           },
+          productNumbers.get(String(product._id)),
         ),
       )
 
@@ -216,11 +263,12 @@ export const getByUsername = queryGeneric({
             outbound30d: 0,
             performanceScore: 0,
           },
+          productNumbers.get(String(product._id)),
         ),
       )
 
     return {
-      user: withoutPassword(user),
+      user: toPublicUser(user),
       products: rankedProducts.map((product) =>
         toProductView(
           product,
@@ -233,6 +281,7 @@ export const getByUsername = queryGeneric({
             outbound30d: 0,
             performanceScore: 0,
           },
+          productNumbers.get(String(product._id)),
         ),
       ),
       recentProducts: recentProducts.map((product) =>
@@ -247,10 +296,32 @@ export const getByUsername = queryGeneric({
             outbound30d: 0,
             performanceScore: 0,
           },
+          productNumbers.get(String(product._id)),
         ),
       ),
       topPicks,
       trending,
     }
+  },
+})
+
+// Resolves /{username}/{number} short links to a live product.
+export const getProductByNumber = queryGeneric({
+  args: {
+    username: v.string(),
+    productNumber: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const user = await findEnabledStoreOwner(ctx, args.username)
+    if (!user) return null
+
+    const products = await ctx.db
+      .query("products")
+      .withIndex("by_userId", (q) => q.eq("userId", user._id))
+      .collect()
+    const numbers = getEffectiveProductNumbers(products)
+    const product = products.find((doc) => numbers.get(String(doc._id)) === args.productNumber)
+    if (!product || product.isArchived === true || product.isLinkHealthy === false) return null
+    return { productId: product._id }
   },
 })

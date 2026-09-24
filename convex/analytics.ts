@@ -1,6 +1,8 @@
 import { queryGeneric } from "../lib/convex-guard"
 import { v } from "convex/values"
 
+import { getEffectiveProductNumbers } from "../lib/product-number"
+
 function withoutPassword(user: any) {
   if (!user) return null
   const { passwordHash, ...rest } = user
@@ -57,6 +59,11 @@ export const getDashboardData = queryGeneric({
     }
 
     const outboundClicks30 = clicks.length
+    const outboundByProduct = new Map<string, number>()
+    for (const click of clicks) {
+      outboundByProduct.set(String(click.productId), (outboundByProduct.get(String(click.productId)) || 0) + 1)
+    }
+    const productNumbers = getEffectiveProductNumbers(products)
     const conversionRate30 = storeViews30 > 0 ? (outboundClicks30 / storeViews30) * 100 : 0
 
     const activeProducts: any[] = []
@@ -81,6 +88,17 @@ export const getDashboardData = queryGeneric({
       user: withoutPassword(user),
       totalProducts: activeProducts.length,
       recentProducts: activeProducts.slice(0, 3).map(sanitizeProduct),
+      topProducts: activeProducts
+        .map((product) => ({
+          id: product._id,
+          name: product.title,
+          image: product.images?.[0] || "",
+          productNumber: productNumbers.get(String(product._id)),
+          outbound30d: outboundByProduct.get(String(product._id)) || 0,
+        }))
+        .filter((product) => product.outbound30d > 0)
+        .sort((a, b) => b.outbound30d - a.outbound30d)
+        .slice(0, 3),
       quickMetrics: {
         storeViews30,
         cardClicks30,
@@ -224,6 +242,7 @@ export const getAnalyticsData = queryGeneric({
       clicks: outboundMap30.get(product._id) || 0,
     }))
 
+    const productNumbers = getEffectiveProductNumbers(products)
     const productPerformanceData = activeProducts
       .map((product) => {
         const cardClicksFor7d = cardClickMap7.get(product._id) || 0
@@ -237,6 +256,9 @@ export const getAnalyticsData = queryGeneric({
         return {
           id: product._id,
           name: product.title,
+          image: product.images?.[0] || "",
+          productNumber: productNumbers.get(String(product._id)),
+          isPinned: product.isPinned === true,
           category: product.category || "General",
           cardClicks7d: cardClicksFor7d,
           cardClicks30d: cardClicksFor30d,

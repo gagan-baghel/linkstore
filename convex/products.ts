@@ -3,6 +3,7 @@ import { v } from "convex/values"
 
 import { getEffectiveSubscriptionStatus, pickCanonicalSubscription } from "../lib/subscription-billing"
 import { SUBSCRIPTION_PRODUCT_LIMIT } from "../lib/subscription"
+import { getEffectiveProductNumbers, getNextProductNumber } from "../lib/product-number"
 
 function normalizeCategory(category?: string) {
   const normalized = (category || "").trim()
@@ -11,8 +12,16 @@ function normalizeCategory(category?: string) {
 
 function sanitizeProduct(product: any) {
   if (!product) return product
-  const { description, videoUrl, ...rest } = product
+  const { videoUrl, ...rest } = product
   return rest
+}
+
+function cleanPrice(price?: string) {
+  return (price || "").trim().slice(0, 40) || undefined
+}
+
+function cleanDescription(description?: string) {
+  return (description || "").trim().slice(0, 600) || undefined
 }
 
 async function hasActiveSubscription(ctx: any, userId: string) {
@@ -30,9 +39,20 @@ async function hasActiveSubscription(ctx: any, userId: string) {
   return { ok: true as const }
 }
 
-async function countProductsForUser(ctx: any, userId: string) {
-  const docs = await ctx.db.query("products").withIndex("by_userId", (q: any) => q.eq("userId", userId)).collect()
-  return docs.length
+async function listAllForUser(ctx: any, userId: string) {
+  return ctx.db.query("products").withIndex("by_userId", (q: any) => q.eq("userId", userId)).collect()
+}
+
+// Persist fallback numbers for legacy products so later inserts/deletes never
+// renumber them. Returns the next free number.
+async function ensureProductNumbers(ctx: any, docs: any[]) {
+  const numbers = getEffectiveProductNumbers(docs)
+  for (const doc of docs) {
+    if (typeof doc.productNumber !== "number") {
+      await ctx.db.patch(doc._id, { productNumber: numbers.get(String(doc._id)) })
+    }
+  }
+  return getNextProductNumber(docs)
 }
 
 export const listByUser = queryGeneric({
@@ -40,6 +60,7 @@ export const listByUser = queryGeneric({
     userId: v.id("users"),
     limit: v.optional(v.number()),
     includeArchived: v.optional(v.boolean()),
+    withClicks30d: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const docs = await ctx.db
@@ -48,11 +69,29 @@ export const listByUser = queryGeneric({
       .order("desc")
       .collect()
 
+    const clicks30d = new Map<string, number>()
+    if (args.withClicks30d) {
+      const since = Date.now() - 30 * 24 * 60 * 60 * 1000
+      const clicks = await ctx.db
+        .query("clicks")
+        .withIndex("by_userId_createdAt", (q) => q.eq("userId", args.userId))
+        .filter((q) => q.gte(q.field("createdAt"), since))
+        .collect()
+      for (const click of clicks) {
+        clicks30d.set(String(click.productId), (clicks30d.get(String(click.productId)) || 0) + 1)
+      }
+    }
+
     const includeArchived = args.includeArchived ?? true
     const filtered = includeArchived ? docs : docs.filter((product) => product.isArchived !== true)
 
+    const numbers = getEffectiveProductNumbers(docs)
     const limited = typeof args.limit === "number" ? filtered.slice(0, args.limit) : filtered
-    return limited.map(sanitizeProduct)
+    return limited.map((product) => ({
+      ...sanitizeProduct(product),
+      productNumber: numbers.get(String(product._id)),
+      ...(args.withClicks30d ? { clicks30d: clicks30d.get(String(product._id)) || 0 } : {}),
+    }))
   },
 })
 
@@ -131,6 +170,8 @@ export const createProduct = mutationGeneric({
     affiliateUrl: v.string(),
     images: v.array(v.string()),
     category: v.optional(v.string()),
+    price: v.optional(v.string()),
+    description: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId)
@@ -143,8 +184,8 @@ export const createProduct = mutationGeneric({
       return { ok: false, message: subscriptionCheck.message, code: "SUBSCRIPTION_REQUIRED" as const }
     }
 
-    const currentProductCount = await countProductsForUser(ctx, args.userId)
-    if (currentProductCount >= SUBSCRIPTION_PRODUCT_LIMIT) {
+    const existing = await listAllForUser(ctx, args.userId)
+    if (existing.length >= SUBSCRIPTION_PRODUCT_LIMIT) {
       return {
         ok: false,
         message: `Product limit reached (${SUBSCRIPTION_PRODUCT_LIMIT}).`,
@@ -152,6 +193,7 @@ export const createProduct = mutationGeneric({
       }
     }
 
+    const productNumber = await ensureProductNumbers(ctx, existing)
     const now = Date.now()
     const productId = await ctx.db.insert("products", {
       userId: args.userId,
@@ -159,6 +201,10 @@ export const createProduct = mutationGeneric({
       affiliateUrl: args.affiliateUrl.trim(),
       images: args.images,
       category: normalizeCategory(args.category),
+      price: cleanPrice(args.price),
+      description: cleanDescription(args.description),
+      productNumber,
+      isPinned: false,
       isArchived: false,
       isLinkHealthy: true,
       lastLinkCheckAt: undefined,
@@ -182,6 +228,8 @@ export const updateByIdForUser = mutationGeneric({
     affiliateUrl: v.string(),
     images: v.array(v.string()),
     category: v.optional(v.string()),
+    price: v.optional(v.string()),
+    description: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const product = await ctx.db.get(args.productId)
@@ -199,6 +247,8 @@ export const updateByIdForUser = mutationGeneric({
       affiliateUrl: args.affiliateUrl.trim(),
       images: args.images,
       category: normalizeCategory(args.category),
+      price: cleanPrice(args.price),
+      description: cleanDescription(args.description),
       updatedAt: Date.now(),
     })
 
@@ -215,6 +265,7 @@ export const quickUpdateByIdForUser = mutationGeneric({
     affiliateUrl: v.optional(v.string()),
     category: v.optional(v.string()),
     isArchived: v.optional(v.boolean()),
+    isPinned: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const product = await ctx.db.get(args.productId)
@@ -232,6 +283,7 @@ export const quickUpdateByIdForUser = mutationGeneric({
     if (typeof args.affiliateUrl === "string") patch.affiliateUrl = args.affiliateUrl.trim()
     if (typeof args.category === "string") patch.category = normalizeCategory(args.category)
     if (typeof args.isArchived === "boolean") patch.isArchived = args.isArchived
+    if (typeof args.isPinned === "boolean") patch.isPinned = args.isPinned
 
     await ctx.db.patch(args.productId, patch)
     const updated = await ctx.db.get(args.productId)
@@ -281,8 +333,8 @@ export const duplicateByIdForUser = mutationGeneric({
       return { ok: false, message: subscriptionCheck.message, code: "SUBSCRIPTION_REQUIRED" as const }
     }
 
-    const currentProductCount = await countProductsForUser(ctx, args.userId)
-    if (currentProductCount >= SUBSCRIPTION_PRODUCT_LIMIT) {
+    const existing = await listAllForUser(ctx, args.userId)
+    if (existing.length >= SUBSCRIPTION_PRODUCT_LIMIT) {
       return {
         ok: false,
         message: `Product limit reached (${SUBSCRIPTION_PRODUCT_LIMIT}).`,
@@ -290,6 +342,7 @@ export const duplicateByIdForUser = mutationGeneric({
       }
     }
 
+    const productNumber = await ensureProductNumbers(ctx, existing)
     const now = Date.now()
     const duplicatedId = await ctx.db.insert("products", {
       userId: product.userId,
@@ -297,6 +350,10 @@ export const duplicateByIdForUser = mutationGeneric({
       affiliateUrl: product.affiliateUrl,
       images: product.images,
       category: normalizeCategory(product.category),
+      price: product.price,
+      description: product.description,
+      productNumber,
+      isPinned: false,
       isArchived: true,
       isLinkHealthy: product.isLinkHealthy ?? true,
       lastLinkCheckAt: product.lastLinkCheckAt,
@@ -378,6 +435,8 @@ export const deleteByIdForUser = mutationGeneric({
     if (!product || product.userId !== args.userId) {
       return { ok: false, message: "Product not found" as const }
     }
+
+    await ensureProductNumbers(ctx, await listAllForUser(ctx, args.userId))
 
     const relatedClicks = await ctx.db
       .query("clicks")
