@@ -24,6 +24,8 @@ const productSchema = z.object({
   affiliateUrl: z.string().trim().min(1),
   category: z.string().trim().min(2).max(60).optional().default("General"),
   images: z.array(imageUrlSchema).max(1).optional().default([]),
+  price: z.string().trim().max(40).optional().default(""),
+  description: z.string().trim().max(600).optional().default(""),
 })
 
 const quickUpdateSchema = z.object({
@@ -31,6 +33,7 @@ const quickUpdateSchema = z.object({
   affiliateUrl: z.string().trim().min(1).optional(),
   category: z.string().trim().min(2).max(60).optional(),
   isArchived: z.boolean().optional(),
+  isPinned: z.boolean().optional(),
 })
 
 const routeParamsSchema = z.object({
@@ -52,6 +55,10 @@ function serializeProduct(product: any) {
     lastLinkCheckAt: product.lastLinkCheckAt,
     lastLinkStatus: product.lastLinkStatus,
     lastLinkError: product.lastLinkError || "",
+    price: product.price || "",
+    description: product.description || "",
+    productNumber: product.productNumber,
+    isPinned: product.isPinned === true,
   }
 }
 
@@ -129,7 +136,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (!access.ok) return access.response
 
     const body = await req.json()
-    const { title, affiliateUrl: rawAffiliateUrl, category, images } = productSchema.parse(body)
+    const { title, affiliateUrl: rawAffiliateUrl, category, images, price, description } = productSchema.parse(body)
     const affiliateUrl = normalizeAffiliateUrl(rawAffiliateUrl)
     await assertSafePublicHttpUrlForServerFetch(affiliateUrl)
 
@@ -156,6 +163,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         affiliateUrl: string
         category?: string
         images: string[]
+        price?: string
+        description?: string
       },
       { ok: boolean; message?: string; code?: string; product?: any }
     >("products:updateByIdForUser", {
@@ -165,6 +174,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       affiliateUrl,
       category,
       images: finalImages,
+      price,
+      description,
     })
 
     if (!result.ok || !result.product) {
@@ -269,6 +280,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         affiliateUrl?: string
         category?: string
         isArchived?: boolean
+        isPinned?: boolean
       },
       { ok: boolean; message?: string; code?: string; product?: any }
     >("products:quickUpdateByIdForUser", {
@@ -278,6 +290,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       affiliateUrl: normalizedAffiliateUrl,
       category: payload.category,
       isArchived: payload.isArchived,
+      isPinned: payload.isPinned,
     })
 
     if (!result.ok || !result.product) {

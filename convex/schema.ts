@@ -196,6 +196,9 @@ export default defineSchema({
     images: v.array(v.string()),
     videoUrl: v.optional(v.string()),
     category: v.optional(v.string()),
+    price: v.optional(v.string()),
+    productNumber: v.optional(v.number()),
+    isPinned: v.optional(v.boolean()),
     isArchived: v.optional(v.boolean()),
     isLinkHealthy: v.optional(v.boolean()),
     lastLinkCheckAt: v.optional(v.number()),
@@ -209,7 +212,8 @@ export default defineSchema({
     .index("by_userId", ["userId"])
     .index("by_userId_createdAt", ["userId", "createdAt"])
     .index("by_userId_archived", ["userId", "isArchived"])
-    .index("by_userId_category", ["userId", "category"]),
+    .index("by_userId_category", ["userId", "category"])
+    .index("by_userId_productNumber", ["userId", "productNumber"]),
   clicks: defineTable({
     productId: v.id("products"),
     userId: v.id("users"),

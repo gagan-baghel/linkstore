@@ -24,6 +24,8 @@ const productSchema = z.object({
   affiliateUrl: z.string().trim().min(1),
   category: z.string().trim().min(2).max(60).optional().default("General"),
   images: z.array(imageUrlSchema).max(1).optional().default([]),
+  price: z.string().trim().max(40).optional().default(""),
+  description: z.string().trim().max(600).optional().default(""),
 })
 
 function serializeProduct(product: any) {
@@ -41,6 +43,10 @@ function serializeProduct(product: any) {
     lastLinkCheckAt: product.lastLinkCheckAt,
     lastLinkStatus: product.lastLinkStatus,
     lastLinkError: product.lastLinkError || "",
+    price: product.price || "",
+    description: product.description || "",
+    productNumber: product.productNumber,
+    isPinned: product.isPinned === true,
   }
 }
 
@@ -83,7 +89,7 @@ export async function POST(req: Request) {
     if (!access.ok) return access.response
 
     const body = await req.json()
-    const { title, affiliateUrl: rawAffiliateUrl, category, images } = productSchema.parse(body)
+    const { title, affiliateUrl: rawAffiliateUrl, category, images, price, description } = productSchema.parse(body)
     const affiliateUrl = normalizeAffiliateUrl(rawAffiliateUrl)
     await assertSafePublicHttpUrlForServerFetch(affiliateUrl)
 
@@ -109,6 +115,8 @@ export async function POST(req: Request) {
         affiliateUrl: string
         category?: string
         images: string[]
+        price?: string
+        description?: string
       },
       { ok: boolean; message?: string; code?: string; product?: any }
     >("products:createProduct", {
@@ -117,6 +125,8 @@ export async function POST(req: Request) {
       affiliateUrl,
       category,
       images: finalImages,
+      price,
+      description,
     })
 
     if (!result.ok || !result.product) {

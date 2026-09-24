@@ -43,6 +43,7 @@ export async function POST(req: Request) {
         title: metadata.title || "",
         description: metadata.description || "",
         images: metadata.image ? [metadata.image] : [],
+        price: metadata.price || "",
       },
     })
   } catch (error) {

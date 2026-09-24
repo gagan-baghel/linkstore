@@ -9,6 +9,7 @@ import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/components/ui/use-toast"
 import { ImageUpload } from "@/components/image-upload"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -30,7 +31,11 @@ const productFormSchema = z.object({
     message: "Please enter a valid affiliate URL.",
   }),
   images: z.array(z.string()).max(1).optional().default([]),
+  price: z.string().trim().max(40, "Keep the price under 40 characters.").optional().default(""),
+  description: z.string().trim().max(600, "Keep the note under 600 characters.").optional().default(""),
 })
+
+const BULK_LIMIT = 25
 
 type ProductFormValues = z.infer<typeof productFormSchema>
 
@@ -41,6 +46,8 @@ interface ProductFormProps {
     category?: string
     affiliateUrl: string
     images: string[]
+    price?: string
+    description?: string
   }
   isEditing?: boolean
   redirectTo?: string | null
@@ -61,7 +68,9 @@ export function ProductForm({
   const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES)
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false)
   const [affiliateFetchNote, setAffiliateFetchNote] = useState<string | null>(null)
-  // single-add only
+  const [mode, setMode] = useState<"single" | "bulk">("single")
+  const [bulkInput, setBulkInput] = useState("")
+  const [bulkProgress, setBulkProgress] = useState<string | null>(null)
 
   useEffect(() => {
     try {
@@ -94,6 +103,8 @@ export function ProductForm({
       category: initialData?.category || "General",
       affiliateUrl: initialData?.affiliateUrl || "",
       images: (initialData?.images || []).slice(0, 1),
+      price: initialData?.price || "",
+      description: initialData?.description || "",
     },
   })
 
@@ -153,6 +164,8 @@ export function ProductForm({
       category: "General",
       affiliateUrl: "",
       images: [],
+      price: "",
+      description: "",
     })
     setAffiliateFetchNote(null)
     setError(null)
@@ -268,20 +281,99 @@ export function ProductForm({
       if (metadata.title && !form.getValues("title")) {
         form.setValue("title", metadata.title, { shouldValidate: true })
       }
+      if (metadata.price && !form.getValues("price")) {
+        form.setValue("price", metadata.price, { shouldValidate: true })
+      }
       if (Array.isArray(metadata.images) && metadata.images.length > 0 && form.getValues("images").length === 0) {
         form.setValue("images", [metadata.images[0]], { shouldValidate: true })
       }
       const hasFetchedImage = Array.isArray(metadata.images) && metadata.images.length > 0
       if (!hasFetchedImage && form.getValues("images").length === 0) {
-        setAffiliateFetchNote("Can't fetch image from URL. Kindly upload a image.")
+        setAffiliateFetchNote("We couldn't find an image on that page — upload one below.")
       } else {
         setAffiliateFetchNote(null)
       }
     } catch (err) {
       console.error(err)
-      setAffiliateFetchNote("Can't fetch image from URL. Kindly upload a image.")
+      setAffiliateFetchNote("We couldn't read that page. Fill in the title and upload an image below.")
     } finally {
       setIsFetchingMetadata(false)
+    }
+  }
+
+  const bulkUrls = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          bulkInput
+            .split(/[\s,]+/)
+            .map((token) => tryNormalizeAffiliateUrl(token.trim()))
+            .filter((url): url is string => Boolean(url)),
+        ),
+      ),
+    [bulkInput],
+  )
+
+  // Sequential on purpose: keeps us inside the metadata/create rate limits and
+  // lets us stop at the first plan/limit error instead of spamming failures.
+  async function importBulk() {
+    const urls = bulkUrls.slice(0, BULK_LIMIT)
+    if (urls.length === 0) {
+      setError("Paste at least one product link.")
+      return
+    }
+    setIsLoading(true)
+    setError(null)
+    const category = form.getValues("category") || "General"
+    let created = 0
+    const failed: string[] = []
+
+    for (const [index, affiliateUrl] of urls.entries()) {
+      setBulkProgress(`Adding ${index + 1} of ${urls.length}…`)
+      try {
+        const metaResponse = await fetch("/api/products/metadata", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ affiliateUrl }),
+        })
+        const metadata = metaResponse.ok ? ((await metaResponse.json().catch(() => ({})))?.metadata ?? {}) : {}
+        const fallbackTitle = new URL(affiliateUrl).hostname.replace(/^www\./, "")
+        const response = await fetch("/api/products", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            affiliateUrl,
+            category,
+            title: (metadata.title || fallbackTitle).slice(0, 160),
+            images: Array.isArray(metadata.images) ? metadata.images.slice(0, 1) : [],
+            price: metadata.price || "",
+          }),
+        })
+        if (response.status === 402 || response.status === 409) {
+          const data = await response.json().catch(() => ({}))
+          failed.push(...urls.slice(index))
+          setError(data.message || "Stopped: your plan limit was reached.")
+          break
+        }
+        if (!response.ok) throw new Error()
+        created += 1
+      } catch {
+        failed.push(affiliateUrl)
+      }
+    }
+
+    setIsLoading(false)
+    setBulkProgress(null)
+    setBulkInput(failed.join("\n"))
+    if (created > 0) {
+      toast({
+        title: `${created} product${created === 1 ? "" : "s"} added`,
+        description: failed.length > 0 ? `${failed.length} link(s) need attention — they're still in the box.` : "Review titles and prices anytime.",
+      })
+      onProductsCreated?.(created)
+      router.refresh()
+    } else if (failed.length > 0) {
+      setError((current) => current || "None of those links could be added. Check them and try again.")
     }
   }
 
@@ -297,6 +389,33 @@ export function ProductForm({
   }
 
 
+  const categoryField = (
+    <FormField
+      control={form.control}
+      name="category"
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel className="text-sm font-semibold text-slate-800">Category</FormLabel>
+          <FormControl>
+            <Select value={field.value} onValueChange={(value) => field.onChange(value)}>
+              <SelectTrigger className="h-11 border-slate-200 bg-white text-sm text-slate-900">
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categoryOptions.map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  )
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(() => onSubmit())} className="min-w-0 w-full space-y-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_14px_36px_rgba(15,23,42,0.06)] sm:space-y-6 sm:p-6">
@@ -306,10 +425,27 @@ export function ProductForm({
           </Alert>
         )}
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <p className="text-sm font-semibold text-slate-900">Add product</p>
-            <p className="text-xs text-slate-500">Paste a link, we’ll fill the rest.</p>
-          </div>
+          {isEditing ? (
+            <p className="text-xs text-slate-500">Changes go live on your store right away.</p>
+          ) : (
+            <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 p-1 text-xs font-semibold" role="tablist" aria-label="Add mode">
+              {(["single", "bulk"] as const).map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="tab"
+                  aria-selected={mode === value}
+                  onClick={() => {
+                    setMode(value)
+                    setError(null)
+                  }}
+                  className={mode === value ? "rounded-full bg-white px-3 py-1.5 text-slate-900 shadow-sm" : "px-3 py-1.5 text-slate-500"}
+                >
+                  {value === "single" ? "One link" : "Many links"}
+                </button>
+              ))}
+            </div>
+          )}
           <Button
             type="button"
             variant="outline"
@@ -319,6 +455,42 @@ export function ProductForm({
             Create Category
           </Button>
         </div>
+        {mode === "bulk" && !isEditing ? (
+          <div className="space-y-3">
+            <label htmlFor="bulk-links" className="text-sm font-semibold text-slate-800">
+              Product links
+            </label>
+            <Textarea
+              id="bulk-links"
+              value={bulkInput}
+              onChange={(event) => setBulkInput(event.target.value)}
+              rows={7}
+              placeholder={"Paste up to 25 links — one per line\nhttps://amzn.to/...\nhttps://myntra.com/..."}
+              className="border-slate-200 bg-white font-mono text-xs text-slate-900"
+              disabled={isLoading}
+            />
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+              <span>
+                {bulkUrls.length} valid link{bulkUrls.length === 1 ? "" : "s"}
+                {bulkUrls.length > BULK_LIMIT ? ` — the first ${BULK_LIMIT} will be added` : ""}. We&apos;ll fetch each title, image and price.
+              </span>
+            </div>
+            {categoryField}
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <Button
+                type="button"
+                onClick={importBulk}
+                disabled={isLoading || bulkUrls.length === 0}
+                className="h-10 w-full rounded-md border border-slate-900 bg-slate-900 px-6 text-sm text-white hover:bg-slate-800 sm:w-auto"
+              >
+                {bulkProgress || `Add ${Math.min(bulkUrls.length, BULK_LIMIT) || ""} product${bulkUrls.length === 1 ? "" : "s"}`}
+              </Button>
+              <p className="text-xs text-slate-500" aria-live="polite">
+                {bulkProgress ? "Keep this window open." : ""}
+              </p>
+            </div>
+          </div>
+        ) : (
         <div className="space-y-4">
           <FormField
             control={form.control}
@@ -347,7 +519,7 @@ export function ProductForm({
                     </Button>
                   </div>
                 </FormControl>
-                <p className="text-xs text-slate-500">Paste any link. We’ll auto‑fill title and image.</p>
+                <p className="text-xs text-slate-500">Paste any link. We’ll auto‑fill the title, image and price.</p>
                 {affiliateFetchNote && <p className="text-xs text-slate-500">{affiliateFetchNote}</p>}
                 <FormMessage />
               </FormItem>
@@ -370,6 +542,23 @@ export function ProductForm({
 
           <FormField
             control={form.control}
+            name="price"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm font-semibold text-slate-800">
+                  Price <span className="font-normal text-slate-400">(optional)</span>
+                </FormLabel>
+                <FormControl>
+                  <Input className="h-11 border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400" placeholder="e.g. ₹1,299" {...field} />
+                </FormControl>
+                <p className="text-xs text-slate-500">Shown on your store as-is. Prices change, so keep it current.</p>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
             name="images"
             render={({ field }) => (
               <FormItem className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
@@ -383,33 +572,28 @@ export function ProductForm({
             )}
           />
 
-          <details className="rounded-2xl border border-slate-200 bg-white p-3">
+          <details className="rounded-2xl border border-slate-200 bg-white p-3" open={isEditing && Boolean(initialData?.description)}>
             <summary className="cursor-pointer text-sm font-semibold text-slate-800">More options</summary>
-            <div className="mt-3">
+            <div className="mt-3 space-y-4">
               <FormField
                 control={form.control}
-                name="category"
+                name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-semibold text-slate-800">Category</FormLabel>
+                    <FormLabel className="text-sm font-semibold text-slate-800">Your note</FormLabel>
                     <FormControl>
-                      <Select value={field.value} onValueChange={(value) => field.onChange(value)}>
-                        <SelectTrigger className="h-11 border-slate-200 bg-white text-sm text-slate-900">
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categoryOptions.map((category) => (
-                            <SelectItem key={category} value={category}>
-                              {category}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Textarea
+                        rows={3}
+                        className="border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400"
+                        placeholder="Why you love it, size tips, discount code… (searchable on your store)"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+              {categoryField}
             </div>
           </details>
 
@@ -425,8 +609,7 @@ export function ProductForm({
             </Button>
           </div>
         </div>
-
-        {/* single add only */}
+        )}
 
         <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
           <DialogContent>

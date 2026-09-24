@@ -14,6 +14,8 @@ interface EditProductModalProps {
     category?: string
     affiliateUrl: string
     images?: string[]
+    price?: string
+    description?: string
   }
   triggerLabel?: string
   triggerClassName?: string
@@ -46,6 +48,8 @@ export function EditProductModal({
             category: product.category,
             affiliateUrl: product.affiliateUrl,
             images: Array.isArray(product.images) ? product.images : [],
+            price: product.price || "",
+            description: product.description || "",
           }}
           redirectTo={null}
           onProductsCreated={() => setOpen(false)}

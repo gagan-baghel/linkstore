@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { format } from "date-fns"
-import { MousePointerClick, Package, Store, Users } from "lucide-react"
+import { MousePointerClick, Store, Users } from "lucide-react"
 import { redirect } from "next/navigation"
 
 import { getSafeServerSession } from "@/lib/auth"
@@ -11,6 +11,8 @@ import { ReferrerChart } from "@/components/referrer-chart"
 import { Overview } from "@/components/overview"
 import { convexQuery } from "@/lib/convex"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { InsightsList, TopPerformersList } from "@/components/performance-insights"
+import { buildInsights, getTopPerformers, type ProductPerformance } from "@/lib/insights"
 
 export const metadata: Metadata = {
   title: "Analytics - Linkstore",
@@ -35,7 +37,6 @@ export default async function AnalyticsPage() {
     hasDataError = true
   }
 
-  const totalProducts = analytics?.totalProducts || 0
   const totalClicks = analytics?.totalClicks || 0
   const recentClicks = analytics?.recentClicks || 0
   const last30DaysClicks = analytics?.last30DaysClicks || 0
@@ -59,12 +60,24 @@ export default async function AnalyticsPage() {
   const funnelData = analytics?.funnelData || []
   const recentClicksData = analytics?.recentClicksData || []
   const leadsCount30 = analytics?.leadsCount30 || 0
+  const performance: ProductPerformance[] = (analytics?.productPerformanceData || []).map((item: any) => ({
+    ...item,
+    id: String(item.id),
+  }))
+  const topPerformers = getTopPerformers(performance)
+  const insights = buildInsights({
+    products: performance,
+    storeViews30,
+    outboundClicks7: recentClicks,
+    outboundClicks30: last30DaysClicks,
+    sources: sourceChartData,
+    devices: deviceChartData,
+  })
 
   const totalDeviceTraffic = deviceChartData.reduce((sum: number, item: any) => sum + Number(item.value || 0), 0)
-  const summaryCardClassName =
-    "app-reveal app-surface content-auto min-w-0 rounded-[1.15rem] border border-[#d8e2f3] bg-white p-3 shadow-[0_10px_26px_rgba(87,107,149,0.08)] md:rounded-xl md:p-4"
-  const sectionCardClassName =
-    "app-reveal app-surface content-auto min-w-0 rounded-[1.2rem] border border-[#d8e2f3] bg-white p-3 shadow-[0_10px_26px_rgba(87,107,149,0.08)] md:col-span-2 md:rounded-xl md:p-5"
+  // Open layout: stats read as a strip, sections are separated by hairlines, not boxed.
+  const summaryCardClassName = "app-reveal min-w-0 px-0 lg:px-6 lg:first:pl-0"
+  const sectionCardClassName = "app-reveal content-auto min-w-0 border-t border-[#e3e9f5] pt-5 md:col-span-2"
 
   return (
     <DashboardShell>
@@ -73,15 +86,17 @@ export default async function AnalyticsPage() {
           <AlertDescription>Analytics data is temporarily unavailable. Please refresh in a few seconds.</AlertDescription>
         </Alert>
       )}
-      <div className="grid min-w-0 grid-cols-2 gap-2.5 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid min-w-0 grid-cols-2 gap-x-6 gap-y-6 lg:grid-cols-4 lg:divide-x lg:divide-[#e3e9f5]">
         <div className={summaryCardClassName}>
           <div className="mb-2 flex items-center justify-between md:mb-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#5f6b7e]">Total Products</p>
-            <Package className="h-4 w-4 text-[#8a94a8]" />
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#5f6b7e]">Product Clicks (30d)</p>
+            <MousePointerClick className="h-4 w-4 text-[#8a94a8]" />
           </div>
-          <div className="text-[1.15rem] font-semibold tracking-tight text-[#1c1917] md:text-2xl">{totalProducts}</div>
+          <div className="text-2xl font-semibold tracking-tight text-[#1c1917] tabular-nums md:text-3xl">{last30DaysClicks}</div>
           <p className="mt-1 text-[10px] leading-4 text-[#8a94a8] md:text-xs">
-            {totalProducts === 0 ? "Add your first product" : `${totalProducts} products in your store`}
+            {storeViews30 > 0
+              ? `${((last30DaysClicks / storeViews30) * 100).toFixed(1)}% of store visits sent to a retailer`
+              : "Shoppers sent to retailers"}
           </p>
         </div>
         <div className={summaryCardClassName}>
@@ -89,7 +104,7 @@ export default async function AnalyticsPage() {
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#5f6b7e]">Store Views (30d)</p>
             <Store className="h-4 w-4 text-[#8a94a8]" />
           </div>
-          <div className="text-[1.15rem] font-semibold tracking-tight text-[#1c1917] md:text-2xl">{storeViews30}</div>
+          <div className="text-2xl font-semibold tracking-tight text-[#1c1917] tabular-nums md:text-3xl">{storeViews30}</div>
           <p className="mt-1 text-[10px] leading-4 text-[#8a94a8] md:text-xs">Top of funnel audience reach</p>
         </div>
         <div className={summaryCardClassName}>
@@ -97,7 +112,7 @@ export default async function AnalyticsPage() {
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#5f6b7e]">Card Clicks (30d)</p>
             <MousePointerClick className="h-4 w-4 text-[#8a94a8]" />
           </div>
-          <div className="text-[1.15rem] font-semibold tracking-tight text-[#1c1917] md:text-2xl">{productCardClicks30}</div>
+          <div className="text-2xl font-semibold tracking-tight text-[#1c1917] tabular-nums md:text-3xl">{productCardClicks30}</div>
           <p className="mt-1 text-[10px] leading-4 text-[#8a94a8] md:text-xs">Product intent signals</p>
         </div>
         <div className={summaryCardClassName}>
@@ -105,11 +120,23 @@ export default async function AnalyticsPage() {
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#5f6b7e]">Leads Captured (30d)</p>
             <Users className="h-4 w-4 text-[#8a94a8]" />
           </div>
-          <div className="text-[1.15rem] font-semibold tracking-tight text-[#1c1917] md:text-2xl">{leadsCount30}</div>
+          <div className="text-2xl font-semibold tracking-tight text-[#1c1917] tabular-nums md:text-3xl">{leadsCount30}</div>
           <p className="mt-1 text-[10px] leading-4 text-[#8a94a8] md:text-xs">Owned audience from your storefront</p>
         </div>
       </div>
-      <div className="mt-4 grid min-w-0 gap-3 md:mt-6 md:grid-cols-2 lg:grid-cols-7">
+      <div className="mt-10 grid min-w-0 gap-x-10 gap-y-10 md:grid-cols-2 lg:grid-cols-7">
+        <div className={`${sectionCardClassName} lg:col-span-3`}>
+          <h2 className="mb-1 text-sm font-semibold text-[#1c1917]">What to do next</h2>
+          <p className="mb-3 text-xs text-[#8a94a8]">Based on your last 30 days</p>
+          <InsightsList insights={insights} />
+        </div>
+        <div className={`${sectionCardClassName} lg:col-span-4`}>
+          <h2 className="mb-1 text-sm font-semibold text-[#1c1917]">Best performers</h2>
+          <p className="mb-3 text-xs text-[#8a94a8]">Products sending the most shoppers to retailers (30 days)</p>
+          <TopPerformersList products={topPerformers} totalClicks={last30DaysClicks} />
+        </div>
+      </div>
+      <div className="mt-10 grid min-w-0 gap-x-10 gap-y-10 md:grid-cols-2 lg:grid-cols-7">
         <div className={`${sectionCardClassName} lg:col-span-4`}>
           <h2 className="mb-4 text-sm font-semibold text-[#1c1917]">Overview</h2>
           <div className="min-w-0 pl-2">
@@ -154,7 +181,7 @@ export default async function AnalyticsPage() {
           </div>
         </div>
       </div>
-      <div className="mt-4 grid min-w-0 gap-3 md:mt-6">
+      <div className="mt-10 grid min-w-0 gap-x-10 gap-y-10">
         <div className={sectionCardClassName}>
           <h2 className="mb-1 text-sm font-semibold text-[#1c1917]">Daily Clicks</h2>
           <p className="mb-4 text-xs text-[#8a94a8]">Click trends over the last 30 days</p>
@@ -163,7 +190,7 @@ export default async function AnalyticsPage() {
           </div>
         </div>
       </div>
-      <div className="mt-4 grid min-w-0 gap-3 md:mt-6 md:grid-cols-2 lg:grid-cols-7">
+      <div className="mt-10 grid min-w-0 gap-x-10 gap-y-10 md:grid-cols-2 lg:grid-cols-7">
         <div className={`${sectionCardClassName} lg:col-span-4`}>
           <h2 className="mb-1 text-sm font-semibold text-[#1c1917]">Traffic Sources</h2>
           <p className="mb-4 text-xs text-[#8a94a8]">Campaign/source attribution for tracked events</p>
@@ -194,7 +221,7 @@ export default async function AnalyticsPage() {
           )}
         </div>
       </div>
-      <div className="mt-4 grid min-w-0 gap-3 md:mt-6 md:grid-cols-2 lg:grid-cols-7">
+      <div className="mt-10 grid min-w-0 gap-x-10 gap-y-10 md:grid-cols-2 lg:grid-cols-7">
         <div className={`${sectionCardClassName} lg:col-span-3`}>
           <h2 className="mb-1 text-sm font-semibold text-[#1c1917]">Campaigns</h2>
           <p className="mb-4 text-xs text-[#8a94a8]">UTM campaign labels attached to tracked storefront traffic</p>
@@ -208,7 +235,7 @@ export default async function AnalyticsPage() {
           </div>
         </div>
       </div>
-      <div className="mt-4 grid min-w-0 gap-3 md:mt-6 md:grid-cols-2 lg:grid-cols-7">
+      <div className="mt-10 grid min-w-0 gap-x-10 gap-y-10 md:grid-cols-2 lg:grid-cols-7">
         <div className={`${sectionCardClassName} lg:col-span-3`}>
           <h2 className="mb-1 text-sm font-semibold text-[#1c1917]">Browsers</h2>
           <p className="mb-4 text-xs text-[#8a94a8]">Approximate browser breakdown from tracked storefront activity</p>
@@ -220,7 +247,7 @@ export default async function AnalyticsPage() {
           <ReferrerChart data={osChartData} metricLabel="Visitors" />
         </div>
       </div>
-      <div className="mt-4 grid min-w-0 gap-3 md:mt-6 md:grid-cols-2 lg:grid-cols-7">
+      <div className="mt-10 grid min-w-0 gap-x-10 gap-y-10 md:grid-cols-2 lg:grid-cols-7">
         <div className={`${sectionCardClassName} lg:col-span-3`}>
           <h2 className="mb-1 text-sm font-semibold text-[#1c1917]">Top Countries</h2>
           <p className="mb-4 text-xs text-[#8a94a8]">Approximate geo based on request headers from your hosting platform</p>
@@ -234,7 +261,7 @@ export default async function AnalyticsPage() {
           </div>
         </div>
       </div>
-      <div className="mt-4 grid min-w-0 gap-3 md:mt-6">
+      <div className="mt-10 grid min-w-0 gap-x-10 gap-y-10">
         <div className={sectionCardClassName}>
           <h2 className="mb-1 text-sm font-semibold text-[#1c1917]">Clicks by Product</h2>
           <p className="mb-4 text-xs text-[#8a94a8]">Click distribution across your products</p>
@@ -243,7 +270,7 @@ export default async function AnalyticsPage() {
           </div>
         </div>
       </div>
-      <div className="mt-4 grid min-w-0 gap-3 md:mt-6">
+      <div className="mt-10 grid min-w-0 gap-x-10 gap-y-10">
         <div className={sectionCardClassName}>
           <h2 className="mb-1 text-sm font-semibold text-[#1c1917]">Leads by Collection</h2>
           <p className="mb-4 text-xs text-[#8a94a8]">Which attributed posts or drops are actually capturing contacts</p>

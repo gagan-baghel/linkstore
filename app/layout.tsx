@@ -1,21 +1,17 @@
 import type { Metadata } from "next"
 import type React from "react"
 import { ThemeProvider } from "@/components/theme-provider"
+import { getConfiguredAppUrl } from "@/lib/storefront-url"
 import "./globals.css"
 
-const metadataBase = (() => {
-  const candidate = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-  try {
-    return new URL(candidate)
-  } catch {
-    return new URL("http://localhost:3000")
-  }
-})()
+const title = "Linkstore — Your shoppable link in bio"
+const description =
+  "Turn your bio link into a storefront: numbered products followers can find instantly, short links, and insights on what actually sells."
 
 export const metadata: Metadata = {
-  title: "Linkstore - Create Your Affiliate Storefront",
-  description: "Build your own affiliate marketing storefront and start earning commissions",
-  metadataBase,
+  title,
+  description,
+  metadataBase: getConfiguredAppUrl(),
   icons: {
     icon: [
       { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
@@ -26,11 +22,19 @@ export const metadata: Metadata = {
     apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
   },
   manifest: "/site.webmanifest",
+  // og:image / twitter:image come from app/opengraph-image.tsx (1200×630).
   openGraph: {
-    images: ["/og-image.png"],
+    type: "website",
+    siteName: "Linkstore",
+    title,
+    description,
+    url: "/",
+    locale: "en_IN",
   },
   twitter: {
-    images: ["/og-image.png"],
+    card: "summary_large_image",
+    title,
+    description,
   },
 }
 

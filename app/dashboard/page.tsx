@@ -32,6 +32,7 @@ export default async function DashboardPage() {
       conversionRate30: number
     }
     linkHealth?: any
+    topProducts?: any[]
   } | null = null
 
   try {
@@ -43,6 +44,7 @@ export default async function DashboardPage() {
         recentProducts: data.recentProducts,
         quickMetrics: data.quickMetrics,
         linkHealth: data.linkHealth,
+        topProducts: data.topProducts,
       }
     }
   } catch (error) {

@@ -23,28 +23,28 @@ export async function generateMetadata({ params }: StorePageProps): Promise<Meta
   }
 
   const storeName = user.storeBannerText?.trim() || user.name?.trim() || user.username
+  const productCount = storeData?.products?.length || 0
   const description =
     user.storeBio?.trim() ||
-    `Shop ${storeName}'s curated product picks on Linkstore.`
+    `Shop ${productCount > 0 ? `${productCount} ` : ""}curated picks from ${storeName} on Linkstore.`
   const canonical = buildStorefrontUrl(user.username)
-  const ogImage = user.storeLogo?.trim() || "/og-image.png"
 
   return {
     title: `${storeName} (@${user.username}) - Linkstore`,
     description,
     alternates: { canonical },
+    // og:image comes from ./opengraph-image.tsx (a generated 1200×630 store card).
     openGraph: {
-      title: storeName,
+      title: `${storeName} (@${user.username})`,
       description,
       url: canonical,
       type: "profile",
-      images: [ogImage],
+      siteName: "Linkstore",
     },
     twitter: {
-      card: "summary",
-      title: storeName,
+      card: "summary_large_image",
+      title: `${storeName} (@${user.username})`,
       description,
-      images: [ogImage],
     },
   }
 }

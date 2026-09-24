@@ -1,5 +1,9 @@
-function getConfiguredAppUrl() {
-  const candidate = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+// Absolute URLs matter for canonical links and social previews (LinkedIn/WhatsApp
+// can't fetch a localhost og:image), so fall back to Vercel's production domain.
+export function getConfiguredAppUrl() {
+  const vercelHost = process.env.VERCEL_PROJECT_PRODUCTION_URL
+  const candidate =
+    process.env.NEXT_PUBLIC_APP_URL || (vercelHost ? `https://${vercelHost}` : "") || "http://localhost:3000"
   try {
     return new URL(candidate)
   } catch {

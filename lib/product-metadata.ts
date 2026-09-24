@@ -1,10 +1,12 @@
 import { normalizeAffiliateUrl, tryNormalizeAffiliateUrl } from "@/lib/affiliate-url"
 import { assertSafePublicHttpUrlForServerFetch } from "@/lib/affiliate-url-server"
+import { extractPrice } from "@/lib/product-price"
 
 export interface ProductMetadata {
   title?: string
   description?: string
   image?: string
+  price?: string
 }
 
 const METADATA_FETCH_RETRIES = Math.max(0, Number.parseInt(process.env.METADATA_FETCH_RETRIES || "1", 10))
@@ -395,6 +397,7 @@ export async function fetchProductMetadata(affiliateUrl: string): Promise<Produc
   let bestTitle: string | undefined
   let bestDescription: string | undefined
   let bestImage: string | undefined
+  let bestPrice: string | undefined
   let lastError: Error | null = null
 
   // ── Strategy 1 & 2 & 3: Direct HTML fetch for each candidate URL ──
@@ -407,6 +410,7 @@ export async function fetchProductMetadata(affiliateUrl: string): Promise<Produc
       const description = extractMetaContent(html, ["og:description", "twitter:description", "description"])
       if (title && !bestTitle) bestTitle = title
       if (description && !bestDescription) bestDescription = description
+      if (!bestPrice) bestPrice = extractPrice(html)
 
       // Gather image candidates from all HTML extraction methods
       const htmlImages = extractImagesFromHtml(html)
@@ -432,7 +436,7 @@ export async function fetchProductMetadata(affiliateUrl: string): Promise<Produc
 
       // If we got everything, return early
       if (bestImage && bestTitle) {
-        return { title: bestTitle, description: bestDescription, image: bestImage }
+        return { title: bestTitle, description: bestDescription, image: bestImage, price: bestPrice }
       }
     } catch (err) {
       lastError = err instanceof Error ? err : new Error("Fetch failed")
@@ -440,8 +444,8 @@ export async function fetchProductMetadata(affiliateUrl: string): Promise<Produc
   }
 
   // Return whatever we gathered, even partial
-  if (bestImage || bestTitle || bestDescription) {
-    return { title: bestTitle, description: bestDescription, image: bestImage }
+  if (bestImage || bestTitle || bestDescription || bestPrice) {
+    return { title: bestTitle, description: bestDescription, image: bestImage, price: bestPrice }
   }
 
   throw lastError || new Error("Failed to fetch product metadata from the provided URL")

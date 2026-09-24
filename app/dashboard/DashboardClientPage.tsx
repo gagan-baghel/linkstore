@@ -1,11 +1,11 @@
 "use client"
 
-import { memo, startTransition, useEffect, useState } from "react"
+import { memo, startTransition, useEffect, useState, useSyncExternalStore } from "react"
 import type { ElementType } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useSearchParams } from "next/navigation"
-import { ExternalLink, Sparkles, Link2, ShoppingBag, Palette, AlertCircle, CheckCircle2 } from "lucide-react"
+import { ExternalLink, Sparkles, Link2, ShoppingBag, Palette, AlertCircle, CheckCircle2, Copy, Check, Share2 } from "lucide-react"
 
 import { DashboardHeader } from "@/components/dashboard-header"
 import { DashboardShell } from "@/components/dashboard-shell"
@@ -20,11 +20,120 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { cn } from "@/lib/utils"
 import { buildStorefrontUrl } from "@/lib/storefront-url"
 import { SUBSCRIPTION_UPGRADE_BASE_PATH } from "@/lib/subscription-routing"
+import { TopPerformersList } from "@/components/performance-insights"
 
 interface DashboardInitialData {
   user: any
   totalProducts?: number
   recentProducts?: any[]
+  quickMetrics?: {
+    storeViews30: number
+    cardClicks30: number
+    outboundClicks30: number
+    conversionRate30: number
+  }
+  topProducts?: Array<{ id: string; name: string; image?: string; productNumber?: number; outbound30d: number }>
+}
+
+const noopSubscribe = () => () => {}
+
+function StoreLinkCard({
+  storeUrl,
+  isStorePublic,
+  fixHref,
+  metrics,
+}: {
+  storeUrl: string
+  isStorePublic: boolean
+  fixHref: string
+  metrics?: DashboardInitialData["quickMetrics"]
+}) {
+  const [copied, setCopied] = useState(false)
+  const canShare = useSyncExternalStore(
+    noopSubscribe,
+    () => "share" in navigator,
+    () => false,
+  )
+  const displayUrl = storeUrl.replace(/^https?:\/\//, "")
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(storeUrl)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // Clipboard blocked: URL is visible and selectable.
+    }
+  }
+
+  async function share() {
+    try {
+      await navigator.share({ url: storeUrl })
+    } catch {
+      await copy()
+    }
+  }
+
+  const stats = [
+    { label: "Store views", value: metrics?.storeViews30 ?? 0 },
+    { label: "Product clicks", value: metrics?.outboundClicks30 ?? 0 },
+    { label: "Click rate", value: `${(metrics?.conversionRate30 ?? 0).toFixed(1)}%` },
+  ]
+
+  return (
+    <section className="mb-8 flex flex-col gap-6 border-b border-slate-200/80 pb-8 lg:flex-row lg:items-end lg:justify-between">
+        <div className="min-w-0 space-y-2">
+          <div className="flex items-center gap-2">
+            <span className={cn("h-2 w-2 rounded-full", isStorePublic ? "bg-emerald-500" : "bg-amber-400")} />
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+              {isStorePublic ? "Your store is live" : "Your store isn't live yet"}
+            </p>
+          </div>
+          {storeUrl ? (
+            <p className="select-all truncate text-2xl font-semibold tracking-tight text-slate-900">{displayUrl}</p>
+          ) : null}
+          {isStorePublic ? (
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" className="rounded-full bg-slate-900 text-white hover:bg-slate-800" onClick={copy}>
+                {copied ? <Check className="mr-1.5 h-3.5 w-3.5" /> : <Copy className="mr-1.5 h-3.5 w-3.5" />}
+                {copied ? "Copied" : "Copy link"}
+              </Button>
+              {canShare ? (
+                <Button size="sm" variant="outline" className="rounded-full" onClick={share}>
+                  <Share2 className="mr-1.5 h-3.5 w-3.5" /> Share
+                </Button>
+              ) : null}
+              <Button size="sm" variant="outline" className="rounded-full" asChild>
+                <a href={storeUrl} target="_blank" rel="noopener noreferrer">
+                  Open <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
+                </a>
+              </Button>
+            </div>
+          ) : (
+            <Button size="sm" className="rounded-full bg-slate-900 text-white hover:bg-slate-800" asChild>
+              <Link href={fixHref}>Go live</Link>
+            </Button>
+          )}
+          <p className="text-xs text-slate-500">
+            Tip: put this in your bio, then say &ldquo;product #12 in my bio&rdquo; — followers can search the number or open{" "}
+            <span className="font-medium text-slate-700">{displayUrl || "yourstore"}/12</span> directly.
+          </p>
+        </div>
+        <Link
+          href="/dashboard/analytics"
+          className="group grid shrink-0 grid-cols-3 divide-x divide-slate-200"
+          aria-label="Open analytics"
+        >
+          {stats.map((stat) => (
+            <div key={stat.label} className="min-w-[6rem] px-5 first:pl-0">
+              <p className="text-2xl font-semibold tracking-tight text-slate-900 transition group-hover:text-indigo-600">{stat.value}</p>
+              <p className="text-[11px] text-slate-500">{stat.label}</p>
+              <p className="text-[10px] text-slate-400">last 30 days</p>
+            </div>
+          ))}
+        </Link>
+    </section>
+  )
 }
 
 interface SetupStep {
@@ -320,7 +429,15 @@ export default function DashboardClientPage({
       title: "Add Social Links",
       description: "Connect your social profiles",
       icon: Link2,
-      completed: Boolean(user?.socialFacebook || user?.socialTwitter || user?.socialInstagram),
+      completed: Boolean(
+        user?.socialFacebook ||
+          user?.socialTwitter ||
+          user?.socialInstagram ||
+          user?.socialYoutube ||
+          user?.socialWebsite ||
+          user?.socialWhatsapp ||
+          user?.customLinks?.length,
+      ),
     },
     {
       id: "products",
@@ -334,14 +451,16 @@ export default function DashboardClientPage({
       title: "Settings",
       description: "Store details and branding",
       icon: Palette,
-      completed: Boolean(user?.storeLogo || user?.storeBannerText),
+      completed: Boolean(user?.storeLogo || user?.storeBio),
     },
     {
       id: "theme",
       title: "Theme & Design",
       description: "Pick colors and styling",
       icon: Palette,
-      completed: Boolean(user?.storeLogo || user?.storeBannerText),
+      completed: Boolean(
+        user?.themePrimaryColor || user?.themeBackgroundColor || (user?.themeBackgroundPattern && user.themeBackgroundPattern !== "solid"),
+      ),
     },
   ]
 
@@ -607,6 +726,32 @@ export default function DashboardClientPage({
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
+
+      <StoreLinkCard
+        storeUrl={storeUrl || previewStoreUrl || (user?.username ? buildStorefrontUrl(user.username, baseUrl) : "")}
+        isStorePublic={isStorePublic}
+        fixHref={openStoreHref}
+        metrics={initialData?.quickMetrics}
+      />
+
+      {initialData?.topProducts?.length ? (
+        <section className="mb-8 border-b border-slate-200/80 pb-8">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-900">Best performers</h2>
+                <p className="text-xs text-slate-500">Most clicked products in the last 30 days</p>
+              </div>
+              <Link href="/dashboard/analytics" className="text-xs font-semibold text-slate-700 hover:text-slate-900">
+                See insights →
+              </Link>
+            </div>
+            <TopPerformersList
+              products={initialData.topProducts.map((product) => ({ ...product, id: String(product.id), outbound7d: 0 }))}
+              totalClicks={initialData.quickMetrics?.outboundClicks30 ?? 0}
+              showWeek={false}
+            />
+        </section>
+      ) : null}
 
       <section className="mb-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
         <div className="space-y-6">
